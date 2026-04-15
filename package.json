@@ -25,7 +25,7 @@
     "build:honeycomb-smoke": "bun build ./scripts/honeycombSmoke.ts --outfile ./dist/honeycomb-smoke.js --target bun --format esm --define MACRO='{\"VERSION\":\"0.0.0-rebuilt\",\"BUILD_TIME\":\"2026-03-31T00:00:00.000Z\",\"FEEDBACK_CHANNEL\":\"#claude-code\",\"ISSUES_EXPLAINER\":\"open an issue\",\"PACKAGE_URL\":\"@anthropic-ai/claude-code\",\"NATIVE_PACKAGE_URL\":\"@anthropic-ai/claude-code-native\",\"VERSION_CHANGELOG\":\"\"}'",
     "build:honeycomb-verify": "bun build ./scripts/honeycombVerify.ts --outfile ./dist/honeycomb-verify.js --target bun --format esm --define MACRO='{\"VERSION\":\"0.0.0-rebuilt\",\"BUILD_TIME\":\"2026-03-31T00:00:00.000Z\",\"FEEDBACK_CHANNEL\":\"#claude-code\",\"ISSUES_EXPLAINER\":\"open an issue\",\"PACKAGE_URL\":\"@anthropic-ai/claude-code\",\"NATIVE_PACKAGE_URL\":\"@anthropic-ai/claude-code-native\",\"VERSION_CHANGELOG\":\"\"}'",
     "smoke:cli": "bun ./entrypoints/cli.tsx --version",
-    "smoke:bundle": "bun ./dist/cli.js --version",
+    "smoke:bundle": "bun --preload ./test/preload.ts ./dist/cli.js --version",
     "smoke:employee": "bun ./scripts/employeeSmoke.ts",
     "smoke:honeycomb": "bun run build:honeycomb-smoke && bun ./dist/honeycomb-smoke.js",
     "honeycomb:verify": "bun ./scripts/honeycombVerify.ts --json",
