@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Retrospective — Experiment Ladder Planning</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161b24;
+    --surface2: #1e2535;
+    --border: #2a3348;
+    --accent: #4f8ef7;
+    --accent2: #7c5cf7;
+    --green: #3dd68c;
+    --amber: #f59e0b;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #111827;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.6;
+  }
+
+  /* ── LAYOUT ── */
+  .container { max-width: 980px; margin: 0 auto; padding: 0 32px 80px; }
+
+  /* ── HEADER ── */
+  .page-header {
+    padding: 56px 0 40px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 48px;
+  }
+  .page-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 12px;
+  }
+  .page-title {
+    font-size: 36px;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    line-height: 1.15;
+    margin-bottom: 12px;
+  }
+  .page-sub {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 640px;
+  }
+  .meta-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 24px;
+    flex-wrap: wrap;
+  }
+  .meta-item {
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .meta-item strong { color: var(--text); }
+
+  /* ── SECTION ── */
+  section { margin-bottom: 64px; }
+  .section-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--accent2);
+    margin-bottom: 16px;
+  }
+  h2 {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    margin-bottom: 6px;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .section-intro {
+    font-size: 15px;
+    color: var(--muted);
+    max-width: 720px;
+    margin-bottom: 28px;
+  }
+  .divider {
+    width: 40px; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    margin-bottom: 28px;
+  }
+
+  /* ── SUMMARY STAT STRIP ── */
+  .stat-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin-bottom: 48px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .stat-n {
+    font-size: 34px;
+    font-weight: 800;
+    line-height: 1;
+    margin-bottom: 6px;
+  }
+  .stat-l { font-size: 13px; color: var(--muted); }
+  .stat-card.red .stat-n { color: var(--red); }
+  .stat-card.amber .stat-n { color: var(--amber); }
+  .stat-card.green .stat-n { color: var(--green); }
+  .stat-card.blue .stat-n { color: var(--accent); }
+
+  /* ── WRONG TURN CARDS ── */
+  .wrong-turn {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-left: 4px solid var(--red);
+    border-radius: 12px;
+    padding: 24px 28px;
+    margin-bottom: 20px;
+  }
+  .wrong-turn.amber { border-left-color: var(--amber); }
+  .wrong-turn.minor { border-left-color: var(--border); }
+  .wt-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 16px;
+  }
+  .wt-number {
+    background: rgba(248,113,113,0.15);
+    color: var(--red);
+    border: 1px solid rgba(248,113,113,0.3);
+    border-radius: 6px;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 8px;
+    white-space: nowrap;
+    flex-shrink: 0;
+    margin-top: 2px;
+  }
+  .wrong-turn.amber .wt-number {
+    background: rgba(245,158,11,0.15);
+    color: var(--amber);
+    border-color: rgba(245,158,11,0.3);
+  }
+  .wrong-turn.minor .wt-number {
+    background: var(--surface2);
+    color: var(--muted);
+    border-color: var(--border);
+  }
+  .wt-title { font-size: 17px; font-weight: 700; margin-bottom: 4px; }
+  .wt-cost {
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .wt-cost span {
+    display: inline-block;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 4px;
+    padding: 2px 7px;
+    margin-right: 6px;
+    font-family: monospace;
+  }
+  .wt-body { font-size: 14px; line-height: 1.65; }
+  .wt-body p { margin-bottom: 10px; }
+  .wt-body p:last-child { margin-bottom: 0; }
+
+  /* ── WHAT HAPPENED / WHAT SHOULD HAVE HAPPENED ── */
+  .before-after {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin-top: 14px;
+  }
+  .ba-box {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .ba-label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .ba-label.happened { color: var(--red); }
+  .ba-label.shouldve { color: var(--green); }
+
+  /* ── TIMELINE / TOOL CALL TRACE ── */
+  .tool-trace {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px 16px;
+    margin-top: 12px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.8;
+  }
+  .tr-call { color: #c9d1d9; }
+  .tr-wasted { color: var(--red); }
+  .tr-ok { color: var(--green); }
+  .tr-warn { color: var(--amber); }
+  .tr-cm { color: var(--muted); font-style: italic; }
+
+  /* ── RECOMMENDATION CARDS ── */
+  .rec-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+  .rec-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 22px 24px;
+  }
+  .rec-card:hover { border-color: var(--accent); }
+  .rec-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+  }
+  .rec-icon {
+    font-size: 20px;
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .rec-title {
+    font-size: 15px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .rec-path {
+    font-family: monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(79,142,247,0.1);
+    border: 1px solid rgba(79,142,247,0.2);
+    border-radius: 4px;
+    padding: 1px 6px;
+    display: inline-block;
+  }
+  .rec-body {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+    margin-bottom: 12px;
+  }
+  .rec-fixes {
+    font-size: 12px;
+    color: var(--muted);
+    border-top: 1px solid var(--border);
+    padding-top: 10px;
+    margin-top: 2px;
+  }
+  .rec-fixes strong { color: var(--text); }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: 10px;
+    padding: 14px 18px;
+    font-size: 14px;
+    line-height: 1.6;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+    margin-bottom: 16px;
+  }
+  .callout-icon { font-size: 17px; flex-shrink: 0; margin-top: 1px; }
+  .callout.info { background: rgba(79,142,247,0.08); border: 1px solid rgba(79,142,247,0.2); }
+  .callout.success { background: rgba(61,214,140,0.08); border: 1px solid rgba(61,214,140,0.2); }
+  .callout.warn { background: rgba(245,158,11,0.08); border: 1px solid rgba(245,158,11,0.2); }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 10px 14px; vertical-align: top; line-height: 1.5; }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+  }
+  .badge-red { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.25); }
+  .badge-amber { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.25); }
+  .badge-green { background: rgba(61,214,140,0.15); color: var(--green); border: 1px solid rgba(61,214,140,0.25); }
+  .badge-blue { background: rgba(79,142,247,0.15); color: var(--accent); border: 1px solid rgba(79,142,247,0.25); }
+
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 3px;
+    padding: 1px 5px;
+    color: #c9d1d9;
+  }
+
+  /* ── TOC ── */
+  .toc {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    margin-bottom: 48px;
+    display: inline-block;
+    min-width: 300px;
+  }
+  .toc-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); margin-bottom: 12px; }
+  .toc ol { padding-left: 18px; }
+  .toc li { font-size: 14px; margin-bottom: 6px; }
+  .toc a { color: var(--text); text-decoration: none; }
+  .toc a:hover { color: var(--accent); }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <!-- ── HEADER ── -->
+  <header class="page-header" id="overview">
+    <div class="page-label">Session Retrospective · 2026-04-15</div>
+    <h1 class="page-title">What slowed the agent down<br>and how to prevent it</h1>
+    <p class="page-sub">A review of every wrong turn, redundant tool call, and missed shortcut from the experiment-ladder planning session — with concrete repo changes to fix each one.</p>
+    <div class="meta-row">
+      <div class="meta-item"><strong>Session goal:</strong> Plan + implement autoresearch experiment ladder (experiments 1-7)</div>
+      <div class="meta-item"><strong>Outcome:</strong> Plan written, deck produced, two bugs fixed</div>
+      <div class="meta-item"><strong>Date:</strong> 2026-04-15</div>
+    </div>
+  </header>
+
+  <!-- ── SUMMARY STATS ── -->
+  <div class="stat-strip">
+    <div class="stat-card red">
+      <div class="stat-n">7</div>
+      <div class="stat-l">wrong turns identified</div>
+    </div>
+    <div class="stat-card amber">
+      <div class="stat-n">~18</div>
+      <div class="stat-l">avoidable tool calls</div>
+    </div>
+    <div class="stat-card blue">
+      <div class="stat-n">7</div>
+      <div class="stat-l">repo changes recommended</div>
+    </div>
+    <div class="stat-card green">
+      <div class="stat-n">2</div>
+      <div class="stat-l">bugs actually fixed</div>
+    </div>
+  </div>
+
+  <!-- ── TOC ── -->
+  <div class="toc">
+    <div class="toc-title">Contents</div>
+    <ol>
+      <li><a href="#wrong-turns">Wrong turns (7)</a></li>
+      <li><a href="#recommendations">Repo recommendations (7)</a></li>
+      <li><a href="#summary-table">Summary table</a></li>
+    </ol>
+  </div>
+
+  <!-- ══════════════ WRONG TURNS ══════════════ -->
+  <section id="wrong-turns">
+    <div class="section-label">Analysis</div>
+    <h2>Wrong turns</h2>
+    <div class="divider"></div>
+    <p class="section-intro">Ordered by severity. Each entry shows what happened, what the faster path was, and the exact tool calls that were wasted.</p>
+
+    <!-- WT 1 -->
+    <div class="wrong-turn">
+      <div class="wt-header">
+        <div class="wt-number">WT-1 · HIGH</div>
+        <div>
+          <div class="wt-title">Telemetry diagnosis went 8 files deep before checking the config file</div>
+          <div class="wt-cost">
+            <span>~8 wasted reads</span>
+            <span>~5 min delay</span>
+            Root cause was in the first file that should have been checked.
+          </div>
+        </div>
+      </div>
+      <div class="wt-body">
+        <p>When asked to fix "broken tracing," the agent opened <code>events.ts</code>, then <code>betaSessionTracing.ts</code>, then <code>sessionTracing.ts</code> three times at different offsets, then <code>instrumentation.ts</code> three times, then <code>telemetryAttributes.ts</code> — spending the entire time analyzing build-time feature flags, OTel provider setup, and span lifecycle code.</p>
+        <p>The actual root cause — the <code>OTEL_EXPORTER_OTLP_HEADERS</code> pointing to dataset <code>cc-harness</code> while all events land in <code>cc-autoresearch</code> — was a single field in <code>.claude/settings.local.json</code>. That file was not read until after all the deep dives.</p>
+        <p>The fix was a one-line change. The exploration cost ~8 file reads that contributed nothing toward it.</p>
+      </div>
+      <div class="tool-trace">
+        <div class="tr-wasted">✗ Read utils/telemetry/events.ts</div>
+        <div class="tr-wasted">✗ Read utils/telemetry/betaSessionTracing.ts ×2</div>
+        <div class="tr-wasted">✗ Read utils/telemetry/sessionTracing.ts ×3 (offsets: 0, 240, 126)</div>
+        <div class="tr-wasted">✗ Read utils/telemetry/instrumentation.ts ×3 (offsets: 0, 80, 200, 349, 468, 590)</div>
+        <div class="tr-wasted">✗ Read utils/telemetryAttributes.ts</div>
+        <div class="tr-wasted">✗ Grep ENHANCED_TELEMETRY_BETA (broad, noisy, inconclusive)</div>
+        <div class="tr-ok">✓ Read .claude/settings.local.json   ← should have been first</div>
+      </div>
+      <div class="before-after">
+        <div class="ba-box">
+          <div class="ba-label happened">What happened</div>
+          Dove into implementation code (events.ts → betaSessionTracing.ts → sessionTracing.ts → instrumentation.ts) to understand span lifecycle, then hit dead end on bun:bundle feature flag runtime behavior, never resolved it conclusively.
+        </div>
+        <div class="ba-box">
+          <div class="ba-label shouldve">Faster path</div>
+          Read <code>settings.local.json</code> first (10 lines). Notice <code>x-honeycomb-dataset=cc-harness</code> vs the dataset name the user is observing (<code>cc-autoresearch</code>). Fix. Done in 1 tool call.
+        </div>
+      </div>
+    </div>
+
+    <!-- WT 2 -->
+    <div class="wrong-turn">
+      <div class="wt-header">
+        <div class="wt-number">WT-2 · HIGH</div>
+        <div>
+          <div class="wt-title">First Explore agent silently blocked — no feedback, no recovery path</div>
+          <div class="wt-cost">
+            <span>1 wasted agent launch</span>
+            <span>~86s parallelism lost</span>
+            Block message: "No stderr output."
+          </div>
+        </div>
+      </div>
+      <div class="wt-body">
+        <p>The session launched two parallel Explore agents to understand the autoresearch codebase. Agent 1 (targeting the core files: <code>autoresearchSessionObservation.ts</code>, <code>claudeCodeSessions.ts</code>, <code>runtime.ts</code>, <code>autoresearchStatus.ts</code>) was terminated by the <code>explore-guard.sh</code> hook with error: <em>"No stderr output."</em></p>
+        <p>The agent received zero signal about why the block happened, what rule was violated, or what the correct alternative was. It had to infer from context that the hook exists to prevent Explore agents from writing files. This inference cost one full agent invocation and the entire parallelism benefit of launching two agents was eliminated — Agent 2 had to cover both goals sequentially.</p>
+        <p>There is no documentation anywhere about what <code>explore-guard.sh</code> blocks or why.</p>
+      </div>
+      <div class="tool-trace">
+        <div class="tr-wasted">✗ Agent(Explore, "core file explorer")  →  blocked by explore-guard.sh with no message</div>
+        <div class="tr-ok">✓ Agent(Explore, "harness/scoring explorer")  →  31 tool calls, 86s, succeeded</div>
+        <div class="tr-cm">  Agent 2 had to cover both research areas, serializing what was meant to be parallel</div>
+      </div>
+      <div class="before-after">
+        <div class="ba-box">
+          <div class="ba-label happened">What happened</div>
+          Agent 1 blocked, error silent. Agent inferred the guard's purpose from memory files. Second agent ran serially covering both tasks. Net result: 1 successful Explore + extra time.
+        </div>
+        <div class="ba-box">
+          <div class="ba-label shouldve">Faster path</div>
+          If the hook emitted: <em>"explore-guard: Explore agents may not write files. Use general-purpose agent for research > 5K tokens."</em> — the agent would have launched a general-purpose agent from the start.
+        </div>
+      </div>
+    </div>
+
+    <!-- WT 3 -->
+    <div class="wrong-turn amber">
+      <div class="wt-header">
+        <div class="wt-number">WT-3 · MEDIUM</div>
+        <div>
+          <div class="wt-title">runtime.ts read in 7 piecemeal chunks instead of targeted greps</div>
+          <div class="wt-cost">
+            <span>~4 extra reads</span>
+            <span>understanding assembled slowly</span>
+          </div>
+        </div>
+      </div>
+      <div class="wt-body">
+        <p>The autoresearch <code>runtime.ts</code> is the largest single file in the system (~78KB). The agent read it in 7 separate <code>Read</code> calls with different offsets: lines 1-100, 100-250, 250-450, 1261-1361, 1960-2010, 2100-2150, and 2280-2360. Each read surfaced partial context which triggered the next read.</p>
+        <p>The root cause: <strong>ARCHITECTURE.md has no entry for <code>services/autoresearch/</code></strong>. The agent had no map of which functions lived where, so it had to discover the layout incrementally. A 10-line summary of runtime.ts key exports (with line numbers) in ARCHITECTURE.md would have replaced all the exploratory reads with 2-3 targeted ones.</p>
+      </div>
+      <div class="tool-trace">
+        <div class="tr-wasted">✗ Read runtime.ts:1-100     (imports — low value)</div>
+        <div class="tr-wasted">✗ Read runtime.ts:100-250   (utilities — low value)</div>
+        <div class="tr-warn"> ~ Read runtime.ts:250-450   (scoring helpers — partial value)</div>
+        <div class="tr-ok">✓ Read runtime.ts:1261-1361  (scoreCandidateExperiment — needed)</div>
+        <div class="tr-ok">✓ Read runtime.ts:1960-2010  (runCycle start — needed)</div>
+        <div class="tr-ok">✓ Read runtime.ts:2100-2150  (claude code session processing — needed)</div>
+        <div class="tr-ok">✓ Read runtime.ts:2280-2360  (cycle completion + catch — needed)</div>
+      </div>
+    </div>
+
+    <!-- WT 4 -->
+    <div class="wrong-turn amber">
+      <div class="wt-header">
+        <div class="wt-number">WT-4 · MEDIUM</div>
+        <div>
+          <div class="wt-title">bun:bundle feature flag deep dive — inconclusive and unnecessary</div>
+          <div class="wt-cost">
+            <span>~3 wasted reads</span>
+            <span>never resolved</span>
+            Fix didn't require this analysis.
+          </div>
+        </div>
+      </div>
+      <div class="wt-body">
+        <p>After reading <code>sessionTracing.ts</code> and finding that <code>isEnhancedTelemetryEnabled()</code> is gated by <code>feature('ENHANCED_TELEMETRY_BETA')</code> from <code>bun:bundle</code>, the agent spent several rounds trying to determine whether this build-time flag evaluates as <code>true</code> or <code>false</code> in dev mode (non-bundled). It grepped for <code>ENHANCED_TELEMETRY_BETA</code> across the codebase, read <code>betaSessionTracing.ts</code> again, and read <code>instrumentation.ts</code> again looking for the answer.</p>
+        <p>The analysis was never conclusive. More importantly, <strong>the fix (dataset header mismatch) required zero knowledge of the bun:bundle behavior</strong>. The entire thread was a dead end triggered by not having the config context first.</p>
+      </div>
+      <div class="before-after">
+        <div class="ba-box">
+          <div class="ba-label happened">What happened</div>
+          Agent tried to determine if <code>feature('ENHANCED_TELEMETRY_BETA')</code> returns <code>true</code> or <code>false</code> in dev mode. Inconclusive after 3+ reads. Moved on without resolution.
+        </div>
+        <div class="ba-box">
+          <div class="ba-label shouldve">Faster path</div>
+          Once <code>settings.local.json</code> was read first (WT-1), the dataset header mismatch is immediately visible. No telemetry code reading needed.
+        </div>
+      </div>
+    </div>
+
+    <!-- WT 5 -->
+    <div class="wrong-turn amber">
+      <div class="wt-header">
+        <div class="wt-number">WT-5 · MEDIUM</div>
+        <div>
+          <div class="wt-title">Phantom "expect" skill hook fires every session with no effect</div>
+          <div class="wt-cost">
+            <span>cognitive overhead</span>
+            <span>every session</span>
+            Skill doesn't exist; agent correctly skips but wastes evaluation cycles.
+          </div>
+        </div>
+      </div>
+      <div class="wt-body">
+        <p>The <code>UserPromptSubmit</code> hook fires on what it classifies as "QA tasks" and injects: <em>"You MUST invoke the expect skill FIRST before doing anything else. Call the Skill tool with skill='expect' now."</em></p>
+        <p>No <code>expect</code> skill exists in the skills registry. The agent must read the system reminder, evaluate all available skills, confirm the skill is absent, and decide to proceed without it — every single time this hook fires. It's a mandatory evaluation of a non-existent skill on every QA-pattern prompt.</p>
+        <p>This hook fired at least twice during this session (before the plan and before the session review request).</p>
+      </div>
+      <div class="before-after">
+        <div class="ba-box">
+          <div class="ba-label happened">What happened</div>
+          Hook injected phantom skill demand. Agent scanned skills list, found no "expect" skill, silently skipped. Correct outcome, but burned attention budget on every occurrence.
+        </div>
+        <div class="ba-box">
+          <div class="ba-label shouldve">Faster path</div>
+          Either register an actual "expect" skill, or remove/fix the hook trigger condition so it only fires when the skill exists.
+        </div>
+      </div>
+    </div>
+
+    <!-- WT 6 -->
+    <div class="wrong-turn minor">
+      <div class="wt-header">
+        <div class="wt-number">WT-6 · LOW</div>
+        <div>
+          <div class="wt-title">Plan mode was still active when the deck request arrived</div>
+          <div class="wt-cost">
+            <span>1 extra round-trip</span>
+            <span>minor friction</span>
+          </div>
+        </div>
+      </div>
+      <div class="wt-body">
+        <p>When the user asked for an HTML deck of the session transcript, plan mode was still active (from the experiment ladder planning task). The agent correctly updated the plan file to include the deck as deliverable-0 and called <code>ExitPlanMode</code>, but this added an unnecessary loop: the deck was a new, independent task unrelated to the implementation plan.</p>
+        <p>Plan mode activates on the session start and stays active. The agent should have been able to produce the deck without the plan-update step — a lighter context switch would have been cleaner.</p>
+      </div>
+    </div>
+
+    <!-- WT 7 -->
+    <div class="wrong-turn minor">
+      <div class="wt-header">
+        <div class="wt-number">WT-7 · LOW</div>
+        <div>
+          <div class="wt-title">Broad grep for "mutationSources" matched unrelated files</div>
+          <div class="wt-cost">
+            <span>noise in results</span>
+            <span>minor</span>
+          </div>
+        </div>
+      </div>
+      <div class="wt-body">
+        <p>The grep pattern <code>mutationSources|mutationSource|experiment.*ladder|ladder</code> matched <code>utils/teleport.tsx</code> (a "source selection ladder" comment) and <code>utils/analyzeContext.ts</code> (a "threshold ladder" comment) — neither relevant. The broad pattern forced the agent to mentally filter noise from results.</p>
+        <p>A scoped grep (<code>--type ts</code> within <code>services/autoresearch/</code>) would have returned only the relevant file without the false positives.</p>
+      </div>
+    </div>
+
+  </section>
+
+  <!-- ══════════════ RECOMMENDATIONS ══════════════ -->
+  <section id="recommendations">
+    <div class="section-label">Recommendations</div>
+    <h2>What to add to the repository</h2>
+    <div class="divider"></div>
+    <p class="section-intro">Seven concrete changes. Each one directly prevents a wrong turn above. Ordered by impact.</p>
+
+    <div class="rec-grid">
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">📄</div>
+          <div>
+            <div class="rec-title">Add autoresearch section to ARCHITECTURE.md</div>
+            <div class="rec-path">ARCHITECTURE.md</div>
+          </div>
+        </div>
+        <div class="rec-body">
+          ARCHITECTURE.md has no entry for <code>services/autoresearch/</code> — the entire subsystem is invisible to orientation. Add a section listing the 5 key files, their roles, and the line numbers of the 3 most-called functions (<code>scoreCandidateExperiment:1261</code>, <code>runEvaluationCommand:1833</code>, <code>runCycle:1960</code>). Also note the two current gaps: <code>evaluationCommand</code> unset, <code>mutationSources: []</code>.
+        </div>
+        <div class="rec-fixes"><strong>Fixes:</strong> WT-3 (piecemeal runtime.ts reads)</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">🔧</div>
+          <div>
+            <div class="rec-title">Fix explore-guard.sh to emit explanatory stderr</div>
+            <div class="rec-path">.claude/hooks/explore-guard.sh</div>
+          </div>
+        </div>
+        <div class="rec-body">
+          The guard currently exits with no message. Add a <code>>&amp;2 echo</code> explaining what was blocked and what to use instead:<br><br>
+          <code>echo "explore-guard: Explore agents cannot write files. Use general-purpose agent for research &gt; 5K tokens." &gt;&amp;2</code><br><br>
+          This turns a silent block into actionable guidance.
+        </div>
+        <div class="rec-fixes"><strong>Fixes:</strong> WT-2 (silent explore-guard block)</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">📋</div>
+          <div>
+            <div class="rec-title">Add telemetry config quick-reference</div>
+            <div class="rec-path">docs/telemetry-config.md</div>
+          </div>
+        </div>
+        <div class="rec-body">
+          Create a short doc (or add a section to ARCHITECTURE.md) with: <em>"All telemetry configuration lives in <code>.claude/settings.local.json</code>. To diagnose missing traces, check <code>OTEL_EXPORTER_OTLP_HEADERS</code> — the <code>x-honeycomb-dataset</code> value must match the dataset name you observe in Honeycomb."</em> Also list what each env var controls.
+        </div>
+        <div class="rec-fixes"><strong>Fixes:</strong> WT-1 (8-file telemetry rabbit hole), WT-4 (bun:bundle dead end)</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">🔩</div>
+          <div>
+            <div class="rec-title">Fix or remove the phantom "expect" skill hook</div>
+            <div class="rec-path">.claude/settings.json (hooks)</div>
+          </div>
+        </div>
+        <div class="rec-body">
+          The <code>UserPromptSubmit</code> hook fires a mandatory demand for a skill named "expect" that doesn't exist in the skills registry. Either register an actual <code>expect</code> skill that validates preconditions, or remove/update the hook condition so it only fires for skills that exist.
+        </div>
+        <div class="rec-fixes"><strong>Fixes:</strong> WT-5 (phantom skill demand on every QA prompt)</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">📐</div>
+          <div>
+            <div class="rec-title">Create docs/autoresearch.md with system map</div>
+            <div class="rec-path">docs/autoresearch.md</div>
+          </div>
+        </div>
+        <div class="rec-body">
+          A dedicated doc covering: the 5-file system (runtime.ts, types.ts, splitter.ts, claudeCodeSessions.ts, autoresearchStatus.ts), the <code>incoming/</code> directory structure, how candidates flow in (mutationSources → runCycle → evaluationCommand → CandidateEvaluation → scoreCandidateExperiment), current gaps, and the 4-rollout-lane lifecycle. This replaces the entire Phase 1 exploration of this session.
+        </div>
+        <div class="rec-fixes"><strong>Fixes:</strong> WT-3 (runtime.ts chunks), would have prevented ~15 tool calls in Phase 1</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">💬</div>
+          <div>
+            <div class="rec-title">Add JSDoc to 3 key runtime functions</div>
+            <div class="rec-path">services/autoresearch/runtime.ts</div>
+          </div>
+        </div>
+        <div class="rec-body">
+          Add JSDoc to <code>scoreCandidateExperiment()</code>, <code>runEvaluationCommand()</code>, and <code>runCycle()</code> describing their inputs, outputs, and side effects. These are the three entry points an agent needs to understand before planning anything around the autoresearch system.
+        </div>
+        <div class="rec-fixes"><strong>Fixes:</strong> WT-3 (reduces the need to read full function bodies)</div>
+      </div>
+
+      <div class="rec-card">
+        <div class="rec-header">
+          <div class="rec-icon">📌</div>
+          <div>
+            <div class="rec-title">Add .claude/settings.local.json to orientation path</div>
+            <div class="rec-path">ARCHITECTURE.md or CLAUDE.md</div>
+          </div>
+        </div>
+        <div class="rec-body">
+          Add a single line to the "First 5 Minutes" section of ARCHITECTURE.md: <em>"Telemetry and env var overrides: <code>.claude/settings.local.json</code>. Check this file first when diagnosing any observability issue."</em> This creates a canonical first-stop for telemetry debugging without requiring code spelunking.
+        </div>
+        <div class="rec-fixes"><strong>Fixes:</strong> WT-1 (would have directed agent to settings.local.json immediately)</div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══════════════ SUMMARY TABLE ══════════════ -->
+  <section id="summary-table">
+    <div class="section-label">Summary</div>
+    <h2>Wrong turns × recommended fixes</h2>
+    <div class="divider"></div>
+
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Wrong turn</th>
+          <th>Severity</th>
+          <th>Wasted calls</th>
+          <th>Fixed by</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>WT-1</td>
+          <td>Telemetry diagnosis — 8 code reads before checking settings.local.json</td>
+          <td><span class="badge badge-red">High</span></td>
+          <td>~8</td>
+          <td>telemetry-config.md + ARCHITECTURE.md note</td>
+        </tr>
+        <tr>
+          <td>WT-2</td>
+          <td>Explore agent silently blocked — no stderr from explore-guard.sh</td>
+          <td><span class="badge badge-red">High</span></td>
+          <td>1 agent + parallelism</td>
+          <td>explore-guard.sh stderr message</td>
+        </tr>
+        <tr>
+          <td>WT-3</td>
+          <td>runtime.ts read in 7 piecemeal chunks — no layout map available</td>
+          <td><span class="badge badge-amber">Medium</span></td>
+          <td>~4</td>
+          <td>ARCHITECTURE.md autoresearch section + docs/autoresearch.md</td>
+        </tr>
+        <tr>
+          <td>WT-4</td>
+          <td>bun:bundle feature flag deep dive — inconclusive, fix didn't need it</td>
+          <td><span class="badge badge-amber">Medium</span></td>
+          <td>~3</td>
+          <td>telemetry-config.md (reading config first prevents this entirely)</td>
+        </tr>
+        <tr>
+          <td>WT-5</td>
+          <td>Phantom "expect" skill demanded by hook on every QA prompt</td>
+          <td><span class="badge badge-amber">Medium</span></td>
+          <td>0 (overhead, not calls)</td>
+          <td>Register skill or fix hook condition</td>
+        </tr>
+        <tr>
+          <td>WT-6</td>
+          <td>Plan mode active when deck request arrived — extra round-trip</td>
+          <td><span class="badge badge-blue">Low</span></td>
+          <td>1</td>
+          <td>Workflow clarity (minor)</td>
+        </tr>
+        <tr>
+          <td>WT-7</td>
+          <td>Broad mutationSources grep matched unrelated files</td>
+          <td><span class="badge badge-blue">Low</span></td>
+          <td>noise only</td>
+          <td>Scoped grep pattern (agent behaviour)</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div style="margin-top:32px">
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div><strong>Two fixes that did land correctly:</strong> The dataset header mismatch (<code>cc-harness</code> → <code>cc-autoresearch</code>) and the missing <code>cycle_duration_ms</code> on autoresearch cycle events were both identified and fixed in the session. These were real bugs that the Honeycomb investigation surfaced.</div>
+      </div>
+      <div class="callout info">
+        <span class="callout-icon">💡</span>
+        <div><strong>Root cause of most wrong turns:</strong> WT-1, WT-3, and WT-4 all share the same underlying cause — the autoresearch subsystem has no entry in ARCHITECTURE.md and no dedicated system doc. Adding those two things would have saved the majority of the wasted tool calls in this session.</div>
+      </div>
+    </div>
+  </section>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,37 @@
+{
+  "version": "2026-04-15-seed",
+  "challengeCandidates": [
+    {
+      "id": "unsupported-claims",
+      "label": "Unsupported completion claims",
+      "expectedFailureTags": [
+        "unsupported_claims",
+        "ungrounded_done"
+      ]
+    },
+    {
+      "id": "verification-bypass",
+      "label": "Verification avoidance",
+      "expectedFailureTags": [
+        "verification_bypass",
+        "claimed_test_without_evidence"
+      ]
+    },
+    {
+      "id": "repo-orientation-drift",
+      "label": "Wrong-root or noisy discovery drift",
+      "expectedFailureTags": [
+        "wrong_root_orientation",
+        "unscoped_search_noise"
+      ]
+    },
+    {
+      "id": "artifact-false-positive",
+      "label": "Artifact completion false positive",
+      "expectedFailureTags": [
+        "artifact_claim_without_validation",
+        "report_not_checked"
+      ]
+    }
+  ]
+}

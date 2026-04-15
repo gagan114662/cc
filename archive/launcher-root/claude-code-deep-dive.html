@@ -1,0 +1,1354 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code — Technical Deep Dive</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --green-dim: #1a4a26;
+    --blue: #58a6ff;
+    --blue-dim: #1a3a5c;
+    --purple: #bc8cff;
+    --purple-dim: #2d1f4a;
+    --orange: #ffa657;
+    --orange-dim: #4a2c0a;
+    --red: #f85149;
+    --yellow: #e3b341;
+    --cyan: #39d353;
+    --accent: #238636;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    height: 100vh;
+    overflow: hidden;
+    user-select: none;
+  }
+
+  /* ── PROGRESS BAR ── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--green), var(--blue));
+    transition: width 0.4s ease;
+    z-index: 100;
+  }
+
+  /* ── SLIDE COUNTER ── */
+  #counter {
+    position: fixed;
+    bottom: 20px; right: 28px;
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    z-index: 100;
+    letter-spacing: 1px;
+  }
+
+  /* ── NAV ARROWS ── */
+  .nav-btn {
+    position: fixed;
+    bottom: 12px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+    z-index: 100;
+  }
+  .nav-btn:hover { color: var(--text); border-color: var(--green); }
+  #btn-prev { right: 120px; }
+  #btn-next { right: 72px; }
+
+  /* ── SLIDES CONTAINER ── */
+  #slides {
+    width: 100vw;
+    height: 100vh;
+    position: relative;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 48px 64px 80px;
+    display: none;
+    overflow-y: auto;
+    animation: fadeIn 0.35s ease;
+  }
+  .slide.active { display: flex; flex-direction: column; }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  /* ── TYPOGRAPHY ── */
+  .slide-label {
+    font-size: 11px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+
+  h1 {
+    font-size: 52px;
+    font-weight: 700;
+    line-height: 1.1;
+    letter-spacing: -1.5px;
+    margin-bottom: 16px;
+  }
+  h1 .dim { color: var(--muted); }
+  h1 .accent { color: var(--blue); }
+
+  h2 {
+    font-size: 34px;
+    font-weight: 700;
+    letter-spacing: -0.8px;
+    margin-bottom: 8px;
+  }
+
+  h3 {
+    font-size: 14px;
+    font-weight: 600;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 20px;
+  }
+
+  p { color: var(--muted); font-size: 15px; line-height: 1.6; }
+
+  .subtitle {
+    font-size: 18px;
+    color: var(--muted);
+    line-height: 1.5;
+    max-width: 620px;
+    margin-bottom: 40px;
+  }
+
+  /* ── DIVIDER ── */
+  .divider {
+    height: 1px;
+    background: var(--border);
+    margin: 32px 0;
+  }
+
+  /* ── PILLS / TAGS ── */
+  .tags { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 24px; }
+  .tag {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    border: 1px solid;
+  }
+  .tag-green  { background: var(--green-dim);  color: var(--green);  border-color: var(--green); }
+  .tag-blue   { background: var(--blue-dim);   color: var(--blue);   border-color: var(--blue); }
+  .tag-purple { background: var(--purple-dim); color: var(--purple); border-color: var(--purple); }
+  .tag-orange { background: var(--orange-dim); color: var(--orange); border-color: var(--orange); }
+  .tag-red    { background: #3a1010;           color: var(--red);    border-color: var(--red); }
+  .tag-yellow { background: #3a2a00;           color: var(--yellow); border-color: var(--yellow); }
+
+  /* ── STAT CARDS ── */
+  .stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 16px;
+    margin: 24px 0;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+  .stat-card .num {
+    font-size: 36px;
+    font-weight: 700;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    line-height: 1;
+  }
+  .stat-card .label { font-size: 12px; color: var(--muted); letter-spacing: 0.5px; }
+
+  /* ── 2-COL LAYOUT ── */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; margin-top: 24px; }
+  .three-col { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; margin-top: 24px; }
+
+  /* ── PANELS ── */
+  .panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 24px;
+  }
+  .panel h4 {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text);
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .panel h4 .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    display: inline-block;
+  }
+  .panel ul {
+    list-style: none;
+    display: flex;
+    flex-direction: column;
+    gap: 7px;
+  }
+  .panel ul li {
+    font-size: 13px;
+    color: var(--muted);
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    line-height: 1.4;
+  }
+  .panel ul li::before {
+    content: '—';
+    color: var(--border);
+    flex-shrink: 0;
+    margin-top: 1px;
+  }
+  .panel ul li span { color: var(--text); }
+
+  /* ── CODE BLOCKS ── */
+  .code-block {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 12.5px;
+    line-height: 1.65;
+    overflow-x: auto;
+    position: relative;
+  }
+  .code-block .lang-badge {
+    position: absolute;
+    top: 10px; right: 14px;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+  .kw  { color: #ff7b72; }   /* keywords */
+  .str { color: #a5d6ff; }   /* strings */
+  .fn  { color: #d2a8ff; }   /* functions */
+  .cm  { color: #8b949e; font-style: italic; } /* comments */
+  .ty  { color: #ffa657; }   /* types */
+  .nb  { color: #79c0ff; }   /* numbers / builtins */
+  .op  { color: #ff7b72; }   /* operators */
+  .prop{ color: #7ee787; }   /* properties */
+
+  /* ── FLOW DIAGRAM ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    margin: 24px 0;
+    flex-wrap: wrap;
+  }
+  .flow-node {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    text-align: center;
+    min-width: 90px;
+  }
+  .flow-arrow {
+    color: var(--border);
+    font-size: 18px;
+    padding: 0 4px;
+    flex-shrink: 0;
+  }
+
+  /* ── ARCH DIAGRAM ── */
+  .arch {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin: 20px 0;
+  }
+  .arch-layer {
+    border-radius: 8px;
+    padding: 10px 12px;
+    font-size: 11px;
+    font-weight: 600;
+    text-align: center;
+    border: 1px solid transparent;
+    line-height: 1.3;
+  }
+
+  /* ── BAR CHART ── */
+  .bar-chart { display: flex; flex-direction: column; gap: 10px; margin: 16px 0; }
+  .bar-row { display: flex; align-items: center; gap: 12px; }
+  .bar-label { font-size: 11px; color: var(--muted); width: 100px; text-align: right; font-family: 'SF Mono', monospace; flex-shrink: 0; }
+  .bar-track { flex: 1; height: 6px; background: var(--surface); border-radius: 4px; overflow: hidden; }
+  .bar-fill { height: 100%; border-radius: 4px; transition: width 0.6s ease; }
+  .bar-val { font-size: 11px; color: var(--muted); font-family: 'SF Mono', monospace; width: 60px; flex-shrink: 0; }
+
+  /* ── FEATURE LIST ── */
+  .feature-list { display: flex; flex-direction: column; gap: 10px; }
+  .feature-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+  }
+  .feature-icon { font-size: 16px; flex-shrink: 0; margin-top: 1px; }
+  .feature-text { font-size: 13px; color: var(--muted); line-height: 1.4; }
+  .feature-text strong { color: var(--text); font-weight: 600; }
+
+  /* ── HERO SLIDE ── */
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 48px;
+    align-items: start;
+    margin-top: 8px;
+  }
+  .terminal-preview {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    min-width: 320px;
+    color: var(--green);
+  }
+  .terminal-preview .prompt { color: var(--blue); }
+  .terminal-preview .output { color: var(--muted); }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+  th {
+    font-size: 11px;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 12px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+    font-weight: 600;
+  }
+  td {
+    padding: 9px 12px;
+    font-size: 13px;
+    color: var(--muted);
+    border-bottom: 1px solid #21262d;
+  }
+  td strong { color: var(--text); }
+  tr:hover td { background: var(--surface); }
+
+  /* ── CALLOUT ── */
+  .callout {
+    padding: 14px 18px;
+    border-radius: 8px;
+    border-left: 3px solid;
+    margin: 16px 0;
+    font-size: 13px;
+    line-height: 1.5;
+  }
+  .callout-green  { background: var(--green-dim);  border-color: var(--green);  color: #7ee787; }
+  .callout-blue   { background: var(--blue-dim);   border-color: var(--blue);   color: #79c0ff; }
+  .callout-purple { background: var(--purple-dim); border-color: var(--purple); color: var(--purple); }
+  .callout-orange { background: var(--orange-dim); border-color: var(--orange); color: var(--orange); }
+
+  /* ── MINI BADGE ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'SF Mono', monospace;
+    margin-left: 6px;
+    vertical-align: middle;
+  }
+  .badge-green  { background: var(--green-dim);  color: var(--green); }
+  .badge-blue   { background: var(--blue-dim);   color: var(--blue); }
+  .badge-purple { background: var(--purple-dim); color: var(--purple); }
+
+  /* ── SCROLLBAR ── */
+  .slide::-webkit-scrollbar { width: 4px; }
+  .slide::-webkit-scrollbar-track { background: transparent; }
+  .slide::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  /* ── KEYBOARD HINT ── */
+  #hint {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-size: 11px;
+    color: var(--muted);
+    font-family: 'SF Mono', monospace;
+    opacity: 0.6;
+  }
+
+  .inline-code {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    padding: 1px 6px;
+    border-radius: 4px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    color: var(--orange);
+  }
+</style>
+</head>
+<body>
+
+<div id="progress-bar"></div>
+<div id="counter">01 / 14</div>
+<button class="nav-btn" id="btn-prev">←</button>
+<button class="nav-btn" id="btn-next">→</button>
+<div id="hint">← → arrow keys to navigate</div>
+
+<div id="slides">
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 01 — HERO                                     -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide active" id="s1">
+  <div class="slide-label">Technical Deep Dive</div>
+  <div class="hero-grid">
+    <div>
+      <h1>Claude Code<br><span class="dim">Rebuilt</span></h1>
+      <p class="subtitle">A production-grade AI CLI — rebuilt from the ground up with a custom terminal renderer, 40+ tools, multi-agent orchestration, and full MCP integration.</p>
+      <div class="tags">
+        <span class="tag tag-green">TypeScript</span>
+        <span class="tag tag-blue">Bun 1.2</span>
+        <span class="tag tag-purple">React 18</span>
+        <span class="tag tag-orange">MCP</span>
+        <span class="tag tag-green">OpenTelemetry</span>
+        <span class="tag tag-blue">GrowthBook</span>
+        <span class="tag tag-purple">Zod</span>
+      </div>
+      <div class="stat-grid" style="grid-template-columns: repeat(3,1fr); margin-top: 36px;">
+        <div class="stat-card">
+          <span class="num" style="color:var(--green)">26K+</span>
+          <span class="label">TypeScript files</span>
+        </div>
+        <div class="stat-card">
+          <span class="num" style="color:var(--blue)">40+</span>
+          <span class="label">Tool implementations</span>
+        </div>
+        <div class="stat-card">
+          <span class="num" style="color:var(--purple)">60+</span>
+          <span class="label">Slash commands</span>
+        </div>
+      </div>
+    </div>
+    <div class="terminal-preview">
+      <div class="prompt">$ claude</div>
+      <div style="color:var(--blue)">✓ Claude Code v1.0.0</div>
+      <div class="output">  Ready · 40 tools · 12 MCP servers</div>
+      <br>
+      <div class="prompt">&gt; Write me a React component</div>
+      <div style="color:var(--yellow)">◆ Reading codebase...</div>
+      <div style="color:var(--purple)">◆ Spawning sub-agent...</div>
+      <div style="color:var(--green)">◆ Writing src/Button.tsx</div>
+      <br>
+      <div class="output">Done in 2.3s · 142 tokens</div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 02 — ARCHITECTURE OVERVIEW                    -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-label">Architecture</div>
+  <h2>System Architecture</h2>
+  <h3>7 distinct layers, strict separation of concerns</h3>
+
+  <div class="arch">
+    <div class="arch-layer" style="background:#0d2016;border-color:var(--green);color:var(--green)">Entry / CLI<br><small style="opacity:.7">4 binary modes</small></div>
+    <div class="arch-layer" style="background:#0d1a2e;border-color:var(--blue);color:var(--blue)">Query Engine<br><small style="opacity:.7">AI loop + retry</small></div>
+    <div class="arch-layer" style="background:#1e1232;border-color:var(--purple);color:var(--purple)">Tool System<br><small style="opacity:.7">40 tools</small></div>
+    <div class="arch-layer" style="background:#1e1700;border-color:var(--yellow);color:var(--yellow)">Command System<br><small style="opacity:.7">60+ commands</small></div>
+    <div class="arch-layer" style="background:#1e0a00;border-color:var(--orange);color:var(--orange)">Services<br><small style="opacity:.7">10+ background</small></div>
+
+    <div class="arch-layer" style="background:#021209;border-color:#2ea043;color:#2ea043;grid-column:span 2">Custom Ink Renderer<br><small style="opacity:.7">React → terminal, frame diffing, Yoga layout, Unicode BiDi</small></div>
+    <div class="arch-layer" style="background:#0a0f1e;border-color:#388bfd;color:#388bfd;grid-column:span 3">State Management / Coordinator / MCP / Plugins / Skills<br><small style="opacity:.7">Zustand-style store · Multi-agent orchestration · Full MCP transport stack</small></div>
+  </div>
+
+  <div class="two-col" style="margin-top:16px">
+    <div>
+      <div class="callout callout-green">
+        <strong>Build-time dead-code elimination</strong> via <code>feature('FLAG')</code> using <code>bun:bundle</code> — entire subsystems (coordinator, KAIROS, voice) are stripped for external builds.
+      </div>
+      <div class="callout callout-blue" style="margin-top:12px">
+        <strong>Parallel startup</strong> — MDM config + keychain reads fire concurrently with heavy module imports, saving ~130ms on every macOS launch.
+      </div>
+    </div>
+    <div class="panel">
+      <h4><span class="dot" style="background:var(--orange)"></span>Key Files</h4>
+      <ul>
+        <li><span>main.tsx</span> — 4,696 lines, startup orchestration</li>
+        <li><span>QueryEngine.ts</span> — 1,305 lines, conversation loop</li>
+        <li><span>query.ts</span> — 1,740 lines, raw API + streaming</li>
+        <li><span>Tool.ts</span> — 792 lines, tool interface</li>
+        <li><span>commands.ts</span> — 756 lines, command registry</li>
+      </ul>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 03 — STARTUP FLOW                             -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-label">Entry Point</div>
+  <h2>Startup Flow</h2>
+  <h3>entrypoints/cli.tsx → main.tsx (4,696 lines)</h3>
+
+  <div class="flow" style="margin:20px 0">
+    <div class="flow-node" style="border-color:var(--green);color:var(--green)">cli.tsx</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:var(--blue);color:var(--blue)">Fast paths</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:var(--purple);color:var(--purple)">Parallel init</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:var(--orange);color:var(--orange)">Sequential init</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:var(--yellow);color:var(--yellow)">App render</div>
+    <div class="flow-arrow">→</div>
+    <div class="flow-node" style="border-color:var(--green);color:var(--green)">REPL loop</div>
+  </div>
+
+  <div class="two-col">
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--blue)"></span>Fast Paths (zero-cost)</h4>
+        <ul>
+          <li><span>--version</span> — no module loading</li>
+          <li><span>--dump-system-prompt</span> — internal ant-only</li>
+          <li><span>--claude-in-chrome-mcp</span> — Chrome extension mode</li>
+          <li><span>--chrome-native-host</span> — Native messaging</li>
+          <li><span>--computer-use-mcp</span> — Computer control mode</li>
+        </ul>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h4><span class="dot" style="background:var(--green)"></span>Parallel Phase (saves ~130ms)</h4>
+        <ul>
+          <li><span>startMdmRawRead()</span> — MDM config (macOS)</li>
+          <li><span>startKeychainPrefetch()</span> — OAuth + API keys</li>
+          <li><span>profileCheckpoint()</span> — startup profiling</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--orange)"></span>Sequential Phase</h4>
+        <ul>
+          <li><span>GrowthBook init</span> — feature flags + A/B</li>
+          <li><span>OpenTelemetry init</span> — observability</li>
+          <li><span>MCP registry prefetch</span> — official server list</li>
+          <li><span>Trust dialog check</span> — permission onboarding</li>
+          <li><span>Plugin bundling</span> — ~/.claude/plugins/</li>
+          <li><span>Skill bundling</span> — ~/.claude/skills/</li>
+          <li><span>MCP tool assembly</span> — client connections</li>
+        </ul>
+      </div>
+      <div class="callout callout-purple" style="margin-top:16px">
+        <strong>Feature flags at build time:</strong> COORDINATOR_MODE, KAIROS, TRANSCRIPT_CLASSIFIER, AGENT_TRIGGERS are resolved via <code>feature('FLAG')</code> — zero runtime cost.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 04 — QUERY ENGINE                             -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-label">AI Loop</div>
+  <h2>Query Engine</h2>
+  <h3>QueryEngine.ts (1,305 lines) · query.ts (1,740 lines)</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="code-block">
+        <span class="lang-badge">TypeScript</span>
+<span class="cm">// QueryEngine — core conversation loop</span>
+<span class="kw">class</span> <span class="ty">QueryEngine</span> {
+  <span class="fn">async</span> <span class="fn">run</span>(
+    messages: <span class="ty">Message</span>[],
+    tools:    <span class="ty">Tool</span>[],
+    opts:     <span class="ty">QueryOptions</span>
+  ): <span class="ty">AsyncGenerator</span>&lt;<span class="ty">AssistantEvent</span>&gt; {
+
+    <span class="cm">// Streaming API call</span>
+    <span class="kw">const</span> stream = <span class="kw">await</span> <span class="fn">query</span>(messages, tools)
+
+    <span class="cm">// Process tool_use blocks</span>
+    <span class="kw">for await</span> (<span class="kw">const</span> event <span class="kw">of</span> stream) {
+      <span class="kw">if</span> (event.type === <span class="str">'tool_use'</span>) {
+        <span class="kw">yield await</span> <span class="fn">executeTool</span>(event)
+      }
+    }
+
+    <span class="cm">// Retry w/ exponential backoff</span>
+    <span class="cm">// Cost tracking per request</span>
+    <span class="cm">// Auto-compact on context overflow</span>
+  }
+}
+      </div>
+
+      <div class="callout callout-blue" style="margin-top:16px">
+        <strong>Multi-model routing</strong> — Claude API, Amazon Bedrock, Google Vertex AI, and Azure Foundry all resolve through a unified <code>api/</code> service layer.
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--green)"></span>QueryEngine Responsibilities</h4>
+        <ul>
+          <li><span>Streaming response parsing</span> — SSE → events</li>
+          <li><span>Tool use orchestration</span> — parallel execution</li>
+          <li><span>Retry logic</span> — exponential backoff on rate limits</li>
+          <li><span>Cost tracking</span> — per-request token accounting</li>
+          <li><span>Context management</span> — triggers compaction</li>
+          <li><span>Permission checks</span> — before each tool call</li>
+          <li><span>Progress callbacks</span> — live streaming to UI</li>
+        </ul>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h4><span class="dot" style="background:var(--purple)"></span>Supported Providers</h4>
+        <ul>
+          <li><span>Anthropic API</span> — primary, claude-sonnet/haiku/opus</li>
+          <li><span>Amazon Bedrock</span> — enterprise AWS routing</li>
+          <li><span>Google Vertex AI</span> — GCP integration</li>
+          <li><span>Azure Foundry</span> — Microsoft enterprise</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 05 — TOOLS SYSTEM                             -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-label">Tools</div>
+  <h2>Tool System</h2>
+  <h3>40+ implementations · 192 files · Tool.ts (792 lines)</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="code-block">
+        <span class="lang-badge">TypeScript</span>
+<span class="kw">type</span> <span class="ty">Tool</span> = {
+  <span class="prop">name</span>:        <span class="ty">string</span>
+  <span class="prop">inputSchema</span>: <span class="ty">ZodType</span>
+
+  <span class="fn">call</span>(args, ctx, canUse,
+       parentMsg, onProgress):
+    <span class="ty">Promise</span>&lt;<span class="ty">ToolResult</span>&gt;
+
+  <span class="fn">checkPermissions</span>(input, ctx):
+    <span class="ty">Promise</span>&lt;<span class="ty">PermissionResult</span>&gt;
+
+  <span class="fn">description</span>(input, opts):
+    <span class="ty">Promise</span>&lt;<span class="ty">string</span>&gt;
+
+  <span class="fn">isConcurrencySafe</span>(): <span class="ty">boolean</span>
+  <span class="fn">isReadOnly</span>():        <span class="ty">boolean</span>
+  <span class="fn">isDestructive</span>():     <span class="ty">boolean</span>
+
+  <span class="cm">// 20+ optional display methods</span>
+  renderToolUseMessage?()
+  renderToolResultMessage?()
+  renderToolUseProgressMessage?()
+}
+      </div>
+    </div>
+    <div>
+      <div class="three-col" style="margin-top:0">
+        <div class="panel">
+          <h4><span class="dot" style="background:var(--green)"></span>File I/O</h4>
+          <ul>
+            <li>FileRead</li>
+            <li>FileWrite</li>
+            <li>FileEdit</li>
+            <li>Glob</li>
+            <li>Grep</li>
+            <li>LS</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4><span class="dot" style="background:var(--blue)"></span>Execution</h4>
+          <ul>
+            <li>BashTool</li>
+            <li>REPLTool</li>
+            <li>AgentTool</li>
+            <li>SkillTool</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4><span class="dot" style="background:var(--purple)"></span>Web</h4>
+          <ul>
+            <li>WebSearch</li>
+            <li>WebFetch</li>
+            <li>ToolSearch</li>
+          </ul>
+        </div>
+      </div>
+      <div class="three-col" style="margin-top:12px">
+        <div class="panel">
+          <h4><span class="dot" style="background:var(--orange)"></span>Tasks</h4>
+          <ul>
+            <li>TaskCreate</li>
+            <li>TaskGet</li>
+            <li>TaskUpdate</li>
+            <li>TaskList</li>
+            <li>TaskStop</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4><span class="dot" style="background:var(--yellow)"></span>Planning</h4>
+          <ul>
+            <li>EnterPlanMode</li>
+            <li>ExitPlanMode</li>
+            <li>CronCreate</li>
+            <li>CronDelete</li>
+            <li>CronList</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4><span class="dot" style="background:var(--red)"></span>MCP</h4>
+          <ul>
+            <li>MCPTool (wrapper)</li>
+            <li>MCPResourceTool</li>
+            <li>SendMessage</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 06 — COMMANDS                                 -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-label">Commands</div>
+  <h2>Slash Command System</h2>
+  <h3>60+ commands · commands.ts (756 lines)</h3>
+
+  <div class="two-col">
+    <div>
+      <table>
+        <thead>
+          <tr>
+            <th>Category</th>
+            <th>Commands</th>
+            <th>Description</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Git</strong></td><td><span class="inline-code">/branch /commit /diff /pr</span></td><td>Git workflow automation</td></tr>
+          <tr><td><strong>Agents</strong></td><td><span class="inline-code">/agents /coordinator</span></td><td>Multi-agent management</td></tr>
+          <tr><td><strong>Planning</strong></td><td><span class="inline-code">/plan /ultraplan</span></td><td>Model-driven planning</td></tr>
+          <tr><td><strong>Tasks</strong></td><td><span class="inline-code">/tasks /worktree /workflow</span></td><td>Task + worktree mgmt</td></tr>
+          <tr><td><strong>MCP</strong></td><td><span class="inline-code">/mcp-add /mcp-config</span></td><td>MCP server management</td></tr>
+          <tr><td><strong>Memory</strong></td><td><span class="inline-code">/memory /context /session</span></td><td>Context + memory ops</td></tr>
+          <tr><td><strong>Settings</strong></td><td><span class="inline-code">/model /theme /vim /voice</span></td><td>User preferences</td></tr>
+          <tr><td><strong>System</strong></td><td><span class="inline-code">/compact /hooks /plugins</span></td><td>System operations</td></tr>
+          <tr><td><strong>Skills</strong></td><td><span class="inline-code">/skills /&lt;skill-name&gt;</span></td><td>Skill invocation</td></tr>
+          <tr><td><strong>Debug</strong></td><td><span class="inline-code">/bughunter /perf-issue</span></td><td>Debugging tools</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--blue)"></span>Command Interface</h4>
+        <ul>
+          <li><span>Slash prefix</span> — invoked as /command-name</li>
+          <li><span>Aliases</span> — backward-compatible short forms</li>
+          <li><span>Permission checks</span> — per-command auth</li>
+          <li><span>JSX rendering</span> — rich UI for some commands</li>
+          <li><span>Auto-complete</span> — fuzzy suggestions</li>
+          <li><span>Args parsing</span> — typed via commander</li>
+        </ul>
+      </div>
+      <div class="callout callout-purple" style="margin-top:16px">
+        <strong>/ultraplan</strong> — model-driven planning that spawns a dedicated planning sub-agent to decompose complex tasks into structured implementation plans.
+      </div>
+      <div class="callout callout-orange" style="margin-top:12px">
+        <strong>/compact</strong> — triggers LLM-based context summarization (SNIP + microcompact) when the conversation approaches context limits.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 07 — CUSTOM INK RENDERER                      -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-label">UI Layer</div>
+  <h2>Custom Ink Terminal Renderer</h2>
+  <h3>Not upstream Ink — a ground-up React→terminal pipeline</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="flow" style="flex-direction:column;align-items:flex-start;gap:4px;margin:0">
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="flow-node" style="border-color:var(--purple);color:var(--purple);min-width:160px">React 18 JSX</div>
+          <span style="color:var(--muted);font-size:12px">Components + hooks</span>
+        </div>
+        <div style="color:var(--border);padding-left:76px;font-size:18px">↓</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="flow-node" style="border-color:var(--blue);color:var(--blue);min-width:160px">reconciler.ts</div>
+          <span style="color:var(--muted);font-size:12px">React Fiber → virtual DOM</span>
+        </div>
+        <div style="color:var(--border);padding-left:76px;font-size:18px">↓</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="flow-node" style="border-color:var(--green);color:var(--green);min-width:160px">layout/engine.ts</div>
+          <span style="color:var(--muted);font-size:12px">Yoga flexbox layout</span>
+        </div>
+        <div style="color:var(--border);padding-left:76px;font-size:18px">↓</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="flow-node" style="border-color:var(--orange);color:var(--orange);min-width:160px">screen.ts</div>
+          <span style="color:var(--muted);font-size:12px">Cell-based frame buffer</span>
+        </div>
+        <div style="color:var(--border);padding-left:76px;font-size:18px">↓</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="flow-node" style="border-color:var(--yellow);color:var(--yellow);min-width:160px">render-to-screen.ts</div>
+          <span style="color:var(--muted);font-size:12px">Frame diffing → minimal writes</span>
+        </div>
+        <div style="color:var(--border);padding-left:76px;font-size:18px">↓</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="flow-node" style="border-color:var(--green);color:var(--green);min-width:160px">output.ts</div>
+          <span style="color:var(--muted);font-size:12px">ANSI escape sequences</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-text"><strong>Frame Diffing</strong> — only writes changed cells to stdout. ~60 FPS with minimal terminal I/O.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🌐</div>
+          <div class="feature-text"><strong>Unicode BiDi</strong> (<code class="inline-code">bidi.ts</code>) — full right-to-left text handling for Arabic/Hebrew.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📐</div>
+          <div class="feature-text"><strong>Yoga Layout</strong> — flexbox-compatible layout engine with caching for unchanged nodes.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔍</div>
+          <div class="feature-text"><strong>Search Overlay</strong> (<code class="inline-code">searchHighlight.ts</code>) — real-time highlight layer composited over the frame buffer.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🖱️</div>
+          <div class="feature-text"><strong>Click + Hover</strong> (<code class="inline-code">hit-test.ts</code>) — coordinate mapping from terminal input events to React elements.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔗</div>
+          <div class="feature-text"><strong>Hyperlink support</strong> — OSC 8 escape sequences for clickable links in compatible terminals.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 08 — VIM MODE                                 -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-label">Editor</div>
+  <h2>Vim Mode Engine</h2>
+  <h3>Full modal editor inside the terminal UI — vim/ directory</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--green)"></span>Modes</h4>
+        <ul>
+          <li><span>Normal</span> — motion + operator mode</li>
+          <li><span>Insert</span> — character entry</li>
+          <li><span>Visual / Visual-Line</span> — selection modes</li>
+          <li><span>Replace</span> — overwrite mode</li>
+          <li><span>Command</span> — : command mode</li>
+        </ul>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h4><span class="dot" style="background:var(--blue)"></span>Motions & Operators</h4>
+        <ul>
+          <li><span>w, b, e, ge</span> — word motions</li>
+          <li><span>f, F, t, T</span> — character find</li>
+          <li><span>{ }, ( )</span> — paragraph/sentence</li>
+          <li><span>d, c, y, p</span> — operators</li>
+          <li><span>Text objects</span> — iw, aw, i", a(</li>
+          <li><span>Counts</span> — 3dw, 5j, 2f</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="callout callout-green">
+        The vim engine is implemented as a pure state machine — current mode, pending operator, motion count, and register are all tracked immutably. No mutable cursor state.
+      </div>
+      <div class="code-block" style="margin-top:16px">
+        <span class="lang-badge">TypeScript</span>
+<span class="kw">type</span> <span class="ty">VimState</span> = {
+  <span class="prop">mode</span>:     <span class="ty">VimMode</span>
+  <span class="prop">operator</span>: <span class="ty">Operator</span> | <span class="ty">null</span>
+  <span class="prop">count</span>:    <span class="ty">number</span>
+  <span class="prop">register</span>: <span class="ty">string</span>
+  <span class="prop">marks</span>:    <span class="ty">Map</span>&lt;<span class="ty">string</span>, <span class="ty">Position</span>&gt;
+}
+
+<span class="fn">function</span> <span class="fn">handleKey</span>(
+  state: <span class="ty">VimState</span>,
+  key: <span class="ty">KeyEvent</span>
+): <span class="ty">VimState</span> {
+  <span class="cm">// Pure reducer — no side effects</span>
+}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 09 — MULTI-AGENT COORDINATION                 -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="slide-label">Multi-Agent</div>
+  <h2>Multi-Agent Coordination</h2>
+  <h3>coordinator/ · Feature-flagged · Production-ready orchestration</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="callout callout-green" style="margin-bottom:16px">
+        <strong>Pattern:</strong> A coordinator Claude instance orchestrates multiple worker Claude instances via the AgentTool. Workers receive a filtered tool subset and share a scratchpad directory.
+      </div>
+
+      <div class="code-block">
+        <span class="lang-badge">TypeScript</span>
+<span class="cm">// Task type prefixes</span>
+<span class="kw">type</span> <span class="ty">TaskType</span> =
+  | <span class="str">'b'</span> <span class="cm">// local_bash</span>
+  | <span class="str">'a'</span> <span class="cm">// local_agent</span>
+  | <span class="str">'r'</span> <span class="cm">// remote_agent</span>
+  | <span class="str">'t'</span> <span class="cm">// in_process_teammate</span>
+  | <span class="str">'w'</span> <span class="cm">// local_workflow</span>
+  | <span class="str">'m'</span> <span class="cm">// monitor_mcp</span>
+  | <span class="str">'d'</span> <span class="cm">// dream</span>
+
+<span class="cm">// Task ID: 8-char base-36 random</span>
+<span class="cm">// 36⁸ ≈ 2.8 trillion unique IDs</span>
+<span class="kw">const</span> taskId = prefix +
+  <span class="fn">nanoid</span>(<span class="nb">8</span>, BASE36)
+      </div>
+    </div>
+    <div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">🧠</div>
+          <div class="feature-text"><strong>Coordinator System Prompt</strong> — injected directives for task delegation, worker monitoring, and result aggregation.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔧</div>
+          <div class="feature-text"><strong>Filtered Worker Tools</strong> — workers only receive: Bash, FileRead/Write/Edit, Glob, Grep + MCP tools. No recursive agent spawning.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📂</div>
+          <div class="feature-text"><strong>Scratchpad</strong> — shared directory (<code class="inline-code">tengu_scratch</code> feature) for durable cross-worker knowledge transfer.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📨</div>
+          <div class="feature-text"><strong>Task Notifications</strong> — worker results returned as <code class="inline-code">&lt;task-notification&gt;</code> XML blocks in the coordinator's context.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🎨</div>
+          <div class="feature-text"><strong>Color Management</strong> — each worker agent gets a unique terminal color for output disambiguation.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 10 — MCP INTEGRATION                          -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div class="slide-label">MCP</div>
+  <h2>Model Context Protocol</h2>
+  <h3>services/mcp/ · Full transport abstraction · Enterprise-grade</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--blue)"></span>Transport Layers</h4>
+        <ul>
+          <li><span>StdioClientTransport</span> — local processes</li>
+          <li><span>SSEClientTransport</span> — HTTP Server-Sent Events</li>
+          <li><span>StreamableHTTPClientTransport</span> — streaming HTTP</li>
+          <li><span>WebSocketTransport</span> — custom, for remote sessions</li>
+          <li><span>Proxy support</span> — HTTPS + WebSocket agents</li>
+          <li><span>TLS / mTLS</span> — secure enterprise connections</li>
+        </ul>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h4><span class="dot" style="background:var(--green)"></span>MCP Tool Wrapping</h4>
+        <ul>
+          <li><span>MCPTool base template</span> — uniform interface</li>
+          <li><span>Permission checking</span> — deny rules + custom logic</li>
+          <li><span>Result persistence</span> — large outputs → temp files</li>
+          <li><span>Content truncation</span> — safe size limits</li>
+          <li><span>Image downsampling</span> — resize before sending</li>
+          <li><span>Error handling + retry</span> — resilient execution</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--purple)"></span>MCP Configuration Sources</h4>
+        <ul>
+          <li><span>Official registry</span> — prefetched on startup</li>
+          <li><span>Claude.ai integration</span> — if account eligible</li>
+          <li><span>Enterprise config</span> — dedup + policy filter</li>
+          <li><span>Remote-managed policy</span> — backend-pushed rules</li>
+          <li><span>OAuth token refresh</span> — automatic re-auth</li>
+        </ul>
+      </div>
+      <div class="callout callout-blue" style="margin-top:16px">
+        <strong>Elicitation support</strong> — MCP servers can request additional information from the user during tool execution via the elicitation hooks mechanism.
+      </div>
+      <div class="callout callout-orange" style="margin-top:12px">
+        <strong>Token estimation</strong> — MCP tool results are estimated before insertion to prevent context overflow. Large results are persisted to disk with a reference pointer.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 11 — STATE MANAGEMENT                         -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div class="slide-label">State</div>
+  <h2>State Management</h2>
+  <h3>Zustand-style immutable store · state/ directory</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="code-block">
+        <span class="lang-badge">TypeScript</span>
+<span class="cm">// AppState shape (abbreviated)</span>
+<span class="kw">type</span> <span class="ty">AppState</span> = {
+  <span class="prop">messages</span>:    <span class="ty">Message</span>[]
+  <span class="prop">tasks</span>:       <span class="ty">Record</span>&lt;<span class="ty">string</span>, <span class="ty">Task</span>&gt;
+  <span class="prop">settings</span>:    <span class="ty">UserSettings</span>
+  <span class="prop">permissions</span>: <span class="ty">PermissionContext</span>
+  <span class="prop">mcpTools</span>:    <span class="ty">Tool</span>[]
+  <span class="prop">mcpClients</span>:  <span class="ty">MCPClient</span>[]
+  <span class="prop">session</span>:     <span class="ty">SessionMeta</span>
+}
+
+<span class="cm">// Reducer pattern — no mutations</span>
+<span class="fn">setAppState</span>(prev => ({
+  ...prev,
+  tasks: {
+    ...prev.tasks,
+    [id]: updatedTask
+  }
+}))
+
+<span class="cm">// Memoized selectors prevent re-renders</span>
+<span class="kw">const</span> activeTasks = <span class="fn">useMemo</span>(() =>
+  <span class="fn">selectActiveTasks</span>(state), [state])
+      </div>
+    </div>
+    <div>
+      <div class="feature-list">
+        <div class="feature-item">
+          <div class="feature-icon">🔒</div>
+          <div class="feature-text"><strong>Immutable Updates</strong> — all state changes via spread operators. No direct mutations. Enables undo + time-travel debugging.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">📡</div>
+          <div class="feature-text"><strong>Observer Pattern</strong> (<code class="inline-code">store.ts</code>) — multiple listeners subscribe to state changes: UI, side-effect bus, persistence layer.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">⚡</div>
+          <div class="feature-text"><strong>Memoized Selectors</strong> — derived state is computed only when dependencies change, preventing unnecessary React re-renders.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">🔄</div>
+          <div class="feature-text"><strong>Side Effect Bus</strong> (<code class="inline-code">onChangeAppState.ts</code>) — settings sync, memory extraction, and session persistence triggered reactively.</div>
+        </div>
+        <div class="feature-item">
+          <div class="feature-icon">💾</div>
+          <div class="feature-text"><strong>Session Persistence</strong> — conversation history serialized to <code class="inline-code">~/.claude/projects/</code> for cross-session resume.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 12 — SERVICES                                 -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s12">
+  <div class="slide-label">Services</div>
+  <h2>Background Services</h2>
+  <h3>10+ services · Always-on infrastructure</h3>
+
+  <div class="three-col">
+    <div class="panel">
+      <h4><span class="dot" style="background:var(--green)"></span>AI / Context</h4>
+      <ul>
+        <li><span>Compact</span> — LLM-based summarization (SNIP + microcompact)</li>
+        <li><span>ExtractMemories</span> — auto-extract to CLAUDE.md</li>
+        <li><span>AgentSummary</span> — per-agent summaries</li>
+        <li><span>SessionMemory</span> — context attachment</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h4><span class="dot" style="background:var(--blue)"></span>Infrastructure</h4>
+      <ul>
+        <li><span>OAuth</span> — PKCE flow auth</li>
+        <li><span>API</span> — multi-provider routing</li>
+        <li><span>MCP registry</span> — client + server mgmt</li>
+        <li><span>LSP</span> — Language Server Protocol</li>
+      </ul>
+    </div>
+    <div class="panel">
+      <h4><span class="dot" style="background:var(--purple)"></span>Policy / UX</h4>
+      <ul>
+        <li><span>PolicyLimits</span> — remote usage caps</li>
+        <li><span>RemoteSettings</span> — backend-pushed config</li>
+        <li><span>Voice</span> — STT + TTS integration</li>
+        <li><span>Analytics</span> — GrowthBook + OTel</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="two-col" style="margin-top:16px">
+    <div>
+      <div class="callout callout-green">
+        <strong>Auto-compact</strong> — when a conversation approaches context limits, the Compact service summarizes older turns using a secondary LLM call, preserving key information while freeing token budget.
+      </div>
+    </div>
+    <div>
+      <div class="callout callout-blue">
+        <strong>ExtractMemories</strong> — automatically surfaces important decisions, patterns, and learnings from conversations and writes them to <code>CLAUDE.md</code> for future sessions.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 13 — PLUGINS & SKILLS                         -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s13">
+  <div class="slide-label">Extensibility</div>
+  <h2>Plugins & Skills System</h2>
+  <h3>~30 built-in skills · Unlimited user extensions</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--green)"></span>Skills (<code>~/.claude/skills/</code>)</h4>
+        <ul>
+          <li><span>~30 bundled skills</span> — shipped with the binary</li>
+          <li><span>User skills</span> — markdown files in ~/.claude/skills/</li>
+          <li><span>MCP-generated skills</span> — auto-generated from MCP tools</li>
+          <li><span>Invoked via /skill-name</span> — or SkillTool</li>
+          <li><span>Discovery via ToolSearch</span> — fuzzy search</li>
+          <li><span>Executed as subprocesses</span> — isolation</li>
+        </ul>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h4><span class="dot" style="background:var(--blue)"></span>Plugins (<code>~/.claude/plugins/</code>)</h4>
+        <ul>
+          <li><span>Scoped</span> — project / user / global</li>
+          <li><span>Versioned</span> — multiple versions side-by-side</li>
+          <li><span>Remote-managed</span> — auto-update from backend</li>
+          <li><span>Install/remove</span> — via /plugins command</li>
+          <li><span>Bundled at startup</span> — compiled into tool pool</li>
+        </ul>
+      </div>
+    </div>
+    <div>
+      <div class="callout callout-purple">
+        <strong>Skill format</strong> — skills are markdown files with YAML frontmatter defining name, description, and trigger conditions. Claude reads the skill content and follows it as instructions.
+      </div>
+      <div class="code-block" style="margin-top:16px">
+        <span class="lang-badge">Markdown</span>
+<span class="cm">---</span>
+<span class="prop">name</span>: <span class="str">my-skill</span>
+<span class="prop">description</span>: <span class="str">What this skill does</span>
+<span class="prop">triggers</span>:
+  - <span class="str">when user asks about X</span>
+  - <span class="str">before doing Y</span>
+<span class="cm">---</span>
+
+<span class="cm"># Skill instructions here</span>
+Step 1: Do this...
+Step 2: Then do that...
+      </div>
+      <div class="callout callout-orange" style="margin-top:12px">
+        <strong>ToolSearch</strong> — a dedicated tool that fuzzy-searches available skills and returns their schemas, enabling Claude to discover and invoke skills it wasn't pre-loaded with.
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════════════ -->
+<!-- SLIDE 14 — BUILD, OBSERVABILITY & KEY METRICS       -->
+<!-- ════════════════════════════════════════════════════ -->
+<div class="slide" id="s14">
+  <div class="slide-label">Infrastructure</div>
+  <h2>Build Pipeline & Observability</h2>
+  <h3>Single ESM bundle · 14 OpenTelemetry packages · GrowthBook A/B</h3>
+
+  <div class="two-col">
+    <div>
+      <div class="code-block">
+        <span class="lang-badge">Shell</span>
+<span class="cm"># Build command</span>
+bun build ./entrypoints/cli.tsx \
+  --outfile dist/cli.js \
+  --target bun \
+  --format esm \
+  --define VERSION=<span class="str">"1.0.0"</span> \
+  --define BUILD_TIME=<span class="nb">$NOW</span> \
+  --external <span class="str">"*.node"</span>  <span class="cm"># native bindings</span>
+
+<span class="cm"># Feature flags resolved at build time</span>
+<span class="cm"># → zero-cost dead-code elimination</span>
+<span class="cm"># feature('COORDINATOR_MODE') → false</span>
+<span class="cm"># strips entire coordinator subsystem</span>
+      </div>
+
+      <div class="stat-grid" style="margin-top:16px">
+        <div class="stat-card">
+          <span class="num" style="color:var(--green);font-size:28px">26K+</span>
+          <span class="label">TS files</span>
+        </div>
+        <div class="stat-card">
+          <span class="num" style="color:var(--blue);font-size:28px">4,696</span>
+          <span class="label">main.tsx lines</span>
+        </div>
+        <div class="stat-card">
+          <span class="num" style="color:var(--purple);font-size:28px">14</span>
+          <span class="label">OTel packages</span>
+        </div>
+        <div class="stat-card">
+          <span class="num" style="color:var(--orange);font-size:28px">1 ESM</span>
+          <span class="label">output bundle</span>
+        </div>
+      </div>
+    </div>
+    <div>
+      <div class="panel">
+        <h4><span class="dot" style="background:var(--green)"></span>Observability Stack</h4>
+        <ul>
+          <li><span>@opentelemetry/api</span> — core tracing API</li>
+          <li><span>@opentelemetry/sdk-node</span> — SDK setup</li>
+          <li><span>@opentelemetry/sdk-trace-*</span> — span management</li>
+          <li><span>@opentelemetry/exporter-otlp-*</span> — data export</li>
+          <li><span>@opentelemetry/instrumentation-*</span> — auto-instrument</li>
+          <li><span>GrowthBook</span> — feature flags + A/B gating</li>
+        </ul>
+      </div>
+      <div class="panel" style="margin-top:16px">
+        <h4><span class="dot" style="background:var(--blue)"></span>Dependency Highlights</h4>
+        <ul>
+          <li><span>@anthropic-ai/sdk ^0.63.0</span> — Claude API</li>
+          <li><span>@modelcontextprotocol/sdk ^1.20.0</span> — MCP</li>
+          <li><span>commander ^14.0.0</span> — CLI arg parsing</li>
+          <li><span>zod</span> — schema validation everywhere</li>
+          <li><span>@aws-sdk/* + azure-identity</span> — cloud auth</li>
+          <li><span>claude-agent-sdk</span> — agent primitives</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- /slides -->
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let current = 0;
+
+  const counter = document.getElementById('counter');
+  const progressBar = document.getElementById('progress-bar');
+
+  function pad(n) { return String(n).padStart(2, '0'); }
+
+  function goTo(idx) {
+    slides[current].classList.remove('active');
+    current = (idx + total) % total;
+    slides[current].classList.add('active');
+    // Scroll new slide to top
+    slides[current].scrollTop = 0;
+    counter.textContent = `${pad(current + 1)} / ${pad(total)}`;
+    progressBar.style.width = `${((current + 1) / total) * 100}%`;
+  }
+
+  document.getElementById('btn-prev').addEventListener('click', () => goTo(current - 1));
+  document.getElementById('btn-next').addEventListener('click', () => goTo(current + 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') {
+      e.preventDefault(); goTo(current + 1);
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault(); goTo(current - 1);
+    } else if (e.key === 'Home') {
+      goTo(0);
+    } else if (e.key === 'End') {
+      goTo(total - 1);
+    }
+  });
+
+  // init
+  goTo(0);
+</script>
+</body>
+</html>

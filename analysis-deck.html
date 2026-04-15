@@ -1,0 +1,1445 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Claude Code — Technical Deep Dive</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --bg2: #161b22;
+    --bg3: #21262d;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --accent: #f78166;
+    --blue: #58a6ff;
+    --green: #3fb950;
+    --yellow: #e3b341;
+    --purple: #bc8cff;
+    --orange: #f0883e;
+    --teal: #39d353;
+    --code-bg: #0d1117;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+
+  /* SLIDES */
+  #deck { width: 100%; height: 100vh; position: relative; }
+  .slide {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    padding: 48px 64px;
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease;
+    overflow: hidden;
+  }
+  .slide.active { opacity: 1; pointer-events: all; }
+
+  /* HEADER */
+  .slide-header { display: flex; align-items: baseline; gap: 16px; margin-bottom: 36px; flex-shrink: 0; }
+  .slide-num { font-size: 11px; font-weight: 600; letter-spacing: 2px; color: var(--muted); text-transform: uppercase; }
+  .slide-tag { font-size: 11px; font-weight: 600; letter-spacing: 1.5px; color: var(--accent); text-transform: uppercase; background: rgba(247,129,102,0.1); padding: 2px 8px; border-radius: 4px; border: 1px solid rgba(247,129,102,0.3); }
+  h1 { font-size: 42px; font-weight: 700; line-height: 1.1; color: var(--text); }
+  h2 { font-size: 28px; font-weight: 700; color: var(--text); margin-bottom: 20px; }
+  h3 { font-size: 17px; font-weight: 600; color: var(--blue); margin-bottom: 10px; }
+  .subtitle { font-size: 18px; color: var(--muted); margin-top: 8px; line-height: 1.5; }
+
+  /* LAYOUT HELPERS */
+  .content { flex: 1; overflow: hidden; display: flex; flex-direction: column; }
+  .cols { display: grid; gap: 28px; flex: 1; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+  .cols-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .cols-60-40 { grid-template-columns: 60fr 40fr; }
+  .cols-40-60 { grid-template-columns: 40fr 60fr; }
+
+  /* CARDS */
+  .card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px 24px;
+  }
+  .card-sm { padding: 14px 18px; }
+  .card-accent { border-color: rgba(88,166,255,0.4); }
+  .card.green-border { border-color: rgba(63,185,80,0.4); }
+  .card.yellow-border { border-color: rgba(227,179,65,0.4); }
+  .card.purple-border { border-color: rgba(188,140,255,0.4); }
+  .card.orange-border { border-color: rgba(240,136,62,0.4); }
+
+  /* CODE */
+  pre {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 18px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', monospace;
+    font-size: 12px;
+    line-height: 1.6;
+    overflow: hidden;
+    color: #e6edf3;
+  }
+  .kw { color: #ff7b72; }
+  .fn { color: #d2a8ff; }
+  .str { color: #a5d6ff; }
+  .cm { color: #8b949e; font-style: italic; }
+  .num { color: #79c0ff; }
+  .type { color: #ffa657; }
+  .op { color: #e6edf3; }
+
+  /* STATS */
+  .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; }
+  .stat-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+  }
+  .stat-val { font-size: 36px; font-weight: 800; line-height: 1; }
+  .stat-label { font-size: 11px; color: var(--muted); margin-top: 6px; text-transform: uppercase; letter-spacing: 1px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  th { text-align: left; color: var(--muted); font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 12px; border-bottom: 1px solid rgba(48,54,61,0.5); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  .mono { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; color: var(--blue); }
+
+  /* BULLETS */
+  .bullets { list-style: none; }
+  .bullets li { padding: 6px 0 6px 20px; position: relative; font-size: 14px; color: var(--text); line-height: 1.5; }
+  .bullets li::before { content: '›'; position: absolute; left: 0; color: var(--accent); font-weight: 700; }
+  .bullets.sm li { font-size: 13px; padding: 4px 0 4px 18px; }
+
+  /* BADGE */
+  .badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; }
+  .badge-blue { background: rgba(88,166,255,0.15); color: var(--blue); border: 1px solid rgba(88,166,255,0.3); }
+  .badge-green { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .badge-yellow { background: rgba(227,179,65,0.15); color: var(--yellow); border: 1px solid rgba(227,179,65,0.3); }
+  .badge-purple { background: rgba(188,140,255,0.15); color: var(--purple); border: 1px solid rgba(188,140,255,0.3); }
+  .badge-orange { background: rgba(240,136,62,0.15); color: var(--orange); border: 1px solid rgba(240,136,62,0.3); }
+  .badge-red { background: rgba(247,129,102,0.15); color: var(--accent); border: 1px solid rgba(247,129,102,0.3); }
+
+  /* FLOW */
+  .flow { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .flow-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 6px 12px; font-size: 12px; font-family: monospace; }
+  .flow-arrow { color: var(--accent); font-size: 16px; font-weight: 700; }
+
+  /* HIGHLIGHT */
+  .hl { color: var(--blue); font-weight: 600; }
+  .hl-green { color: var(--green); font-weight: 600; }
+  .hl-yellow { color: var(--yellow); font-weight: 600; }
+  .hl-purple { color: var(--purple); font-weight: 600; }
+  .hl-orange { color: var(--orange); font-weight: 600; }
+  .hl-accent { color: var(--accent); font-weight: 600; }
+
+  p { font-size: 14px; line-height: 1.7; color: var(--text); }
+  .text-muted { color: var(--muted); }
+  .text-sm { font-size: 12px; }
+  .mt-12 { margin-top: 12px; }
+  .mt-16 { margin-top: 16px; }
+  .mb-8 { margin-bottom: 8px; }
+  .mb-16 { margin-bottom: 16px; }
+  .gap-12 { gap: 12px; }
+
+  /* COVER */
+  .cover { justify-content: center; }
+  .cover-logo { font-size: 72px; font-weight: 900; letter-spacing: -2px; background: linear-gradient(135deg, var(--blue) 0%, var(--purple) 50%, var(--accent) 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+  .cover-sub { font-size: 22px; color: var(--muted); margin-top: 12px; }
+  .cover-meta { display: flex; gap: 24px; margin-top: 40px; }
+  .cover-meta-item { display: flex; flex-direction: column; gap: 4px; }
+  .cover-meta-key { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; }
+  .cover-meta-val { font-size: 18px; font-weight: 700; color: var(--text); }
+
+  /* DIVIDER LINE */
+  .divider { width: 48px; height: 3px; background: var(--accent); border-radius: 2px; margin: 20px 0; }
+
+  /* NAV */
+  #nav {
+    position: fixed; bottom: 28px; right: 40px;
+    display: flex; align-items: center; gap: 16px;
+    z-index: 100;
+  }
+  .nav-btn {
+    width: 40px; height: 40px;
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; color: var(--text);
+    transition: background 0.2s, border-color 0.2s;
+  }
+  .nav-btn:hover { background: var(--bg3); border-color: var(--blue); }
+  .nav-btn:disabled { opacity: 0.3; cursor: default; }
+  #slide-counter { font-size: 12px; color: var(--muted); font-weight: 500; min-width: 52px; text-align: center; }
+
+  /* PROGRESS BAR */
+  #progress {
+    position: fixed; top: 0; left: 0; height: 2px;
+    background: linear-gradient(90deg, var(--blue), var(--purple), var(--accent));
+    transition: width 0.35s ease;
+    z-index: 100;
+  }
+
+  /* SECTION DIVIDER SLIDE */
+  .section-div {
+    justify-content: center;
+    background: linear-gradient(135deg, rgba(88,166,255,0.05) 0%, rgba(188,140,255,0.05) 100%);
+  }
+  .section-div h1 { font-size: 56px; }
+  .section-div .section-num { font-size: 120px; font-weight: 900; position: absolute; right: 64px; bottom: 48px; color: rgba(255,255,255,0.03); line-height: 1; pointer-events: none; }
+
+  /* GRID BOXES */
+  .box-grid { display: grid; gap: 14px; }
+  .box-grid-4 { grid-template-columns: 1fr 1fr 1fr 1fr; }
+  .box-grid-3 { grid-template-columns: 1fr 1fr 1fr; }
+  .box-grid-2 { grid-template-columns: 1fr 1fr; }
+  .box { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; }
+  .box-title { font-size: 12px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .box-val { font-size: 15px; font-weight: 600; color: var(--text); }
+  .box-desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.4; }
+
+  /* TIMELINE */
+  .timeline { position: relative; padding-left: 24px; }
+  .timeline::before { content: ''; position: absolute; left: 7px; top: 8px; bottom: 8px; width: 2px; background: var(--border); }
+  .tl-item { position: relative; margin-bottom: 14px; }
+  .tl-dot { position: absolute; left: -24px; top: 4px; width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--blue); background: var(--bg); }
+  .tl-dot.green { border-color: var(--green); }
+  .tl-dot.yellow { border-color: var(--yellow); }
+  .tl-label { font-family: monospace; font-size: 12px; color: var(--blue); font-weight: 600; }
+  .tl-desc { font-size: 12px; color: var(--muted); margin-top: 2px; line-height: 1.4; }
+
+  /* ARCH DIAGRAM */
+  .arch { display: grid; grid-template-rows: auto auto auto; gap: 8px; }
+  .arch-row { display: flex; gap: 8px; justify-content: center; }
+  .arch-node { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 8px 14px; font-size: 12px; font-family: monospace; text-align: center; flex: 1; }
+  .arch-node.blue { border-color: rgba(88,166,255,0.5); color: var(--blue); }
+  .arch-node.green { border-color: rgba(63,185,80,0.5); color: var(--green); }
+  .arch-node.yellow { border-color: rgba(227,179,65,0.5); color: var(--yellow); }
+  .arch-node.purple { border-color: rgba(188,140,255,0.5); color: var(--purple); }
+  .arch-node.orange { border-color: rgba(240,136,62,0.5); color: var(--orange); }
+  .arch-node.accent { border-color: rgba(247,129,102,0.5); color: var(--accent); }
+  .arch-arrow { text-align: center; color: var(--muted); font-size: 18px; }
+
+  /* NOVEL BADGE */
+  .novel { display: inline-flex; align-items: center; gap: 6px; font-size: 11px; color: var(--yellow); font-weight: 600; }
+  .novel::before { content: '★'; }
+
+  /* SCROLLABLE card */
+  .scroll-y { overflow-y: auto; }
+  .scroll-y::-webkit-scrollbar { width: 4px; }
+  .scroll-y::-webkit-scrollbar-track { background: transparent; }
+  .scroll-y::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+</style>
+</head>
+<body>
+
+<div id="overview"></div>
+<div id="progress"></div>
+<div id="deck">
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 1: COVER
+═══════════════════════════════════════════════ -->
+<div class="slide active cover" id="s1">
+  <div>
+    <div class="cover-logo">Claude Code</div>
+    <div class="cover-sub">Technical Deep Dive — Rebuilt Source</div>
+    <div class="divider"></div>
+    <p style="max-width:600px; color: var(--muted); font-size: 16px; line-height: 1.8;">
+      A production-grade distributed AI system implemented as a terminal application.
+      778 TypeScript source files. Custom React renderer. Full vim engine. Multi-agent orchestration.
+    </p>
+    <div class="cover-meta">
+      <div class="cover-meta-item">
+        <span class="cover-meta-key">Runtime</span>
+        <span class="cover-meta-val">Bun 1.2.23</span>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-key">Language</span>
+        <span class="cover-meta-val">TypeScript + React 19</span>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-key">Source Files</span>
+        <span class="cover-meta-val">778 TS/TSX</span>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-key">Subsystems</span>
+        <span class="cover-meta-val">~40</span>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-key">Tools</span>
+        <span class="cover-meta-val">40</span>
+      </div>
+      <div class="cover-meta-item">
+        <span class="cover-meta-key">Slash Commands</span>
+        <span class="cover-meta-val">60+</span>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 2: STATS / SCALE
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s2">
+  <div class="slide-header">
+    <span class="slide-num">02</span>
+    <span class="slide-tag">Scale</span>
+  </div>
+  <h2>By the Numbers</h2>
+  <div class="content" style="gap: 20px; display: flex; flex-direction: column;">
+    <div class="stat-grid">
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--blue);">778</div>
+        <div class="stat-label">Source TS/TSX files</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--green);">40</div>
+        <div class="stat-label">Tool implementations</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--yellow);">60+</div>
+        <div class="stat-label">Slash commands</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--purple);">4,696</div>
+        <div class="stat-label">Lines in main.tsx</div>
+      </div>
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--orange);">390</div>
+        <div class="stat-label">UI component files</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--teal);">4</div>
+        <div class="stat-label">AI backends</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--accent);">14</div>
+        <div class="stat-label">OTel packages</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-val" style="color: var(--blue);">~40</div>
+        <div class="stat-label">Subsystems</div>
+      </div>
+    </div>
+    <div class="cols cols-3" style="flex: 1;">
+      <div class="card">
+        <h3>Largest Subsystems</h3>
+        <table>
+          <tr><td class="mono">components/</td><td style="color:var(--blue); text-align:right; font-weight:700;">390</td></tr>
+          <tr><td class="mono">commands/</td><td style="color:var(--blue); text-align:right; font-weight:700;">195</td></tr>
+          <tr><td class="mono">tools/</td><td style="color:var(--blue); text-align:right; font-weight:700;">192</td></tr>
+          <tr><td class="mono">services/</td><td style="color:var(--blue); text-align:right; font-weight:700;">135</td></tr>
+          <tr><td class="mono">ink/</td><td style="color:var(--blue); text-align:right; font-weight:700;">98</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Key Orchestrators</h3>
+        <table>
+          <tr><td class="mono">main.tsx</td><td style="color:var(--muted); font-size:12px;">CLI entry · 4,696 lines</td></tr>
+          <tr><td class="mono">QueryEngine.ts</td><td style="color:var(--muted); font-size:12px;">AI conversation loop</td></tr>
+          <tr><td class="mono">Tool.ts</td><td style="color:var(--muted); font-size:12px;">Tool contract · 792 lines</td></tr>
+          <tr><td class="mono">tools.ts</td><td style="color:var(--muted); font-size:12px;">Registry · 389 lines</td></tr>
+          <tr><td class="mono">Task.ts</td><td style="color:var(--muted); font-size:12px;">Task state machine</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Novel Engineering</h3>
+        <ul class="bullets sm">
+          <li>Custom Ink terminal renderer</li>
+          <li>React Compiler integration</li>
+          <li>Speculation engine (pre-run AI)</li>
+          <li>Build-time DCE via <span class="hl">bun:bundle</span></li>
+          <li>Full vim mode in CLI prompt</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 3: ARCHITECTURE MAP
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s3">
+  <div class="slide-header">
+    <span class="slide-num">03</span>
+    <span class="slide-tag">Architecture</span>
+  </div>
+  <h2>System Architecture</h2>
+  <div class="content">
+    <div class="cols cols-60-40" style="flex: 1; gap: 24px;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="arch">
+          <div class="arch-row">
+            <div class="arch-node blue" style="flex: 0.5;">entrypoints/cli.tsx</div>
+            <div class="arch-node blue" style="flex: 1.5;">main.tsx (4,696 lines)</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-node purple">App.tsx<br><span style="font-size:10px; opacity:0.7;">React Compiler</span></div>
+            <div class="arch-node purple">Custom Ink Renderer<br><span style="font-size:10px; opacity:0.7;">Yoga WASM + BiDi</span></div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-node green">QueryEngine.ts<br><span style="font-size:10px; opacity:0.7;">AI loop</span></div>
+            <div class="arch-node green">query.ts<br><span style="font-size:10px; opacity:0.7;">Streaming API</span></div>
+            <div class="arch-node green">AppState Store<br><span style="font-size:10px; opacity:0.7;">DeepImmutable</span></div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-node yellow">Tool Registry (40)</div>
+            <div class="arch-node yellow">Command Registry (60+)</div>
+            <div class="arch-node yellow">Skills (Markdown)</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-node orange">MCP Service</div>
+            <div class="arch-node orange">OAuth PKCE</div>
+            <div class="arch-node orange">Compact Service</div>
+            <div class="arch-node orange">Voice STT</div>
+          </div>
+          <div class="arch-arrow">↓</div>
+          <div class="arch-row">
+            <div class="arch-node accent">Anthropic API</div>
+            <div class="arch-node accent">AWS Bedrock</div>
+            <div class="arch-node accent">Vertex AI</div>
+            <div class="arch-node accent">Foundry</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 12px;">
+        <div class="card card-sm">
+          <div class="box-title">Horizontal Subsystems</div>
+          <ul class="bullets sm" style="margin-top: 6px;">
+            <li><span class="hl">coordinator/</span> — Multi-agent orchestration</li>
+            <li><span class="hl">vim/</span> — Full editor mode (5 files)</li>
+            <li><span class="hl">state/</span> — Zustand-style store (34 lines)</li>
+            <li><span class="hl">bridge/</span> — IDE protocol relay</li>
+            <li><span class="hl">remote/</span> — WebSocket session viewer</li>
+            <li><span class="hl">plugins/</span> — Plugin system</li>
+            <li><span class="hl">memdir/</span> — ~/.claude/memory/ reader</li>
+            <li><span class="hl">migrations/</span> — Settings schema migration</li>
+          </ul>
+        </div>
+        <div class="card card-sm green-border">
+          <div class="box-title">Build Pipeline</div>
+          <div class="flow" style="margin-top: 8px; flex-direction: column; align-items: flex-start; gap: 6px;">
+            <span class="flow-box">typecheck</span>
+            <span style="color: var(--muted); font-size:11px; padding-left:4px;">→ lint → build → smoke:cli → smoke:bundle</span>
+            <span class="flow-box" style="color: var(--green);">dist/cli.js (single ESM bundle)</span>
+          </div>
+        </div>
+        <div class="card card-sm yellow-border">
+          <div class="box-title">Feature Flag DCE</div>
+          <p class="text-sm" style="color: var(--muted);">
+            <span class="hl-yellow">bun:bundle feature()</span> resolves flags at build time. Internal-only features (COORDINATOR_MODE, KAIROS, DAEMON, BRIDGE_MODE) are fully stripped from external builds — zero runtime overhead.
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 4: BOOT SEQUENCE
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s4">
+  <div class="slide-header">
+    <span class="slide-num">04</span>
+    <span class="slide-tag">Entry Point</span>
+  </div>
+  <h2>Boot Sequence & Startup Optimization</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 16px;">
+        <div class="card">
+          <h3>cli.tsx — Fast-Path Dispatcher</h3>
+          <p class="text-sm text-muted mb-8">8 fast paths before loading main.tsx (all imports are dynamic)</p>
+          <table>
+            <tr><td class="mono">--version / -v</td><td style="font-size:12px; color:var(--muted);">Zero imports, prints and exits</td></tr>
+            <tr><td class="mono">--daemon-worker</td><td style="font-size:12px; color:var(--muted);">Lean worker subprocess</td></tr>
+            <tr><td class="mono">remote-control / bridge</td><td style="font-size:12px; color:var(--muted);">Bridge mode relay</td></tr>
+            <tr><td class="mono">daemon</td><td style="font-size:12px; color:var(--muted);">Long-running supervisor</td></tr>
+            <tr><td class="mono">ps / logs / attach / --bg</td><td style="font-size:12px; color:var(--muted);">Background sessions</td></tr>
+          </table>
+        </div>
+        <div class="card">
+          <h3>Startup Parallelism <span class="novel">Novel</span></h3>
+          <p class="text-sm text-muted mb-8">First 3 executable statements fire I/O during import evaluation — before any code runs</p>
+          <pre><span class="cm">// Fire and await later — saves ~130ms total</span>
+<span class="fn">profileCheckpoint</span>(<span class="str">'main_tsx_entry'</span>)
+<span class="fn">startMdmRawRead</span>()       <span class="cm">// ← ~65ms saved</span>
+<span class="fn">startKeychainPrefetch</span>() <span class="cm">// ← ~65ms saved</span>
+
+<span class="cm">// ...135ms of imports happen here...</span>
+
+<span class="cm">// Later, when needed:</span>
+<span class="kw">const</span> token = <span class="kw">await</span> <span class="fn">ensureKeychainPrefetchCompleted</span>()</pre>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 16px;">
+        <div class="card">
+          <h3>Full Startup Sequence</h3>
+          <div class="timeline" style="margin-top: 8px;">
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div class="tl-label">cli.tsx fast-path dispatch</div>
+              <div class="tl-desc">dynamic import of main.tsx if no fast path matches</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot green"></div>
+              <div class="tl-label">main.tsx module evaluation</div>
+              <div class="tl-desc">profileCheckpoint + MDM + keychain fires here</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot yellow"></div>
+              <div class="tl-label">init() function</div>
+              <div class="tl-desc">GrowthBook, OTel, MCP registry prefetch, trust dialog, plugins, skills</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div class="tl-label">renderAndRun()</div>
+              <div class="tl-desc">App.tsx React tree mounted into custom Ink renderer</div>
+            </div>
+          </div>
+        </div>
+        <div class="card card-accent">
+          <h3>Profiling Phases</h3>
+          <p class="text-sm text-muted mb-8">Startup measured in 4 phases, sampled at 100% (internal) / 0.5% (external)</p>
+          <div class="box-grid box-grid-2" style="gap: 8px;">
+            <div class="box"><div class="box-title">import_time</div><div class="box-desc">cli_entry → imports loaded</div></div>
+            <div class="box"><div class="box-title">init_time</div><div class="box-desc">init_start → init_end</div></div>
+            <div class="box"><div class="box-title">settings_time</div><div class="box-desc">eagerLoad start → end</div></div>
+            <div class="box"><div class="box-title">total_time</div><div class="box-desc">cli_entry → after_run</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 5: CUSTOM INK RENDERER
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s5">
+  <div class="slide-header">
+    <span class="slide-num">05</span>
+    <span class="slide-tag">Renderer</span>
+  </div>
+  <h2>Custom Ink Terminal Renderer</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>Architecture</h3>
+          <p class="text-sm text-muted mb-8">Not the upstream Ink npm package — a full custom renderer in <span class="hl">src 2/ink/</span> (98 files)</p>
+          <div class="arch" style="gap: 6px;">
+            <div class="arch-row">
+              <div class="arch-node purple" style="font-size:11px;">React 19 + React Compiler</div>
+            </div>
+            <div class="arch-arrow" style="font-size:14px;">↓</div>
+            <div class="arch-row">
+              <div class="arch-node blue" style="font-size:11px;">reconciler.ts<br><span style="opacity:0.7;">react-reconciler host</span></div>
+            </div>
+            <div class="arch-arrow" style="font-size:14px;">↓</div>
+            <div class="arch-row">
+              <div class="arch-node green" style="font-size:11px;">renderer.ts<br><span style="opacity:0.7;">Yoga WASM layout</span></div>
+              <div class="arch-node yellow" style="font-size:11px;">bidi.ts<br><span style="opacity:0.7;">BiDi reordering</span></div>
+            </div>
+            <div class="arch-arrow" style="font-size:14px;">↓</div>
+            <div class="arch-row">
+              <div class="arch-node orange" style="font-size:11px;">optimizer.ts<br><span style="opacity:0.7;">Frame diff patches</span></div>
+              <div class="arch-node accent" style="font-size:11px;">screen.js<br><span style="opacity:0.7;">StylePool, CharPool</span></div>
+            </div>
+          </div>
+        </div>
+        <div class="card yellow-border">
+          <h3>BiDi Support <span class="novel">Novel</span></h3>
+          <pre><span class="kw">function</span> <span class="fn">needsBidi</span>(): <span class="type">boolean</span> {
+  <span class="kw">return</span> (
+    process.platform === <span class="str">'win32'</span> ||
+    <span class="kw">typeof</span> process.env[<span class="str">'WT_SESSION'</span>] === <span class="str">'string'</span> <span class="cm">// WSL</span>
+    || process.env[<span class="str">'TERM_PROGRAM'</span>] === <span class="str">'vscode'</span>
+  )
+}</pre>
+          <p class="text-sm text-muted mt-12">Reorders ClusteredChar arrays from logical → visual order before Ink's LTR cell loop</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>Frame Diff Optimizer (7 Rules)</h3>
+          <ul class="bullets sm">
+            <li>Remove empty stdout patches</li>
+            <li>Merge consecutive cursorMove patches (x+dx, y+dy)</li>
+            <li>Collapse consecutive cursorTo (only last matters)</li>
+            <li>Concatenate adjacent style patches (transition diffs)</li>
+            <li>Dedupe consecutive hyperlinks with same URI</li>
+            <li>Cancel cursor hide/show pairs</li>
+            <li>Remove clear patches with count 0</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Yoga WASM Memory Management <span class="novel">Novel</span></h3>
+          <pre style="font-size:11px;"><span class="cm">// Clear ALL refs BEFORE freeing — prevents</span>
+<span class="cm">// use-after-free in concurrent operations</span>
+<span class="kw">const</span> <span class="fn">cleanupYogaNode</span> = (node) => {
+  yogaNode.<span class="fn">unsetMeasureFunc</span>()
+  <span class="fn">clearYogaNodeReferences</span>(node)
+  yogaNode.<span class="fn">freeRecursive</span>()  <span class="cm">// WASM free</span>
+}</pre>
+        </div>
+        <div class="card purple-border">
+          <h3>Search Rendering Path <span class="novel">Novel</span></h3>
+          <p class="text-sm text-muted">Secondary off-screen renderer for search hit detection:</p>
+          <ul class="bullets sm mt-12">
+            <li>Renders one message to isolated Screen buffer</li>
+            <li>Scans buffer for query → exact (row, col) matches</li>
+            <li>~1–3ms per call, reuses root/pools across calls</li>
+            <li>Uses <span class="hl-purple">LegacyRoot</span> (not ConcurrentRoot) to prevent scheduler cross-root leaks — 0.0003ms/call growth measured in concurrent mode</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 6: TOOL SYSTEM
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s6">
+  <div class="slide-header">
+    <span class="slide-num">06</span>
+    <span class="slide-tag">Tools</span>
+  </div>
+  <h2>Tool System — 40 Tools</h2>
+  <div class="content">
+    <div class="cols cols-60-40" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>Tool Contract (Tool.ts — 792 lines)</h3>
+          <p class="text-sm text-muted mb-8">Tools are plain objects built by <span class="hl">buildTool()</span> — not classes</p>
+          <pre><span class="kw">type</span> <span class="type">ToolDef</span> = {
+  name:                  <span class="type">string</span>
+  inputSchema:           <span class="type">ZodSchema</span>          <span class="cm">// v4, validated before call()</span>
+  <span class="fn">call</span>():               <span class="type">Promise&lt;ToolResultBlockParam&gt;</span>
+  <span class="fn">renderToolUseMessage</span>(): <span class="type">ReactElement</span>
+  <span class="fn">isEnabled</span>():          <span class="type">Promise&lt;boolean&gt;</span>    <span class="cm">// capability check</span>
+  <span class="fn">checkPermissions</span>():   <span class="type">ValidationResult</span>   <span class="cm">// permission gate</span>
+  description:           <span class="type">string</span>             <span class="cm">// for system prompt</span>
+}</pre>
+        </div>
+        <div class="card">
+          <h3>Tool Categories</h3>
+          <div class="cols cols-2" style="gap: 8px;">
+            <div>
+              <table style="font-size: 12px;">
+                <tr><td><span class="badge badge-blue">File system</span></td><td class="text-muted" style="font-size:11px;">Read, Write, Edit, Glob, Grep</td></tr>
+                <tr><td><span class="badge badge-red">Shell</span></td><td class="text-muted" style="font-size:11px;">Bash, PowerShell</td></tr>
+                <tr><td><span class="badge badge-purple">Orchestration</span></td><td class="text-muted" style="font-size:11px;">Agent, Skill, Workflow</td></tr>
+                <tr><td><span class="badge badge-green">Task mgmt</span></td><td class="text-muted" style="font-size:11px;">Create, Get, List, Update, Stop, Output</td></tr>
+                <tr><td><span class="badge badge-yellow">Team/swarm</span></td><td class="text-muted" style="font-size:11px;">TeamCreate, Delete, SendMessage</td></tr>
+              </table>
+            </div>
+            <div>
+              <table style="font-size: 12px;">
+                <tr><td><span class="badge badge-orange">Scheduling</span></td><td class="text-muted" style="font-size:11px;">CronCreate/Delete/List, RemoteTrigger</td></tr>
+                <tr><td><span class="badge badge-blue">Web</span></td><td class="text-muted" style="font-size:11px;">WebFetch, WebSearch</td></tr>
+                <tr><td><span class="badge badge-purple">MCP</span></td><td class="text-muted" style="font-size:11px;">MCPTool, ListResources, ReadResource</td></tr>
+                <tr><td><span class="badge badge-green">Dev</span></td><td class="text-muted" style="font-size:11px;">NotebookEdit, REPL (ant), LSP</td></tr>
+                <tr><td><span class="badge badge-red">Planning</span></td><td class="text-muted" style="font-size:11px;">EnterPlanMode, Worktree</td></tr>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card card-accent">
+          <h3>BashTool — Most Complex</h3>
+          <ul class="bullets sm">
+            <li>AST-based security parsing (<span class="hl">utils/bash/ast.ts</span>)</li>
+            <li>Semantic command classification for collapsible display</li>
+            <li>Sandbox adapter integration</li>
+            <li>sed-style edit command parser</li>
+            <li>File history tracking + git op detection</li>
+            <li>Progress spinner after <span class="hl">2,000ms</span></li>
+            <li>Auto-backgrounds after <span class="hl">15,000ms</span> in assistant mode</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Feature-Flag Loading</h3>
+          <pre style="font-size:11px;"><span class="cm">// DCE via bun:bundle feature()</span>
+<span class="kw">const</span> cronTools = <span class="fn">feature</span>(<span class="str">'AGENT_TRIGGERS'</span>)
+  ? [CronCreate, CronDelete, CronList]
+  : []
+
+<span class="cm">// Circular dep: lazy require</span>
+<span class="kw">const</span> getTeamCreateTool = () =>
+  <span class="fn">require</span>(<span class="str">'./TeamCreateTool.js'</span>).TeamCreateTool</pre>
+        </div>
+        <div class="card green-border">
+          <h3>Task IDs — Security Design <span class="novel">Novel</span></h3>
+          <p class="text-sm text-muted">Prefixed by type: <span class="mono" style="color:var(--green);">b=bash a=agent r=remote t=teammate w=workflow</span></p>
+          <p class="text-sm text-muted mt-12">36^8 ≈ 2.8 trillion combinations using <span class="hl">crypto.randomBytes()</span> — resists brute-force symlink attacks on task output files</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 7: COMMAND & SKILLS SYSTEM
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s7">
+  <div class="slide-header">
+    <span class="slide-num">07</span>
+    <span class="slide-tag">Commands</span>
+  </div>
+  <h2>Command System &amp; Skills</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>60+ Slash Commands by Category</h3>
+          <div class="cols cols-2" style="gap: 8px; margin-top: 8px;">
+            <div>
+              <p class="text-sm" style="color: var(--yellow); font-weight:600; margin-bottom: 4px;">Git</p>
+              <p class="text-sm text-muted">commit, diff, review, pr_comments, branch, autofix-pr, commit-push-pr</p>
+              <p class="text-sm" style="color: var(--blue); font-weight:600; margin-bottom: 4px; margin-top: 10px;">Context mgmt</p>
+              <p class="text-sm text-muted">compact, context, memory, session, clear</p>
+              <p class="text-sm" style="color: var(--green); font-weight:600; margin-bottom: 4px; margin-top: 10px;">MCP / Skills</p>
+              <p class="text-sm text-muted">mcp, skills, hooks, plugins</p>
+              <p class="text-sm" style="color: var(--purple); font-weight:600; margin-bottom: 4px; margin-top: 10px;">Model / Config</p>
+              <p class="text-sm text-muted">model, fast, effort, theme, config, vim, voice</p>
+            </div>
+            <div>
+              <p class="text-sm" style="color: var(--orange); font-weight:600; margin-bottom: 4px;">Agent system</p>
+              <p class="text-sm text-muted">agents, agents-platform, coordinator, employee</p>
+              <p class="text-sm" style="color: var(--accent); font-weight:600; margin-bottom: 4px; margin-top: 10px;">Plan mode</p>
+              <p class="text-sm text-muted">plan, ultraplan</p>
+              <p class="text-sm" style="color: var(--teal); font-weight:600; margin-bottom: 4px; margin-top: 10px;">Debugging</p>
+              <p class="text-sm text-muted">bughunter, perf-issue, ant-trace, ctx_viz, doctor</p>
+              <p class="text-sm" style="color: var(--muted); font-weight:600; margin-bottom: 4px; margin-top: 10px;">Misc</p>
+              <p class="text-sm text-muted">clear, copy, cost, help, init, login, onboarding, rename, resume, share</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card card-accent">
+          <h3>Skills System — Markdown-Defined Commands <span class="novel">Novel</span></h3>
+          <p class="text-sm text-muted mb-8">Skills are <span class="hl">.md files</span> with YAML frontmatter, loaded from <span class="hl">~/.claude/skills/</span></p>
+          <ul class="bullets sm">
+            <li>Frontmatter: argument names, effort level, model override</li>
+            <li>Shell commands executable within prompt</li>
+            <li>Tool enable/disable per-skill</li>
+            <li>Argument substitution in content</li>
+            <li>gitignore-aware file filtering</li>
+            <li>Auto-generated from MCP server prompts (<span class="hl">mcpSkillBuilders.ts</span>)</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>Build-time Command DCE</h3>
+          <pre style="font-size:11px;"><span class="cm">// Ant-only (runtime check)</span>
+<span class="kw">const</span> agentsPlatform = process.env.USER_TYPE === <span class="str">'ant'</span>
+  ? <span class="fn">require</span>(<span class="str">'./agents-platform/index.js'</span>).default
+  : <span class="kw">null</span>
+
+<span class="cm">// Build-time DCE via feature()</span>
+<span class="kw">const</span> assistantCommand = <span class="fn">feature</span>(<span class="str">'KAIROS'</span>)
+  ? <span class="fn">require</span>(<span class="str">'./assistant/index.js'</span>).default
+  : <span class="kw">null</span></pre>
+        </div>
+        <div class="card yellow-border">
+          <h3>AgentTool — Built-in Agents</h3>
+          <div class="cols cols-2" style="gap: 4px; margin-top: 6px;">
+            <span class="badge badge-blue">generalPurpose</span>
+            <span class="badge badge-green">explore</span>
+            <span class="badge badge-purple">plan</span>
+            <span class="badge badge-yellow">verification</span>
+            <span class="badge badge-orange">engineeringLead</span>
+            <span class="badge badge-red">claudeCodeGuide</span>
+          </div>
+          <p class="text-sm text-muted mt-12">8 color-coded agent types (red, blue, green, yellow, purple, orange, pink, cyan)</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 8: STATE MANAGEMENT
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s8">
+  <div class="slide-header">
+    <span class="slide-num">08</span>
+    <span class="slide-tag">State</span>
+  </div>
+  <h2>State Management</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>Custom Zustand-style Store — 34 Lines <span class="novel">Novel</span></h3>
+          <pre><span class="kw">export function</span> <span class="fn">createStore</span>&lt;<span class="type">T</span>&gt;(
+  initialState: <span class="type">T</span>, onChange?: <span class="type">OnChange&lt;T&gt;</span>
+): <span class="type">Store&lt;T&gt;</span> {
+  <span class="kw">let</span> state = initialState
+  <span class="kw">const</span> listeners = <span class="kw">new</span> <span class="type">Set</span>&lt;<span class="type">Listener</span>&gt;()
+
+  <span class="kw">return</span> {
+    <span class="fn">getState</span>: () => state,
+    <span class="fn">setState</span>: (updater) => {
+      <span class="kw">const</span> next = <span class="fn">updater</span>(state)
+      <span class="kw">if</span> (<span class="type">Object</span>.<span class="fn">is</span>(next, state)) <span class="kw">return</span> <span class="cm">// ref eq check</span>
+      state = next
+      onChange?.({ newState: next, oldState: state })
+      <span class="kw">for</span> (<span class="kw">const</span> l <span class="kw">of</span> listeners) <span class="fn">l</span>()
+    },
+    <span class="fn">subscribe</span>: (l) => {
+      listeners.<span class="fn">add</span>(l)
+      <span class="kw">return</span> () => listeners.<span class="fn">delete</span>(l) <span class="cm">// cleanup fn</span>
+    }
+  }
+}</pre>
+        </div>
+        <div class="card">
+          <h3>Side-Effect Bus <span class="novel">Novel</span></h3>
+          <p class="text-sm text-muted mb-8"><span class="hl">onChangeAppState.ts</span> — single choke-point for state-change side effects</p>
+          <ul class="bullets sm">
+            <li>Permission mode changes → notify CCR/SDK</li>
+            <li>Model overrides → update bootstrap state</li>
+            <li>Settings changes → apply env vars, clear credential caches</li>
+          </ul>
+          <p class="text-sm" style="color: var(--yellow); margin-top: 10px;">
+            ★ Fixed a bug where 8+ permission mutation paths each independently (sometimes incorrectly) notified external systems
+          </p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card card-accent">
+          <h3>AppState Shape</h3>
+          <pre style="font-size:11px;"><span class="kw">type</span> <span class="type">AppState</span> = <span class="type">DeepImmutable</span>&lt;{
+  settings:               <span class="type">SettingsJson</span>
+  mainLoopModel:          <span class="type">ModelSetting</span>
+  toolPermissionContext:  <span class="type">ToolPermissionContext</span>
+  kairosEnabled:          <span class="type">boolean</span>
+  remoteSessionUrl:       <span class="type">string | undefined</span>
+  remoteConnectionStatus: <span class="cm">// 'connecting'|'connected'|...</span>
+  <span class="cm">// ... 40+ more fields</span>
+}&gt; & {
+  tasks: <span class="type">TaskState</span>  <span class="cm">// excluded — has function types</span>
+}</pre>
+        </div>
+        <div class="card purple-border">
+          <h3>Speculation Engine <span class="novel">Novel</span></h3>
+          <p class="text-sm text-muted mb-8">Pre-runs AI responses before user submits</p>
+          <pre style="font-size:11px;"><span class="cm">// Mutable refs inside immutable AppState</span>
+<span class="kw">type</span> <span class="type">SpeculationState</span> = {
+  status: <span class="str">'active'</span>
+  messagesRef:    { current: <span class="type">Message[]</span> }
+  writtenPathsRef: { current: <span class="type">Set&lt;string&gt;</span> }
+  <span class="cm">// ref identity stable; .current mutates</span>
+  <span class="cm">// avoids O(n) array spread per token</span>
+}</pre>
+          <p class="text-sm text-muted mt-12">Mutable refs live inside immutable state — the pattern that avoids O(n) array spreading on every streamed token</p>
+        </div>
+        <div class="card green-border">
+          <h3>Frame Contamination Tracking <span class="novel">Novel</span></h3>
+          <p class="text-sm text-muted">Tracks if previous frame's buffer was "contaminated" (selection overlay, alt-screen reset, SIGCONT). When true: full redraw. When false: blit unchanged cells, only paint diffs.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 9: VIM MODE
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s9">
+  <div class="slide-header">
+    <span class="slide-num">09</span>
+    <span class="slide-tag">Vim Engine</span>
+  </div>
+  <h2>Full Vim Mode Engine — 5 Files, Pure Functional</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>State Machine (transitions.ts)</h3>
+          <pre><span class="kw">function</span> <span class="fn">transition</span>(
+  state: <span class="type">CommandState</span>, input: <span class="type">string</span>, ctx: <span class="type">TransitionContext</span>
+): <span class="type">TransitionResult</span> {
+  <span class="kw">switch</span> (state.type) {
+    <span class="kw">case</span> <span class="str">'idle'</span>:          <span class="kw">return</span> <span class="fn">fromIdle</span>(input, ctx)
+    <span class="kw">case</span> <span class="str">'count'</span>:         <span class="kw">return</span> <span class="fn">fromCount</span>(state, input, ctx)
+    <span class="kw">case</span> <span class="str">'operator'</span>:      <span class="kw">return</span> <span class="fn">fromOperator</span>(state, input, ctx)
+    <span class="kw">case</span> <span class="str">'operatorCount'</span>: <span class="kw">return</span> <span class="fn">fromOperatorCount</span>(...)
+    <span class="kw">case</span> <span class="str">'operatorFind'</span>:  <span class="kw">return</span> <span class="fn">fromOperatorFind</span>(...)
+    <span class="kw">case</span> <span class="str">'operatorTextObj'</span>: <span class="kw">return</span> <span class="fn">fromOperatorTextObj</span>(...)
+    <span class="kw">case</span> <span class="str">'find'</span>:          <span class="kw">return</span> <span class="fn">fromFind</span>(state, input, ctx)
+    <span class="kw">case</span> <span class="str">'g'</span>:            <span class="kw">return</span> <span class="fn">fromG</span>(state, input, ctx)
+  }
+}</pre>
+        </div>
+        <div class="card">
+          <h3>Operator Context (operators.ts)</h3>
+          <pre style="font-size:11px;"><span class="cm">// Context injection — no global state</span>
+<span class="kw">type</span> <span class="type">OperatorContext</span> = {
+  cursor:         <span class="type">Cursor</span>
+  text:           <span class="type">string</span>
+  <span class="fn">setText</span>:        (text: <span class="type">string</span>) => <span class="type">void</span>
+  <span class="fn">setOffset</span>:      (offset: <span class="type">number</span>) => <span class="type">void</span>
+  <span class="fn">enterInsert</span>:    (offset: <span class="type">number</span>) => <span class="type">void</span>
+  <span class="fn">getRegister</span>:    () => <span class="type">string</span>
+  <span class="fn">setRegister</span>:    (content: <span class="type">string</span>, linewise: <span class="type">boolean</span>) => <span class="type">void</span>
+  <span class="fn">getLastFind</span>:    () => <span class="type">FindResult | null</span>
+  <span class="fn">recordChange</span>:   (change: <span class="type">RecordedChange</span>) => <span class="type">void</span>
+}</pre>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card card-accent">
+          <h3>Supported Motions &amp; Operators</h3>
+          <div class="cols cols-2" style="gap: 8px; margin-top: 8px;">
+            <div>
+              <p class="text-sm" style="color: var(--blue); font-weight:600; margin-bottom: 6px;">Motions</p>
+              <p class="text-sm text-muted" style="font-family: monospace; line-height: 2;">h l j k gj gk<br>w b e W B E<br>0 ^ $ G</p>
+              <p class="text-sm" style="color: var(--blue); font-weight:600; margin-top: 10px; margin-bottom: 6px;">Motion Types</p>
+              <p class="text-sm text-muted">Inclusive: <span class="mono" style="color:var(--green);">e E $</span></p>
+              <p class="text-sm text-muted">Linewise: <span class="mono" style="color:var(--green);">G</span></p>
+            </div>
+            <div>
+              <p class="text-sm" style="color: var(--purple); font-weight:600; margin-bottom: 6px;">Operators</p>
+              <p class="text-sm text-muted" style="font-family: monospace; line-height: 2;">d c y p<br>&gt; &lt; x ~<br>J o O</p>
+              <p class="text-sm" style="color: var(--purple); font-weight:600; margin-top: 10px; margin-bottom: 6px;">Text Objects</p>
+              <p class="text-sm text-muted">w b s p + bracket/quote pairs<br><span class="mono" style="color:var(--green);">() [] {} &lt;&gt; "" '' ``</span><br>a (around) + i (inner)</p>
+            </div>
+          </div>
+        </div>
+        <div class="card yellow-border">
+          <h3>Pure Functional Design</h3>
+          <pre style="font-size:11px;"><span class="cm">// All motions return NEW Cursor — no mutation</span>
+<span class="kw">function</span> <span class="fn">resolveMotion</span>(
+  key: <span class="type">string</span>, cursor: <span class="type">Cursor</span>, count: <span class="type">number</span>
+): <span class="type">Cursor</span> {
+  <span class="kw">let</span> result = cursor
+  <span class="kw">for</span> (<span class="kw">let</span> i = <span class="num">0</span>; i &lt; count; i++) {
+    <span class="kw">const</span> next = <span class="fn">applySingleMotion</span>(key, result)
+    <span class="kw">if</span> (next.<span class="fn">equals</span>(result)) <span class="kw">break</span> <span class="cm">// idempotent</span>
+    result = next
+  }
+  <span class="kw">return</span> result
+}</pre>
+          <p class="text-sm text-muted mt-12">All 5 files: pure take/return values. Zero global state. Fully testable in isolation.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 10: SERVICES LAYER
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s10">
+  <div class="slide-header">
+    <span class="slide-num">10</span>
+    <span class="slide-tag">Services</span>
+  </div>
+  <h2>Services Layer</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>MCP Client — 3 Transports</h3>
+          <pre style="font-size:11px;"><span class="kw">import</span> { Client } <span class="kw">from</span> <span class="str">'@modelcontextprotocol/sdk/client'</span>
+<span class="cm">// Transports:</span>
+StdioClientTransport       <span class="cm">// subprocess stdio</span>
+SSEClientTransport         <span class="cm">// Server-Sent Events</span>
+StreamableHTTPClientTransport <span class="cm">// streaming HTTP</span>
+
+<span class="cm">// Supports: CallTool, ListTools, ListPrompts,</span>
+<span class="cm">// ListResources, Elicitation protocol</span></pre>
+          <ul class="bullets sm mt-12">
+            <li>Per-server connection caching</li>
+            <li>MCP elicitation (prompt user for input)</li>
+            <li>Official MCP registry prefetch on startup</li>
+            <li>Auto-add resource listing tools when server supports resources</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>OAuth 2.0 PKCE Service</h3>
+          <pre style="font-size:11px;"><span class="fn">startOAuthFlow</span>(authURLHandler, options?: {
+  loginWithClaudeAi?:  <span class="type">boolean</span>
+  inferenceOnly?:      <span class="type">boolean</span>
+  skipBrowserOpen?:    <span class="type">boolean</span>  <span class="cm">// SDK control mode</span>
+  orgUUID?:            <span class="type">string</span>
+  loginHint?:          <span class="type">string</span>
+}): <span class="type">Promise&lt;OAuthTokens&gt;</span></pre>
+          <div class="cols cols-2" style="gap: 8px; margin-top: 10px;">
+            <div class="box">
+              <div class="box-title">Automatic</div>
+              <div class="box-desc">Opens browser, local HTTP server captures redirect</div>
+            </div>
+            <div class="box">
+              <div class="box-title">Manual</div>
+              <div class="box-desc">Paste auth code (for headless environments)</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card card-accent">
+          <h3>Compact Service — 13 Files</h3>
+          <p class="text-sm text-muted mb-8">LLM-based context summarization running as a forked agent</p>
+          <table>
+            <tr><td class="mono" style="font-size:11px;">compact.ts</td><td style="font-size:11px; color:var(--muted);">Full conversation compaction (forked agent)</td></tr>
+            <tr><td class="mono" style="font-size:11px;">autoCompact.ts</td><td style="font-size:11px; color:var(--muted);">Token threshold monitoring + auto-trigger</td></tr>
+            <tr><td class="mono" style="font-size:11px;">microCompact.ts</td><td style="font-size:11px; color:var(--muted);">Compress individual tool results</td></tr>
+            <tr><td class="mono" style="font-size:11px;">snipCompact.ts</td><td style="font-size:11px; color:var(--muted);">Snip-mode compaction</td></tr>
+            <tr><td class="mono" style="font-size:11px;">sessionMemoryCompact.ts</td><td style="font-size:11px; color:var(--muted);">Per-session memory compaction</td></tr>
+          </table>
+        </div>
+        <div class="card purple-border">
+          <h3>Analytics PII Safety <span class="novel">Novel</span></h3>
+          <pre style="font-size:10px;"><span class="cm">// Type name IS the verification comment</span>
+<span class="kw">type</span> <span class="type">AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS</span>
+  = { ... }</pre>
+          <p class="text-sm text-muted mt-12">Engineers must type out the full verification name to use analytics — enforcing PII awareness at the type level</p>
+        </div>
+        <div class="card green-border">
+          <h3>Other Services</h3>
+          <ul class="bullets sm">
+            <li><span class="hl-green">Voice STT</span> — streaming speech-to-text, keyword activation</li>
+            <li><span class="hl-green">Memory extraction</span> — auto-extracts reusable memories to <span class="mono">~/.claude/memory/</span></li>
+            <li><span class="hl-green">GrowthBook</span> — A/B feature flag gating</li>
+            <li><span class="hl-green">OpenTelemetry</span> — 14 packages, traces + metrics + logs via OTLP/gRPC/HTTP/Prometheus</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 11: MULTI-AGENT ORCHESTRATION
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s11">
+  <div class="slide-header">
+    <span class="slide-num">11</span>
+    <span class="slide-tag">Multi-Agent</span>
+  </div>
+  <h2>Multi-Agent Orchestration</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>Coordinator Mode</h3>
+          <pre><span class="kw">function</span> <span class="fn">isCoordinatorMode</span>(): <span class="type">boolean</span> {
+  <span class="kw">if</span> (<span class="fn">feature</span>(<span class="str">'COORDINATOR_MODE'</span>)) {
+    <span class="kw">return</span> <span class="fn">isEnvTruthy</span>(
+      process.env.CLAUDE_CODE_COORDINATOR_MODE
+    )
+  }
+  <span class="kw">return false</span> <span class="cm">// DCE: entire branch stripped in non-coord builds</span>
+}</pre>
+          <p class="text-sm text-muted mt-12">Dual check: build-time flag + runtime env var. Internal-only worker tools: TeamCreate, TeamDelete, SendMessage, SyntheticOutput</p>
+        </div>
+        <div class="card">
+          <h3>Agent Swarms <span class="novel">Novel</span></h3>
+          <div class="arch" style="gap: 8px; margin-top: 8px;">
+            <div class="arch-row">
+              <div class="arch-node blue" style="font-size:11px;">Coordinator Agent</div>
+            </div>
+            <div class="arch-arrow" style="font-size:12px;">TeamCreateTool → in_process_teammates</div>
+            <div class="arch-row">
+              <div class="arch-node green" style="font-size:10px;">teammate 1</div>
+              <div class="arch-node green" style="font-size:10px;">teammate 2</div>
+              <div class="arch-node green" style="font-size:10px;">teammate 3</div>
+              <div class="arch-node green" style="font-size:10px;">teammate N</div>
+            </div>
+            <div class="arch-arrow" style="font-size:12px;">SendMessageTool injects messages into running agents</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card card-accent">
+          <h3>AgentTool Architecture</h3>
+          <table>
+            <tr><td class="mono" style="font-size:11px;">runAgent.ts</td><td style="font-size:11px; color:var(--muted);">Full sub-agent lifecycle (fork, run, resume)</td></tr>
+            <tr><td class="mono" style="font-size:11px;">resumeAgent.ts</td><td style="font-size:11px; color:var(--muted);">Resume paused/interrupted agent</td></tr>
+            <tr><td class="mono" style="font-size:11px;">forkSubagent.ts</td><td style="font-size:11px; color:var(--muted);">Fork current context for parallel work</td></tr>
+            <tr><td class="mono" style="font-size:11px;">agentColorManager.ts</td><td style="font-size:11px; color:var(--muted);">Assigns unique colors per agent type</td></tr>
+            <tr><td class="mono" style="font-size:11px;">agentMemory.ts</td><td style="font-size:11px; color:var(--muted);">Per-agent memory + snapshots</td></tr>
+          </table>
+        </div>
+        <div class="card yellow-border">
+          <h3>7 Task Types</h3>
+          <div class="box-grid box-grid-2" style="gap: 8px; margin-top: 6px;">
+            <div class="box"><div class="box-title">b</div><div class="box-val">bash</div></div>
+            <div class="box"><div class="box-title">a</div><div class="box-val">agent</div></div>
+            <div class="box"><div class="box-title">r</div><div class="box-val">remote</div></div>
+            <div class="box"><div class="box-title">t</div><div class="box-val">teammate</div></div>
+            <div class="box"><div class="box-title">w</div><div class="box-val">workflow</div></div>
+            <div class="box"><div class="box-title">m</div><div class="box-val">monitor</div></div>
+            <div class="box"><div class="box-title">d</div><div class="box-val">dream</div></div>
+          </div>
+        </div>
+        <div class="card purple-border">
+          <h3>Remote Session Viewer <span class="novel">Novel</span></h3>
+          <ul class="bullets sm">
+            <li>WebSocket connection to remote daemon</li>
+            <li>Ctrl+C/Esc do NOT interrupt remote agent</li>
+            <li>Tasks tracked via event-sourced <span class="mono">system/task_started</span> events</li>
+            <li>60s reconnect timeout disabled in viewer mode</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 12: BUILD SYSTEM
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s12">
+  <div class="slide-header">
+    <span class="slide-num">12</span>
+    <span class="slide-tag">Build System</span>
+  </div>
+  <h2>Build System &amp; Key Dependencies</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>Bun Build Command</h3>
+          <pre style="font-size:11px;"><span class="fn">bun build</span> ./entrypoints/cli.tsx \
+  --outfile ./dist/cli.js \
+  --target bun \
+  --format esm \
+  --define MACRO=<span class="str">'{"VERSION":"0.0.0-rebuilt",...}'</span> \
+  --external audio-capture-napi \
+  --external color-diff-napi \
+  --external image-processor-napi \
+  --external @ant/computer-use-mcp \
+  --external @anthropic-ai/sandbox-runtime</pre>
+          <ul class="bullets sm mt-12">
+            <li>Single ESM bundle output — <span class="hl">dist/cli.js</span></li>
+            <li>Native <span class="mono">*-napi</span> bindings externalized, loaded at runtime</li>
+            <li><span class="hl">MACRO</span> object inlined at build time (version, build ts, feedback channel)</li>
+            <li><span class="hl">feature()</span> resolved at build time → unused branches stripped</li>
+          </ul>
+        </div>
+        <div class="card">
+          <h3>CI Pipeline</h3>
+          <div class="flow" style="flex-direction: column; align-items: flex-start; gap: 8px; margin-top: 8px;">
+            <div class="flow" style="gap: 8px;">
+              <span class="flow-box" style="color: var(--blue);">typecheck</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-box" style="color: var(--blue);">lint</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-box" style="color: var(--green);">build</span>
+            </div>
+            <div class="flow" style="gap: 8px;">
+              <span class="flow-arrow" style="color: var(--muted);">↓</span>
+            </div>
+            <div class="flow" style="gap: 8px;">
+              <span class="flow-box">smoke:cli</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-box">smoke:bundle</span>
+              <span class="flow-arrow">→</span>
+              <span class="flow-box">smoke:employee</span>
+            </div>
+          </div>
+          <p class="text-sm text-muted mt-12">Dev mode: <span class="mono">bun ./entrypoints/cli.tsx</span> — runs TypeScript directly, no build needed</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card scroll-y" style="flex: 1;">
+          <h3>Key Dependencies</h3>
+          <table style="font-size: 12px;">
+            <thead><tr><th>Package</th><th>Purpose</th></tr></thead>
+            <tr><td class="mono">@anthropic-ai/sdk ^0.63</td><td>Primary Claude API (streaming)</td></tr>
+            <tr><td class="mono">@anthropic-ai/bedrock-sdk</td><td>AWS Bedrock backend</td></tr>
+            <tr><td class="mono">@anthropic-ai/vertex-sdk</td><td>Google Vertex AI backend</td></tr>
+            <tr><td class="mono">@anthropic-ai/foundry-sdk</td><td>Internal Foundry backend</td></tr>
+            <tr><td class="mono">@anthropic-ai/claude-agent-sdk</td><td>Sub-agent embedding SDK</td></tr>
+            <tr><td class="mono">@modelcontextprotocol/sdk ^1.20</td><td>MCP client + server</td></tr>
+            <tr><td class="mono">react ^19.2 + react-reconciler</td><td>UI + custom renderer host</td></tr>
+            <tr><td class="mono">zod ^4.1</td><td>Tool input schema validation</td></tr>
+            <tr><td class="mono">@growthbook/growthbook</td><td>Feature flags / A/B gating</td></tr>
+            <tr><td class="mono">@opentelemetry/* (14 pkgs)</td><td>Full OTel observability</td></tr>
+            <tr><td class="mono">bidi-js</td><td>Unicode BiDi algorithm</td></tr>
+            <tr><td class="mono">sharp ^0.34</td><td>Image processing (vision)</td></tr>
+            <tr><td class="mono">vscode-languageserver-protocol</td><td>LSP client</td></tr>
+            <tr><td class="mono">qrcode</td><td>QR code (mobile pairing)</td></tr>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 13: NOVEL ENGINEERING
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s13">
+  <div class="slide-header">
+    <span class="slide-num">13</span>
+    <span class="slide-tag">Novel Engineering</span>
+  </div>
+  <h2>13 Novel Engineering Decisions</h2>
+  <div class="content">
+    <div class="box-grid box-grid-3" style="flex:1; align-content: start; gap: 12px;">
+      <div class="box" style="border-color: rgba(88,166,255,0.4);">
+        <div class="box-title">① Build-time DCE</div>
+        <div class="box-val" style="font-size:13px; color: var(--blue);">bun:bundle feature()</div>
+        <div class="box-desc">Internal features fully stripped from external builds — zero runtime overhead</div>
+      </div>
+      <div class="box" style="border-color: rgba(63,185,80,0.4);">
+        <div class="box-title">② Startup Parallelism</div>
+        <div class="box-val" style="font-size:13px; color: var(--green);">Fire during import eval</div>
+        <div class="box-desc">MDM + keychain reads fired at line 12/16 of main.tsx — saves ~130ms</div>
+      </div>
+      <div class="box" style="border-color: rgba(188,140,255,0.4);">
+        <div class="box-title">③ React Compiler</div>
+        <div class="box-val" style="font-size:13px; color: var(--purple);">Auto-memoization</div>
+        <div class="box-desc">React 19 compiler auto-generates _c() cache slots — no manual useMemo needed</div>
+      </div>
+      <div class="box" style="border-color: rgba(247,129,102,0.4);">
+        <div class="box-title">④ Cryptographic Task IDs</div>
+        <div class="box-val" style="font-size:13px; color: var(--accent);">crypto.randomBytes()</div>
+        <div class="box-desc">36^8 ≈ 2.8T combinations to resist brute-force symlink attacks on task files</div>
+      </div>
+      <div class="box" style="border-color: rgba(227,179,65,0.4);">
+        <div class="box-title">⑤ 3-Strategy Circ. Deps</div>
+        <div class="box-val" style="font-size:13px; color: var(--yellow);">Type / lazy / DCE</div>
+        <div class="box-desc">Types in types/, lazy require() in functions, feature() conditional imports</div>
+      </div>
+      <div class="box" style="border-color: rgba(57,211,83,0.4);">
+        <div class="box-title">⑥ PII Type Convention</div>
+        <div class="box-val" style="font-size:13px; color: var(--teal);">Type name = comment</div>
+        <div class="box-desc">AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS enforces PII awareness</div>
+      </div>
+      <div class="box" style="border-color: rgba(240,136,62,0.4);">
+        <div class="box-title">⑦ Speculation Refs</div>
+        <div class="box-val" style="font-size:13px; color: var(--orange);">Mutable in immutable</div>
+        <div class="box-desc">Mutable refs inside DeepImmutable AppState avoids O(n) array spread per token</div>
+      </div>
+      <div class="box" style="border-color: rgba(88,166,255,0.4);">
+        <div class="box-title">⑧ Frame Contamination</div>
+        <div class="box-val" style="font-size:13px; color: var(--blue);">prevFrameContaminated</div>
+        <div class="box-desc">Tracks stale inverted cells after selection/alt-screen — triggers full redraw vs blit</div>
+      </div>
+      <div class="box" style="border-color: rgba(188,140,255,0.4);">
+        <div class="box-title">⑨ LegacyRoot Search</div>
+        <div class="box-val" style="font-size:13px; color: var(--purple);">No scheduler leaks</div>
+        <div class="box-desc">0.0003ms/call growth in ConcurrentRoot = pathological at 8k messages</div>
+      </div>
+      <div class="box" style="border-color: rgba(247,129,102,0.4);">
+        <div class="box-title">⑩ Viewer-Only Mode</div>
+        <div class="box-val" style="font-size:13px; color: var(--accent);">WebSocket + event-source</div>
+        <div class="box-desc">claude assistant = view-only remote session; Ctrl+C never interrupts remote agent</div>
+      </div>
+      <div class="box" style="border-color: rgba(63,185,80,0.4);">
+        <div class="box-title">⑪ Yoga WASM Mem Mgmt</div>
+        <div class="box-val" style="font-size:13px; color: var(--green);">Explicit free ordering</div>
+        <div class="box-desc">Clear ALL references before freeRecursive() — prevents use-after-free in concurrent ops</div>
+      </div>
+      <div class="box" style="border-color: rgba(227,179,65,0.4);">
+        <div class="box-title">⑫ 4 AI Backends</div>
+        <div class="box-val" style="font-size:13px; color: var(--yellow);">Unified query.ts</div>
+        <div class="box-desc">Anthropic, Bedrock, Vertex, Foundry — transparent to the query layer</div>
+      </div>
+      <div class="box" style="border-color: rgba(57,211,83,0.4);">
+        <div class="box-title">⑬ 8 Message Types</div>
+        <div class="box-val" style="font-size:13px; color: var(--teal);">Rich taxonomy</div>
+        <div class="box-desc">Attachment, Progress, StreamEvent, CompactBoundary, Tombstone, ToolUseSummary…</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 14: REACT / UI COMPONENTS
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s14">
+  <div class="slide-header">
+    <span class="slide-num">14</span>
+    <span class="slide-tag">UI Components</span>
+  </div>
+  <h2>React / Ink UI Components</h2>
+  <div class="content">
+    <div class="cols cols-2" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card">
+          <h3>React Compiler in App.tsx <span class="novel">Novel</span></h3>
+          <pre><span class="kw">import</span> { c <span class="kw">as</span> _c } <span class="kw">from</span> <span class="str">"react/compiler-runtime"</span>
+
+<span class="kw">export function</span> <span class="fn">App</span>(t0) {
+  <span class="kw">const</span> $ = <span class="fn">_c</span>(<span class="num">9</span>) <span class="cm">// 9-slot auto-generated cache</span>
+  <span class="kw">if</span> ($[<span class="num">0</span>] !== children || $[<span class="num">1</span>] !== initialState) {
+    t1 = &lt;<span class="type">AppStateProvider</span> ...&gt;{children}&lt;/<span class="type">AppStateProvider</span>&gt;
+    $[<span class="num">0</span>] = children; $[<span class="num">1</span>] = initialState; $[<span class="num">2</span>] = t1
+  } <span class="kw">else</span> {
+    t1 = $[<span class="num">2</span>] <span class="cm">// cache hit — no re-render</span>
+  }
+}</pre>
+        </div>
+        <div class="card">
+          <h3>Provider Hierarchy</h3>
+          <div class="timeline" style="margin-top:8px;">
+            <div class="tl-item">
+              <div class="tl-dot"></div>
+              <div class="tl-label">FpsMetricsProvider</div>
+              <div class="tl-desc">FPS measurement context</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot green"></div>
+              <div class="tl-label">StatsProvider</div>
+              <div class="tl-desc">Session stats</div>
+            </div>
+            <div class="tl-item">
+              <div class="tl-dot yellow"></div>
+              <div class="tl-label">AppStateProvider</div>
+              <div class="tl-desc">Global app state + onChangeAppState side-effect bus</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 14px;">
+        <div class="card card-accent">
+          <h3>Key Components (390 files)</h3>
+          <table>
+            <tr><td class="mono" style="font-size:11px;">Messages.tsx / Message.tsx</td><td style="font-size:11px; color:var(--muted);">Conversation rendering pipeline</td></tr>
+            <tr><td class="mono" style="font-size:11px;">PromptInput/</td><td style="font-size:11px; color:var(--muted);">Text input with full vim mode integration</td></tr>
+            <tr><td class="mono" style="font-size:11px;">agents/</td><td style="font-size:11px; color:var(--muted);">Color-coded agent progress indicators</td></tr>
+            <tr><td class="mono" style="font-size:11px;">tasks/</td><td style="font-size:11px; color:var(--muted);">Background task list UI</td></tr>
+            <tr><td class="mono" style="font-size:11px;">mcp/</td><td style="font-size:11px; color:var(--muted);">MCP server connection UI</td></tr>
+            <tr><td class="mono" style="font-size:11px;">memory/</td><td style="font-size:11px; color:var(--muted);">Memory display overlay</td></tr>
+            <tr><td class="mono" style="font-size:11px;">permissions/</td><td style="font-size:11px; color:var(--muted);">Permission grant/deny dialogs</td></tr>
+            <tr><td class="mono" style="font-size:11px;">Settings/</td><td style="font-size:11px; color:var(--muted);">Settings configuration UI</td></tr>
+            <tr><td class="mono" style="font-size:11px;">design-system/</td><td style="font-size:11px; color:var(--muted);">Shared design tokens</td></tr>
+          </table>
+        </div>
+        <div class="card green-border">
+          <h3>FPS Tracking</h3>
+          <p class="text-sm text-muted">Renderer tracks FPS metrics → exposed via <span class="hl">FpsMetricsProvider</span> → feeds startup profiler + analytics. Terminal renders at measurable frame rates with ANSI diff patching.</p>
+        </div>
+        <div class="card yellow-border">
+          <h3>Skill Components</h3>
+          <p class="text-sm text-muted">Skills from <span class="hl">~/.claude/skills/*.md</span> auto-appear as slash commands. Each skill is loadable with YAML frontmatter for argument substitution, model overrides, and tool enable/disable.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SLIDE 15: SUMMARY
+═══════════════════════════════════════════════ -->
+<div class="slide" id="s15">
+  <div class="slide-header">
+    <span class="slide-num">15</span>
+    <span class="slide-tag">Summary</span>
+  </div>
+  <h2>What Makes This Architecturally Unique</h2>
+  <div class="content">
+    <div class="cols cols-3" style="flex:1;">
+      <div style="display:flex; flex-direction:column; gap: 12px;">
+        <div class="card" style="border-color: rgba(88,166,255,0.5);">
+          <h3 style="color: var(--blue);">Terminal as Production System</h3>
+          <p class="text-sm text-muted">This is not a typical CLI tool. It is a <span class="hl">production-grade distributed AI system</span> implemented as a terminal application — with its own renderer, layout engine, frame diffing, search indexing, and BiDi support.</p>
+        </div>
+        <div class="card" style="border-color: rgba(63,185,80,0.5);">
+          <h3 style="color: var(--green);">4 AI Backends, 1 Interface</h3>
+          <p class="text-sm text-muted">Anthropic, AWS Bedrock, Google Vertex, Internal Foundry — all unified behind <span class="hl">query.ts</span>. Backend selection is transparent to the AI conversation loop.</p>
+        </div>
+        <div class="card" style="border-color: rgba(247,129,102,0.5);">
+          <h3 style="color: var(--accent);">Build-time Intelligence</h3>
+          <p class="text-sm text-muted">Feature flags resolved at build time via <span class="hl">bun:bundle feature()</span> — entire coordinator, KAIROS, and bridge mode codepaths are absent from external builds with zero runtime overhead.</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 12px;">
+        <div class="card" style="border-color: rgba(188,140,255,0.5);">
+          <h3 style="color: var(--purple);">React Compiler in a Terminal</h3>
+          <p class="text-sm text-muted">Pre-release React 19 compiler integration for automated memoization in a terminal UI context — a novel application of a web-world feature to a CLI renderer.</p>
+        </div>
+        <div class="card" style="border-color: rgba(227,179,65,0.5);">
+          <h3 style="color: var(--yellow);">LLM-Based Context Management</h3>
+          <p class="text-sm text-muted">Compaction, micro-compaction, memory extraction, and a speculation engine that <span class="hl">pre-runs AI responses before the user submits</span>. Context is actively managed, not just truncated.</p>
+        </div>
+        <div class="card" style="border-color: rgba(63,185,80,0.5);">
+          <h3 style="color: var(--green);">Full Vim Mode in Prompt</h3>
+          <p class="text-sm text-muted">5 files, pure functional, zero global state. Full motions, operators, text objects, registers, dot-repeat — all implemented in the terminal prompt input.</p>
+        </div>
+      </div>
+      <div style="display:flex; flex-direction:column; gap: 12px;">
+        <div class="card" style="border-color: rgba(240,136,62,0.5);">
+          <h3 style="color: var(--orange);">Multi-Process Agent Orchestration</h3>
+          <p class="text-sm text-muted">7 task types, agent swarms, coordinator mode, in-process teammates, remote viewer sessions — orchestrated from a terminal with event-sourced task tracking.</p>
+        </div>
+        <div class="card" style="border-color: rgba(57,211,83,0.5);">
+          <h3 style="color: var(--teal);">Full OTel Observability Stack</h3>
+          <p class="text-sm text-muted">14 OTel packages for traces, metrics, and logs — sampled at 100% internally, 0.5% externally. Startup profiled in 4 phases. PII enforced at the type level.</p>
+        </div>
+        <div class="card" style="background: linear-gradient(135deg, rgba(88,166,255,0.1), rgba(188,140,255,0.1)); border-color: rgba(188,140,255,0.5);">
+          <h3 style="background: linear-gradient(90deg, var(--blue), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">778 Source Files</h3>
+          <p class="text-sm text-muted">40 subsystems · 40 tools · 60+ commands · Custom renderer · Vim engine · Multi-agent coordinator · 4 AI backends · Full OTel stack</p>
+          <p class="text-sm" style="color: var(--muted); margin-top: 8px; font-family: monospace;">bun run build → dist/cli.js</p>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</div><!-- #deck -->
+
+<!-- NAV -->
+<nav id="nav">
+  <button class="nav-btn" id="prev" onclick="go(-1)">←</button>
+  <span id="slide-counter">1 / 15</span>
+  <button class="nav-btn" id="next" onclick="go(1)">→</button>
+</nav>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const total = slides.length;
+  let cur = 0;
+
+  function show(n) {
+    slides[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(total - 1, n));
+    slides[cur].classList.add('active');
+    document.getElementById('slide-counter').textContent = (cur + 1) + ' / ' + total;
+    document.getElementById('prev').disabled = cur === 0;
+    document.getElementById('next').disabled = cur === total - 1;
+    document.getElementById('progress').style.width = ((cur + 1) / total * 100) + '%';
+  }
+
+  function go(delta) { show(cur + delta); }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(1); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(-1); }
+    if (e.key === 'Home') show(0);
+    if (e.key === 'End') show(total - 1);
+    if (e.key >= '1' && e.key <= '9') show(parseInt(e.key) - 1);
+  });
+
+  // Touch swipe
+  let touchX = 0;
+  document.addEventListener('touchstart', e => { touchX = e.touches[0].clientX; });
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - touchX;
+    if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
+  });
+
+  show(0);
+</script>
+</body>
+</html>

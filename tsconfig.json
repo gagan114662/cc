@@ -1,0 +1,40 @@
+{
+  "compilerOptions": {
+    "target": "ESNext",
+    "module": "ESNext",
+    "moduleResolution": "Bundler",
+    "jsx": "react-jsx",
+    "lib": [
+      "ESNext",
+      "ESNext.Intl"
+    ],
+    "allowJs": true,
+    "checkJs": false,
+    "resolveJsonModule": true,
+    "allowSyntheticDefaultImports": true,
+    "esModuleInterop": true,
+    "strict": false,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "baseUrl": ".",
+    "paths": {
+      "src/*": [
+        "./*"
+      ]
+    },
+    "types": [
+      "bun-types",
+      "node"
+    ]
+  },
+  "include": [
+    "./**/*.ts",
+    "./**/*.tsx",
+    "./**/*.js",
+    "./**/*.d.ts"
+  ],
+  "exclude": [
+    "./dist",
+    "./node_modules"
+  ]
+}

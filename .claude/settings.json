@@ -1,0 +1,73 @@
+{
+  "deterministicHarness": {
+    "enabled": true,
+    "strictWorkflow": true,
+    "repoAdapterPath": "./deterministic-harness.adapter.json",
+    "requireHumanGate": true,
+    "emitTelemetry": true,
+    "strictJsonResponses": true
+  },
+  "autoresearch": {
+    "enabled": true,
+    "configPath": "./autoresearch.config.json",
+    "schedulerCadenceMs": 60000,
+    "emitTelemetry": true
+  },
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/repoGuard.ts\" SessionStart",
+            "timeout": 15,
+            "statusMessage": "Loading repo guardrails"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "Glob|Grep|Bash|Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/repoGuard.ts\" PreToolUse",
+            "timeout": 15,
+            "statusMessage": "Checking repo guardrails"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/autoresearchSessionObservation.ts\" SessionEnd",
+            "timeout": 10,
+            "statusMessage": "Recording Claude session telemetry"
+          },
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/dist/autoresearch-cycle.js\"",
+            "timeout": 60,
+            "statusMessage": "Running autoresearch cycle"
+          }
+        ]
+      }
+    ],
+    "StopFailure": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bun \"$CLAUDE_PROJECT_DIR/.claude/hooks/autoresearchSessionObservation.ts\" StopFailure",
+            "timeout": 10,
+            "statusMessage": "Recording Claude failure telemetry"
+          }
+        ]
+      }
+    ]
+  }
+}

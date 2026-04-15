@@ -1,0 +1,6 @@
+node_modules/
+dist/
+coverage/
+*.lock
+*.map
+*.d.ts

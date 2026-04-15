@@ -1,0 +1,9 @@
+.DS_Store
+node_modules/
+dist/
+coverage/
+.eslintcache
+tmp-*/
+autoresearch.experiments/
+*.log
+.claude/settings.local.json

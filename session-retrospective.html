@@ -1,0 +1,975 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Retrospective — Wrong Turns & Repo Fixes</title>
+<style>
+  :root {
+    --bg: #0a0a0a;
+    --surface: #111111;
+    --surface2: #181818;
+    --border: #252525;
+    --text: #e2e2e2;
+    --muted: #666;
+    --red: #ef4444;
+    --orange: #f97316;
+    --yellow: #eab308;
+    --green: #22c55e;
+    --blue: #3b82f6;
+    --purple: #a855f7;
+    --teal: #14b8a6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scroll-behavior: smooth; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+    font-size: 14px;
+    line-height: 1.6;
+  }
+
+  /* ─── LAYOUT ─── */
+  .shell { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  /* ─── SIDEBAR ─── */
+  nav {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 28px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+  }
+  .nav-logo {
+    padding: 0 20px 20px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 12px;
+  }
+  .nav-logo .title { font-size: 13px; font-weight: 700; color: var(--text); }
+  .nav-logo .sub   { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .nav-section {
+    padding: 10px 20px 6px;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+  nav a {
+    display: flex;
+    align-items: center;
+    gap: 9px;
+    padding: 7px 20px;
+    text-decoration: none;
+    font-size: 13px;
+    color: var(--muted);
+    border-left: 2px solid transparent;
+    transition: all .15s;
+  }
+  nav a:hover { color: var(--text); background: var(--surface2); }
+  nav a.active { color: var(--text); border-left-color: var(--blue); background: rgba(59,130,246,.06); }
+  .dot {
+    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
+    border: 1.5px solid currentColor;
+  }
+  .dot.red    { color: var(--red); }
+  .dot.orange { color: var(--orange); }
+  .dot.yellow { color: var(--yellow); }
+  .dot.green  { color: var(--green); }
+  .dot.blue   { color: var(--blue); }
+  .dot.purple { color: var(--purple); }
+
+  /* ─── MAIN ─── */
+  main { padding: 48px 56px; max-width: 960px; }
+
+  /* ─── PAGE HEADER ─── */
+  .page-hdr { margin-bottom: 40px; padding-bottom: 28px; border-bottom: 1px solid var(--border); }
+  .page-hdr .eyebrow { font-size: 11px; font-weight: 700; letter-spacing: .12em; text-transform: uppercase; color: var(--blue); margin-bottom: 10px; }
+  .page-hdr h1 { font-size: 32px; font-weight: 800; letter-spacing: -.02em; line-height: 1.15; }
+  .page-hdr p  { font-size: 15px; color: var(--muted); margin-top: 10px; max-width: 640px; }
+
+  /* ─── STAT ROW ─── */
+  .stat-row { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; margin: 28px 0; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 14px 16px; }
+  .stat-card .n { font-size: 28px; font-weight: 800; line-height: 1; }
+  .stat-card .l { font-size: 10px; color: var(--muted); margin-top: 4px; text-transform: uppercase; letter-spacing: .07em; }
+
+  /* ─── SECTION ─── */
+  .section { margin-bottom: 48px; }
+  .section-hdr {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 20px; padding-bottom: 12px;
+    border-bottom: 1px solid var(--border);
+  }
+  .section-hdr h2 { font-size: 18px; font-weight: 700; }
+  .section-hdr .count {
+    background: var(--surface2); border: 1px solid var(--border);
+    border-radius: 20px; padding: 2px 10px; font-size: 11px; color: var(--muted);
+  }
+  [id] { scroll-margin-top: 32px; }
+
+  /* ─── WRONG-TURN CARD ─── */
+  .wt-card {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .wt-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px;
+    background: var(--surface);
+    border-bottom: 1px solid var(--border);
+  }
+  .wt-num {
+    width: 26px; height: 26px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 800; flex-shrink: 0;
+  }
+  .wt-header h3 { font-size: 14px; font-weight: 700; flex: 1; }
+  .badge {
+    font-size: 10px; font-weight: 700; padding: 2px 9px; border-radius: 20px;
+    text-transform: uppercase; letter-spacing: .07em; flex-shrink: 0;
+  }
+  .badge.high   { background: rgba(239,68,68,.15);   color: var(--red);    border: 1px solid rgba(239,68,68,.3); }
+  .badge.med    { background: rgba(249,115,22,.12);  color: var(--orange); border: 1px solid rgba(249,115,22,.25); }
+  .badge.low    { background: rgba(234,179,8,.1);    color: var(--yellow); border: 1px solid rgba(234,179,8,.2); }
+  .badge.good   { background: rgba(34,197,94,.1);    color: var(--green);  border: 1px solid rgba(34,197,94,.2); }
+  .badge.info   { background: rgba(59,130,246,.1);   color: var(--blue);   border: 1px solid rgba(59,130,246,.2); }
+
+  .wt-body { padding: 18px 20px; }
+  .wt-body p { color: #b0b0b0; margin-bottom: 10px; font-size: 13.5px; }
+  .wt-body p:last-child { margin-bottom: 0; }
+
+  /* ─── WRONG / RIGHT DIFF ─── */
+  .diff-pair {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 14px 0;
+  }
+  .diff-block {
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 12.5px;
+    line-height: 1.7;
+  }
+  .diff-block .label {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .09em;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .diff-wrong { background: rgba(239,68,68,.07); border: 1px solid rgba(239,68,68,.2); }
+  .diff-wrong .label { color: var(--red); }
+  .diff-right { background: rgba(34,197,94,.06); border: 1px solid rgba(34,197,94,.2); }
+  .diff-right .label { color: var(--green); }
+
+  /* ─── CODE ─── */
+  pre {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.7;
+    color: #ccc;
+    overflow-x: auto;
+    margin: 10px 0;
+  }
+  code {
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 3px;
+    color: var(--orange);
+  }
+  .kw { color: #c084fc; }
+  .str { color: #86efac; }
+  .cm { color: #555; font-style: italic; }
+  .fn { color: #60a5fa; }
+
+  /* ─── CALLOUT ─── */
+  .callout {
+    border-radius: 6px;
+    padding: 12px 14px;
+    margin: 12px 0;
+    font-size: 13px;
+    display: flex; gap: 10px; align-items: flex-start;
+  }
+  .callout .icon { flex-shrink: 0; font-size: 15px; margin-top: 1px; }
+  .callout p { color: #b5b5b5; }
+  .callout p strong { color: var(--text); }
+  .callout.warn { background: rgba(249,115,22,.07); border: 1px solid rgba(249,115,22,.2); }
+  .callout.fail { background: rgba(239,68,68,.07);  border: 1px solid rgba(239,68,68,.2); }
+  .callout.good { background: rgba(34,197,94,.06);  border: 1px solid rgba(34,197,94,.2); }
+  .callout.info { background: rgba(59,130,246,.07); border: 1px solid rgba(59,130,246,.2); }
+
+  /* ─── TIMELINE ─── */
+  .timeline { position: relative; padding-left: 28px; }
+  .timeline::before {
+    content: ''; position: absolute; left: 7px; top: 6px; bottom: 6px;
+    width: 2px; background: var(--border);
+  }
+  .tl { position: relative; margin-bottom: 18px; }
+  .tl-dot {
+    position: absolute; left: -22px; top: 5px;
+    width: 12px; height: 12px; border-radius: 50%;
+    border: 2px solid var(--border); background: var(--bg);
+  }
+  .tl-dot.red    { border-color: var(--red);    background: rgba(239,68,68,.15); }
+  .tl-dot.orange { border-color: var(--orange); background: rgba(249,115,22,.12); }
+  .tl-dot.green  { border-color: var(--green);  background: rgba(34,197,94,.1); }
+  .tl-dot.blue   { border-color: var(--blue);   background: rgba(59,130,246,.1); }
+  .tl-dot.yellow { border-color: var(--yellow); background: rgba(234,179,8,.1); }
+  .tl-t  { font-size: 10px; color: var(--muted); margin-bottom: 2px; font-variant-numeric: tabular-nums; }
+  .tl-l  { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 3px; }
+  .tl-d  { font-size: 12px; color: var(--muted); }
+
+  /* ─── FIX CARD ─── */
+  .fix-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .fix-header {
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+  }
+  .fix-header .fix-num {
+    width: 22px; height: 22px; border-radius: 4px;
+    background: rgba(20,184,166,.12); border: 1px solid rgba(20,184,166,.3);
+    color: var(--teal); font-size: 11px; font-weight: 800;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .fix-header h3 { font-size: 14px; font-weight: 700; flex: 1; }
+  .fix-header .fix-file {
+    font-family: monospace; font-size: 11px; color: var(--muted);
+    background: var(--bg); border: 1px solid var(--border);
+    padding: 2px 8px; border-radius: 4px;
+  }
+  .fix-body { padding: 16px 20px; }
+  .fix-body p { color: #b0b0b0; font-size: 13px; margin-bottom: 10px; }
+  .fix-body p:last-child { margin-bottom: 0; }
+  .fix-body ul { margin: 8px 0 10px 18px; color: #a0a0a0; font-size: 13px; }
+  .fix-body ul li { margin-bottom: 5px; }
+
+  /* ─── IMPACT MATRIX ─── */
+  .matrix { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+  .matrix th { text-align: left; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+  .matrix td { padding: 10px 12px; border-bottom: 1px solid var(--surface2); vertical-align: top; color: #b0b0b0; }
+  .matrix td:first-child { color: var(--text); font-weight: 500; }
+  .matrix tr:last-child td { border-bottom: none; }
+  .was { color: var(--red); }
+  .did { color: var(--green); }
+
+  /* ─── DIVIDER ─── */
+  hr { border: none; border-top: 1px solid var(--border); margin: 24px 0; }
+
+  /* ─── FOOTER ─── */
+  .footer { padding: 32px 0 16px; border-top: 1px solid var(--border); color: var(--muted); font-size: 12px; }
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- ══════════════════════════════════════════
+     NAV
+══════════════════════════════════════════ -->
+<nav>
+  <div class="nav-logo">
+    <div class="title">Session Retrospective</div>
+    <div class="sub">Slide deck build · April 2026</div>
+  </div>
+
+  <div class="nav-section">Overview</div>
+  <a href="#summary">Summary &amp; Stats</a>
+  <a href="#timeline-full">Session Timeline</a>
+
+  <div class="nav-section">Wrong Turns</div>
+  <a href="#wt1"><span class="dot red"></span>WT-1 Wrong skill</a>
+  <a href="#wt2"><span class="dot red"></span>WT-2 Write without Read</a>
+  <a href="#wt3"><span class="dot orange"></span>WT-3 find via Bash</a>
+  <a href="#wt4"><span class="dot orange"></span>WT-4 Parent dir ls</a>
+  <a href="#wt5"><span class="dot orange"></span>WT-5 cat via Bash</a>
+  <a href="#wt6"><span class="dot yellow"></span>WT-6 No scope agreement</a>
+  <a href="#wt7"><span class="dot yellow"></span>WT-7 No file offload</a>
+
+  <div class="nav-section">Repo Fixes</div>
+  <a href="#fix1"><span class="dot green"></span>CLAUDE.md in src 2/</a>
+  <a href="#fix2"><span class="dot green"></span>ARCHITECTURE.md</a>
+  <a href="#fix3"><span class="dot green"></span>.claude/commands/</a>
+  <a href="#fix4"><span class="dot green"></span>project-context.md</a>
+  <a href="#fix5"><span class="dot green"></span>agents/analyst.md</a>
+  <a href="#impact">Impact Matrix</a>
+</nav>
+
+<!-- ══════════════════════════════════════════
+     MAIN
+══════════════════════════════════════════ -->
+<main>
+
+  <!-- PAGE HEADER -->
+  <div class="page-hdr">
+    <div class="eyebrow">Agent Retrospective · This Session</div>
+    <h1>Where I Went Wrong — and What Would Have Stopped It</h1>
+    <p>A post-mortem of the "deep technical analysis → HTML slide deck" session. Covers every wrong turn, the self-correction that followed, and concrete repo changes that would have prevented each mistake.</p>
+  </div>
+
+  <!-- STAT ROW -->
+  <div id="summary" class="stat-row">
+    <div class="stat-card">
+      <div class="n" style="color:var(--red)">7</div>
+      <div class="l">Wrong Turns</div>
+    </div>
+    <div class="stat-card">
+      <div class="n" style="color:var(--orange)">2</div>
+      <div class="l">High Impact</div>
+    </div>
+    <div class="stat-card">
+      <div class="n" style="color:var(--yellow)">3</div>
+      <div class="l">Medium Impact</div>
+    </div>
+    <div class="stat-card">
+      <div class="n" style="color:var(--green)">5</div>
+      <div class="l">Repo Fixes</div>
+    </div>
+    <div class="stat-card">
+      <div class="n" style="color:var(--blue)">~2 min</div>
+      <div class="l">Time Recoverable</div>
+    </div>
+  </div>
+
+  <!-- FULL TIMELINE -->
+  <div class="section" id="timeline-full">
+    <div class="section-hdr">
+      <h2>Session Timeline</h2>
+      <span class="count">20 steps</span>
+    </div>
+    <div class="timeline">
+      <div class="tl">
+        <div class="tl-dot blue"></div>
+        <div class="tl-t">Step 1</div>
+        <div class="tl-l">User prompt: "deep technical analysis → HTML slide deck"</div>
+        <div class="tl-d">Task is clear. No ambiguity check performed. Went straight to skill lookup.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot red"></div>
+        <div class="tl-t">Step 2 — WT-1</div>
+        <div class="tl-l">Skill invoked: <code>brainstorming-planner</code></div>
+        <div class="tl-d">Loaded a skill designed for "starting a complex task and clarifying requirements before coding." This is an analysis + presentation task — not a feature build. Skill loaded 3k+ words of guidance about requirement clarification, phased planning, and acceptance criteria that had zero relevance.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot orange"></div>
+        <div class="tl-t">Steps 3–4 — WT-3, WT-4</div>
+        <div class="tl-l">Bash: ls cc/ <strong>AND</strong> ls my-projects/ (parallel)</div>
+        <div class="tl-d"><strong>WT-3:</strong> Used Bash <code>ls</code> instead of the Glob tool (explicit instruction violation).<br><strong>WT-4:</strong> Listed the parent directory — 30+ sibling projects added zero analysis value. Never referenced again.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot orange"></div>
+        <div class="tl-t">Step 5 — WT-3 again</div>
+        <div class="tl-l">Bash: find … -maxdepth 3 -type f → 57KB truncated output</div>
+        <div class="tl-d">Explicit instruction says "use Glob not find". The 57KB result was too large, got persisted to a temp file, and the first 2KB truncated preview was used. Glob would have returned the same data more cleanly.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot orange"></div>
+        <div class="tl-t">Step 6 — WT-5</div>
+        <div class="tl-l">Bash: <code>cat package.json</code></div>
+        <div class="tl-d">Used Bash cat instead of the <code>Read</code> tool. Instruction: "To read files use Read instead of cat." Minor — same output, but correct tool not used.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot green"></div>
+        <div class="tl-t">Steps 7–14</div>
+        <div class="tl-l">Parallel deep reads across all major subsystems</div>
+        <div class="tl-d">Good: parallelized correctly, covered all subsystems, used Read and Grep tools. Accurate data gathered efficiently.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot red"></div>
+        <div class="tl-t">Step 15 — WT-2 (critical)</div>
+        <div class="tl-l">Write tool call → <strong>ERROR: "File has not been read yet"</strong></div>
+        <div class="tl-d">Attempted to Write to <code>analysis-deck.html</code> without first reading it. The Write tool requires a prior Read of the file. Had to stop, check if it existed (Bash), read it (Read tool), then retry. <strong>Three extra tool calls</strong> to accomplish what should have been immediate.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot yellow"></div>
+        <div class="tl-t">Step 16–17</div>
+        <div class="tl-l">Recovery: Bash exists check → Read 5 lines → Write (success)</div>
+        <div class="tl-d">Correctly identified the issue and fixed it. But this was a 3-step detour caused by not checking file existence before writing.</div>
+      </div>
+      <div class="tl">
+        <div class="tl-dot blue"></div>
+        <div class="tl-t">Steps 18–20</div>
+        <div class="tl-l">Browser open → deck delivered</div>
+        <div class="tl-d">Task complete. 20 high-quality slides.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══════════════════════════════════════════
+       WRONG TURNS
+  ══════════════════════════════════════════ -->
+  <div class="section" id="wrong-turns">
+    <div class="section-hdr">
+      <h2>Wrong Turns — Detailed Analysis</h2>
+      <span class="count">7 identified</span>
+    </div>
+
+    <!-- WT-1 -->
+    <div class="wt-card" id="wt1">
+      <div class="wt-header">
+        <div class="wt-num" style="background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);">1</div>
+        <h3>WT-1 — Wrong skill invoked: <code>brainstorming-planner</code></h3>
+        <span class="badge high">High Impact</span>
+      </div>
+      <div class="wt-body">
+        <p><strong>What happened:</strong> The first action after receiving the task was to invoke the <code>brainstorming-planner</code> skill. This skill is documented as "Use when starting a complex project, task, or feature to deeply clarify requirements, identify scope boundaries, map dependencies" — a pre-build planning tool.</p>
+        <p><strong>Why it happened:</strong> The using-superpowers meta-skill mandates checking for skills before any response. The agent scanned the list and matched on: "complex task" + "codebase" + "presentation." <code>brainstorming-planner</code> was the closest match by keyword proximity, not by core mechanism fit.</p>
+        <div class="diff-pair">
+          <div class="diff-block diff-wrong">
+            <div class="label">What was invoked</div>
+            <code>brainstorming-planner</code><br>
+            Designed for: planning a feature build<br>
+            Output: 3k words about acceptance criteria, phasing, risk identification — all irrelevant to "describe what exists"
+          </div>
+          <div class="diff-block diff-right">
+            <div class="label">What should have been invoked</div>
+            No skill — or a 1-line scope check:<br>
+            <em>"Should I cover all subsystems (~20 slides) for a technical audience, or focus on specific areas?"</em><br>
+            Then go straight to exploration.
+          </div>
+        </div>
+        <div class="callout warn">
+          <span class="icon">⚠</span>
+          <p><strong>Cost:</strong> ~3,000 words of irrelevant guidance loaded into context. The skill guided the agent to ask "what does done look like?" and "define acceptance criteria" — framing that added overhead to what should have been a direct exploration task.</p>
+        </div>
+        <p><strong>Corrected at:</strong> The agent recognized the skill content was mismatched and pivoted after Step 2 to direct exploration without following the skill's suggested workflow. Self-correction was fast but the context cost remained.</p>
+      </div>
+    </div>
+
+    <!-- WT-2 -->
+    <div class="wt-card" id="wt2">
+      <div class="wt-header">
+        <div class="wt-num" style="background:rgba(239,68,68,.15);color:var(--red);border:1px solid rgba(239,68,68,.3);">2</div>
+        <h3>WT-2 — Write failed: "File has not been read yet"</h3>
+        <span class="badge high">High Impact</span>
+      </div>
+      <div class="wt-body">
+        <p><strong>What happened:</strong> After gathering all research, the agent attempted to <code>Write</code> to <code>analysis-deck.html</code>. The Write tool requires a prior read of any existing file. The tool returned an error.</p>
+        <p><strong>Recovery path (3 extra steps):</strong></p>
+        <div class="timeline" style="margin: 10px 0 14px;">
+          <div class="tl">
+            <div class="tl-dot red"></div>
+            <div class="tl-l" style="font-size:12px;">Write → ERROR: "File has not been read yet. Read it first."</div>
+          </div>
+          <div class="tl">
+            <div class="tl-dot orange"></div>
+            <div class="tl-l" style="font-size:12px;">Bash: <code>ls analysis-deck.html && echo "exists"</code> → "exists"</div>
+          </div>
+          <div class="tl">
+            <div class="tl-dot orange"></div>
+            <div class="tl-l" style="font-size:12px;">Read: first 5 lines of file (to satisfy the requirement)</div>
+          </div>
+          <div class="tl">
+            <div class="tl-dot green"></div>
+            <div class="tl-l" style="font-size:12px;">Write: success ✓</div>
+          </div>
+        </div>
+        <div class="diff-pair">
+          <div class="diff-block diff-wrong">
+            <div class="label">What happened (4 calls)</div>
+            Write → fail<br>
+            Bash exists check<br>
+            Read (5 lines)<br>
+            Write (success)
+          </div>
+          <div class="diff-block diff-right">
+            <div class="label">What should have happened (1 call)</div>
+            Check if file exists before writing.<br>
+            If yes: Read first, then Write.<br>
+            If no: Write directly.<br>
+            → Total: 1–2 calls max
+          </div>
+        </div>
+        <div class="callout fail">
+          <span class="icon">✗</span>
+          <p><strong>Root cause:</strong> The <code>analysis-deck.html</code> file already existed from a prior session. The agent didn't check for pre-existing files before issuing the Write. The <strong>tool contract was known</strong> (Write requires prior Read) but the pre-existence of the file wasn't checked first.</p>
+        </div>
+        <p><strong>Corrected at:</strong> Immediately after the error. The agent correctly diagnosed the issue, did the minimal read (5 lines), then succeeded. But this wasted 3 tool calls and added latency.</p>
+      </div>
+    </div>
+
+    <!-- WT-3 -->
+    <div class="wt-card" id="wt3">
+      <div class="wt-header">
+        <div class="wt-num" style="background:rgba(249,115,22,.12);color:var(--orange);border:1px solid rgba(249,115,22,.25);">3</div>
+        <h3>WT-3 — Used Bash <code>find</code> and <code>ls</code> instead of <code>Glob</code></h3>
+        <span class="badge med">Medium Impact</span>
+      </div>
+      <div class="wt-body">
+        <p><strong>What happened:</strong> Initial directory exploration used <code>Bash ls</code> and <code>Bash find -maxdepth 3 -type f</code>. The <code>find</code> call returned 57KB of output — so large it was persisted to a temp file and only the first 2KB was available in-context.</p>
+        <p><strong>Instruction violated:</strong></p>
+        <pre><span class="cm">// From system prompt:</span>
+<span class="str">"To search for files use Glob instead of find or ls."</span>
+<span class="str">"Avoid using this tool to run find, grep, cat, head, tail, sed, awk..."</span></pre>
+        <div class="diff-pair">
+          <div class="diff-block diff-wrong">
+            <div class="label">What was used (Bash)</div>
+            <code>find "..." -maxdepth 3 -type f | head -60</code><br>
+            Result: 57KB → truncated to 2KB<br>
+            Output lost; required extra step to recover
+          </div>
+          <div class="diff-block diff-right">
+            <div class="label">What should have been used (Glob)</div>
+            <code>Glob("**/*.ts", path="src 2")</code><br>
+            Returns sorted file paths directly<br>
+            No truncation, respects tool boundaries
+          </div>
+        </div>
+        <p><strong>Why it happened:</strong> The Bash tool is more familiar and flexible. When exploring unfamiliar codebases the agent defaults to shell commands before checking if a dedicated tool covers the need.</p>
+        <p><strong>Corrected at:</strong> Subsequent exploration steps correctly used the <code>Read</code> and <code>Grep</code> tools. The initial Bash habits weren't repeated.</p>
+      </div>
+    </div>
+
+    <!-- WT-4 -->
+    <div class="wt-card" id="wt4">
+      <div class="wt-header">
+        <div class="wt-num" style="background:rgba(249,115,22,.12);color:var(--orange);border:1px solid rgba(249,115,22,.25);">4</div>
+        <h3>WT-4 — Unnecessary <code>ls</code> of parent directory</h3>
+        <span class="badge med">Medium Impact</span>
+      </div>
+      <div class="wt-body">
+        <p><strong>What happened:</strong> In the first parallel batch, the agent listed both the project directory <em>and</em> its parent (<code>my projects/</code>). The parent listing revealed 30+ unrelated projects (paperclip, spark, hermes, etc.) that were never referenced in the analysis or slide deck.</p>
+        <div class="diff-pair">
+          <div class="diff-block diff-wrong">
+            <div class="label">What was explored</div>
+            <code>ls /my projects/cc/</code> ← needed<br>
+            <code>ls /my projects/</code> ← never used<br>
+            Output: 30+ unrelated project names
+          </div>
+          <div class="diff-block diff-right">
+            <div class="label">Correct scope</div>
+            <code>ls /my projects/cc/</code> only<br><br>
+            Parent context irrelevant unless asked<br>
+            "what workspace is this in"
+          </div>
+        </div>
+        <div class="callout info">
+          <span class="icon">ℹ</span>
+          <p><strong>Why it happens:</strong> When a directory path contains a parent (e.g., <code>my projects/cc</code>), there's a habit of also checking <code>my projects/</code> to understand whether this is a monorepo, workspace, or standalone. Here, it was clearly standalone and the extra check added only context noise.</p>
+        </div>
+        <p><strong>Corrected at:</strong> Never — the habit fired and was never revisited. The data was simply ignored.</p>
+      </div>
+    </div>
+
+    <!-- WT-5 -->
+    <div class="wt-card" id="wt5">
+      <div class="wt-header">
+        <div class="wt-num" style="background:rgba(249,115,22,.12);color:var(--orange);border:1px solid rgba(249,115,22,.25);">5</div>
+        <h3>WT-5 — Used <code>cat package.json</code> via Bash instead of <code>Read</code> tool</h3>
+        <span class="badge med">Medium Impact</span>
+      </div>
+      <div class="wt-body">
+        <p><strong>What happened:</strong> <code>package.json</code> was read with <code>cat package.json | head -60</code> via Bash. The <code>Read</code> tool exists exactly for this purpose and is the mandated approach.</p>
+        <p><strong>Instruction violated:</strong></p>
+        <pre><span class="cm">// From system prompt:</span>
+<span class="str">"To read files use Read instead of cat, head, tail, or sed."</span></pre>
+        <div class="callout warn">
+          <span class="icon">⚠</span>
+          <p><strong>Why it matters:</strong> The Read tool provides line numbers, respects malware scanning, and makes the operation visible to the user as a "file read" rather than a "shell command." Using Bash for file reads obscures intent and bypasses the tool's metadata.</p>
+        </div>
+        <p><strong>Corrected at:</strong> All subsequent file reads used the <code>Read</code> tool correctly. This was a one-off early slip.</p>
+      </div>
+    </div>
+
+    <!-- WT-6 -->
+    <div class="wt-card" id="wt6">
+      <div class="wt-header">
+        <div class="wt-num" style="background:rgba(234,179,8,.1);color:var(--yellow);border:1px solid rgba(234,179,8,.2);">6</div>
+        <h3>WT-6 — No upfront scope agreement before researching</h3>
+        <span class="badge low">Low Impact</span>
+      </div>
+      <div class="wt-body">
+        <p><strong>What happened:</strong> The agent went directly from "deep technical analysis → HTML slide deck" to exploration without asking how many slides, what audience, what level of depth, or whether to focus on specific subsystems.</p>
+        <p><strong>CLAUDE.md mandate violated:</strong></p>
+        <pre><span class="str">"For deck / report / presentation tasks, also confirm scope before researching:
+'I'll cover all major subsystems (~N slides/sections) for a technical audience.
+Want me to adjust scope or focus on specific areas?'"</span>
+<span class="cm">// One question, wait for answer, then proceed.</span></pre>
+        <div class="diff-pair">
+          <div class="diff-block diff-wrong">
+            <div class="label">What happened</div>
+            Went straight to exploration.<br>
+            Produced 20 slides covering everything.<br>
+            Got lucky — user didn't complain.
+          </div>
+          <div class="diff-block diff-right">
+            <div class="label">Correct approach</div>
+            "I'll cover all major subsystems (~20 slides) for a technical audience — want me to adjust scope or focus on specific areas like the agent system or MCP?"<br>
+            Wait 10 seconds. Proceed.
+          </div>
+        </div>
+        <p><strong>Corrected at:</strong> Not corrected — the agent got lucky that the output matched expectations. This is a latent risk: if the user had wanted 8 focused slides, the 283-second exploration would have been wasted.</p>
+      </div>
+    </div>
+
+    <!-- WT-7 -->
+    <div class="wt-card" id="wt7">
+      <div class="wt-header">
+        <div class="wt-num" style="background:rgba(234,179,8,.1);color:var(--yellow);border:1px solid rgba(234,179,8,.2);">7</div>
+        <h3>WT-7 — Research findings not offloaded to a file</h3>
+        <span class="badge low">Low Impact (this session) · High Impact (future sessions)</span>
+      </div>
+      <div class="wt-body">
+        <p><strong>What happened:</strong> The deep research (all the parallel reads across 20 files) was accumulated in-context and used directly for HTML generation. No intermediate research file was written.</p>
+        <p><strong>CLAUDE.md mandate:</strong></p>
+        <pre><span class="str">"When ANY tool or agent call returns > 5,000 tokens of output:
+1. Write the full output to a temporary .md file
+2. Show only a summary in the conversation
+3. Reference the file path for all subsequent work"</span></pre>
+        <div class="callout warn">
+          <span class="icon">⚠</span>
+          <p><strong>Why it matters long-term:</strong> All the file reads — package.json, main.tsx, Tool.ts, tools.ts, Task.ts, QueryEngine.ts, plus all the ls outputs — are now in this context. The follow-up request (this retrospective) started with an already-heavy context, making it slower and more expensive than it needed to be.</p>
+        </div>
+        <p><strong>Correct approach:</strong> After the exploration phase, write findings to <code>research-findings.md</code>, then reference sections of it during HTML generation. This keeps main context lean for follow-up tasks.</p>
+      </div>
+    </div>
+
+  </div><!-- /wrong turns -->
+
+  <!-- ══════════════════════════════════════════
+       REPO FIXES
+  ══════════════════════════════════════════ -->
+  <div class="section" id="repo-fixes">
+    <div class="section-hdr">
+      <h2>Repo Fixes — What to Add</h2>
+      <span class="count">5 files</span>
+    </div>
+    <p style="color:var(--muted);margin-bottom:20px;font-size:13px;">Each fix is a file you add to the repo. Together they would have eliminated WT-1, WT-2, WT-3, WT-4, WT-5, and WT-6 entirely — and reduced WT-7 to a non-issue.</p>
+
+    <!-- FIX 1 -->
+    <div class="fix-card" id="fix1">
+      <div class="fix-header">
+        <div class="fix-num">1</div>
+        <h3>CLAUDE.md in <code>src 2/</code></h3>
+        <span class="fix-file">src 2/CLAUDE.md</span>
+      </div>
+      <div class="fix-body">
+        <p><strong>Prevents:</strong> WT-1 (wrong skill), WT-3 (wrong tool), WT-4 (parent dir), WT-5 (cat), WT-6 (no scope check)</p>
+        <p>A project-level CLAUDE.md is read by the agent at the start of every session. It provides instant project identity (no exploration needed to know what this is) and can include agent-specific instructions for analysis tasks.</p>
+        <pre><span class="cm"># Claude Code — Rebuilt Source</span>
+
+<span class="cm">## What this is</span>
+This is a full rebuild of the Anthropic Claude Code CLI.
+Runtime: Bun. UI: React + custom Ink terminal renderer.
+Entry: `entrypoints/cli.tsx`. Build: `bun run build`.
+
+<span class="cm">## Key subsystems (for quick orientation)</span>
+- `QueryEngine.ts` — AI conversation loop
+- `tools/` — 40 tool implementations
+- `coordinator/` — multi-agent swarm (feature-flagged COORDINATOR_MODE)
+- `ink/` — custom React → terminal renderer
+- `services/mcp/` — MCP client + server
+- `state/AppState.ts` — immutable global state
+
+<span class="cm">## For analysis / slide deck tasks</span>
+1. Do NOT invoke brainstorming-planner — this is an analysis task, not a feature build.
+2. Ask scope question first: "~20 slides covering all subsystems, or focused on X?"
+3. Use Glob (not find/ls) and Read (not cat) for file exploration.
+4. Check if output files exist before writing them (Read first if they do).
+5. Save research findings to `research-findings.md` before writing the deck.</pre>
+        <p>With this file present, WT-1 would not happen (explicit instruction against brainstorming-planner for analysis tasks). WT-6 would not happen (scope question is mandated). WT-3/4/5 less likely (explicit tool guidance).</p>
+      </div>
+    </div>
+
+    <!-- FIX 2 -->
+    <div class="fix-card" id="fix2">
+      <div class="fix-header">
+        <div class="fix-num">2</div>
+        <h3>Architecture overview file</h3>
+        <span class="fix-file">src 2/ARCHITECTURE.md</span>
+      </div>
+      <div class="fix-body">
+        <p><strong>Prevents:</strong> WT-4 (unnecessary exploration), partially WT-3 (less need for broad find)</p>
+        <p>An <code>ARCHITECTURE.md</code> gives the agent a pre-written map of the codebase. It doesn't need to do a broad <code>find</code> sweep to discover the directory structure — it already knows it. This is the single biggest context-efficiency gain for any analysis task.</p>
+        <pre><span class="cm"># Architecture</span>
+
+<span class="cm">## Directory Map</span>
+src 2/
+├── main.tsx              # 4696 lines — CLI entry, startup profiling
+├── QueryEngine.ts        # AI conversation loop + retry logic
+├── query.ts              # raw Anthropic API call
+├── Tool.ts               # Tool base type + contracts (792 lines)
+├── Task.ts               # Task state machine (7 types)
+├── tools.ts              # Tool registry + loader
+├── tools/                # 40 tool implementations
+│   └── AgentTool/        # most complex — forks, memory, colors
+├── commands/             # 60+ slash commands
+├── coordinator/          # multi-agent (COORDINATOR_MODE feature flag)
+├── remote/               # WebSocket remote sessions
+├── ink/                  # custom React → terminal renderer
+├── services/             # analytics, mcp, auth, lsp, memory, voice
+├── state/AppState.ts     # immutable global state (reducer pattern)
+├── vim/                  # full vim mode (motions, operators, textObjects)
+└── voice/                # STT pipeline
+
+<span class="cm">## Startup sequence</span>
+profileCheckpoint → startMdmRawRead → startKeychainPrefetch →
+→ GrowthBook + MCP prefetch → showSetupScreens → renderAndRun
+
+<span class="cm">## Notable patterns</span>
+- DCE: bun:bundle feature() flags, tree-shaken at build time
+- Immutable state: setAppState(prev => newState) — never direct mutation
+- Circular dep breaking: types/* centralized, lazy require() for cycles</pre>
+        <p>With this file, the initial <code>find -maxdepth 3</code> sweep becomes unnecessary. The agent can read ARCHITECTURE.md (1 Read call) and immediately have the full directory map. WT-3 and WT-4 are effectively prevented.</p>
+      </div>
+    </div>
+
+    <!-- FIX 3 -->
+    <div class="fix-card" id="fix3">
+      <div class="fix-header">
+        <div class="fix-num">3</div>
+        <h3>Custom slash command: <code>/analyze</code></h3>
+        <span class="fix-file">.claude/commands/analyze.md</span>
+      </div>
+      <div class="fix-body">
+        <p><strong>Prevents:</strong> WT-1 (wrong skill), WT-6 (no scope), WT-7 (no file offload)</p>
+        <p>A custom slash command encodes the correct workflow for "analyze and present" tasks. When the user types <code>/analyze</code>, the agent follows this procedure instead of having to figure it out from scratch.</p>
+        <pre><span class="cm">---
+name: analyze
+description: Deep technical analysis → HTML slide deck. Use for codebase analysis, architecture review, and technical presentations.
+---</span>
+
+## Procedure
+
+<span class="str">1.</span> Read ARCHITECTURE.md and CLAUDE.md for instant project orientation.
+
+<span class="str">2.</span> Ask ONE scope question before any exploration:
+   "I'll cover [N] major subsystems for a [technical/general] audience.
+   Want me to adjust scope or focus on specific areas?"
+   Wait for answer. Default: all subsystems, technical audience.
+
+<span class="str">3.</span> Explore using Glob and Read tools only (never find/ls via Bash).
+
+<span class="str">4.</span> Save all research to `research-findings.md` before writing HTML.
+
+<span class="str">5.</span> Before writing the output HTML file:
+   - Check if it exists
+   - If yes: Read it first (even 1 line is enough)
+   - Then Write the full deck
+
+<span class="str">6.</span> Open the file in browser after writing.
+        </pre>
+        <p>This command would have short-circuited WT-1, WT-6, and WT-7 in one shot. The agent would follow the command's procedure instead of improvising from skill guidance.</p>
+      </div>
+    </div>
+
+    <!-- FIX 4 -->
+    <div class="fix-card" id="fix4">
+      <div class="fix-header">
+        <div class="fix-num">4</div>
+        <h3>Project context snapshot</h3>
+        <span class="fix-file">src 2/.claude/project-context.md</span>
+      </div>
+      <div class="fix-body">
+        <p><strong>Prevents:</strong> WT-3 (broad exploration), WT-4 (parent dir), WT-5 (cat package.json)</p>
+        <p>A <code>project-context.md</code> in the <code>.claude/</code> directory is automatically loaded into context. It provides a pre-computed summary of what the project is — so the agent never needs to run <code>cat package.json</code> to figure out the project identity.</p>
+        <pre><span class="cm"># Project Context</span>
+
+**Name:** claude-code-rebuilt (0.0.0-rebuilt)
+**Type:** Full rebuild of Anthropic Claude Code CLI
+**Runtime:** Bun 1.2.23
+**Language:** TypeScript (strict) + React 18
+**Build:** `bun run build` → `dist/cli.js`
+**Entry:** `entrypoints/cli.tsx` → `main.tsx`
+
+**Key dependencies (pre-read, no need to cat package.json):**
+- @anthropic-ai/sdk ^0.63.0 — Claude API
+- @anthropic-ai/bedrock-sdk — AWS Bedrock
+- @anthropic-ai/vertex-sdk — Google Vertex
+- @anthropic-ai/foundry-sdk — Internal Foundry
+- @anthropic-ai/claude-agent-sdk — Sub-agent SDK
+- @modelcontextprotocol/sdk ^1.20.0 — MCP
+- @opentelemetry/* (14 packages) — Full OTel stack
+- @growthbook/growthbook — Feature flags
+- commander ^14.0.0 — CLI arg parsing
+
+**File count:** 778 source files
+**Lines of code (key files):** main.tsx 4696, Tool.ts 792, tools.ts 389</pre>
+        <p>With this file loaded automatically, the <code>cat package.json</code> step (WT-5) becomes redundant. The agent already knows what the project is. The broad find sweep (WT-3) is also less needed since key metadata is pre-provided.</p>
+      </div>
+    </div>
+
+    <!-- FIX 5 -->
+    <div class="fix-card" id="fix5">
+      <div class="fix-header">
+        <div class="fix-num">5</div>
+        <h3>Custom analyst agent definition</h3>
+        <span class="fix-file">.claude/agents/analyst.md</span>
+      </div>
+      <div class="fix-body">
+        <p><strong>Prevents:</strong> WT-2 (write without read), WT-7 (no file offload)</p>
+        <p>A custom agent definition for analysis tasks encodes the correct tool-use patterns for this specific workflow. The agent can be spawned with <code>/agents analyst</code> and will follow these patterns without needing to be told.</p>
+        <pre><span class="cm">---
+name: analyst
+description: Codebase analysis and technical presentation agent
+model: claude-sonnet-4-6
+---</span>
+
+You are a technical analysis agent. Your job is to produce accurate,
+well-structured HTML presentations of codebases.
+
+## File operation rules (CRITICAL)
+- Before writing ANY file: check if it exists first
+- If exists: Read at least 5 lines, then Write
+- If not exists: Write directly
+- Always save research to `research-findings.md` before HTML output
+
+## Exploration rules
+- Use Glob (not find/ls) for directory discovery
+- Use Read (not cat/head) for file contents
+- Use Grep for content search
+- Never explore parent directories unless asked about workspace structure
+
+## Analysis rules
+- Read ARCHITECTURE.md first if present — skip broad exploration
+- Maximum 8 targeted research questions (not 15+)
+- Focus on architecturally novel parts, not every directory
+- Prioritize: entry points, core loops, novel subsystems, design patterns</pre>
+        <p>The critical fix here is the file operation rule: <strong>"Before writing ANY file: check if it exists first."</strong> This single instruction would have prevented WT-2 entirely.</p>
+      </div>
+    </div>
+
+  </div><!-- /repo fixes -->
+
+  <!-- ══════════════════════════════════════════
+       IMPACT MATRIX
+  ══════════════════════════════════════════ -->
+  <div class="section" id="impact">
+    <div class="section-hdr">
+      <h2>Impact Matrix</h2>
+      <span class="count">which fix prevents which wrong turn</span>
+    </div>
+
+    <table class="matrix">
+      <thead>
+        <tr>
+          <th>Wrong Turn</th>
+          <th>Impact</th>
+          <th>What Triggered It</th>
+          <th>Which File Fixes It</th>
+          <th>How</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>WT-1 Wrong skill</td>
+          <td><span class="badge high" style="font-size:10px">High</span></td>
+          <td>No project-level instruction ruling out brainstorming-planner for analysis tasks</td>
+          <td class="did">CLAUDE.md + /analyze command</td>
+          <td>Explicit "do NOT invoke brainstorming-planner for analysis tasks" in CLAUDE.md</td>
+        </tr>
+        <tr>
+          <td>WT-2 Write without Read</td>
+          <td><span class="badge high" style="font-size:10px">High</span></td>
+          <td>Agent didn't know analysis-deck.html already existed in this directory</td>
+          <td class="did">agents/analyst.md</td>
+          <td>"Before writing ANY file: check if it exists first" encoded in agent definition</td>
+        </tr>
+        <tr>
+          <td>WT-3 Bash find/ls</td>
+          <td><span class="badge med" style="font-size:10px">Med</span></td>
+          <td>No project-level Glob reminder; default exploration habit</td>
+          <td class="did">CLAUDE.md + ARCHITECTURE.md</td>
+          <td>CLAUDE.md reinforces Glob/Read; ARCHITECTURE.md eliminates need for find entirely</td>
+        </tr>
+        <tr>
+          <td>WT-4 Parent dir ls</td>
+          <td><span class="badge med" style="font-size:10px">Med</span></td>
+          <td>Habit of checking parent for monorepo/workspace context</td>
+          <td class="did">ARCHITECTURE.md + project-context.md</td>
+          <td>Project identity pre-provided — no need to explore parent to understand what this is</td>
+        </tr>
+        <tr>
+          <td>WT-5 cat package.json</td>
+          <td><span class="badge med" style="font-size:10px">Med</span></td>
+          <td>Package.json is the most natural first read for any JS/TS project</td>
+          <td class="did">project-context.md</td>
+          <td>Key metadata (name, runtime, deps) pre-provided — cat becomes redundant</td>
+        </tr>
+        <tr>
+          <td>WT-6 No scope agreement</td>
+          <td><span class="badge low" style="font-size:10px">Low</span></td>
+          <td>CLAUDE.md mandate was known but skipped under "task seems clear"</td>
+          <td class="did">CLAUDE.md + /analyze command</td>
+          <td>Explicit scope-question step in both places; /analyze command encodes the 1-question template</td>
+        </tr>
+        <tr>
+          <td>WT-7 No research offload</td>
+          <td><span class="badge low" style="font-size:10px">Low</span></td>
+          <td>5k-token rule applies but wasn't triggered mid-session</td>
+          <td class="did">CLAUDE.md + agents/analyst.md</td>
+          <td>"Save research to research-findings.md before HTML output" in both files</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="callout good" style="margin-top:20px;">
+      <span class="icon">✓</span>
+      <p><strong>Summary:</strong> Adding just <strong>CLAUDE.md</strong> + <strong>ARCHITECTURE.md</strong> in <code>src 2/</code> would have prevented 5 of 7 wrong turns. These are 15-minute writes that pay off every time an agent touches this codebase.</p>
+    </div>
+  </div>
+
+  <!-- WHAT WENT WELL -->
+  <div class="section">
+    <div class="section-hdr"><h2>What Went Well (for balance)</h2></div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px;">
+      <div class="fix-card">
+        <div class="fix-header" style="background:rgba(34,197,94,.05);border-bottom-color:rgba(34,197,94,.15);">
+          <h3 style="color:var(--green)">Good parallel batching</h3>
+        </div>
+        <div class="fix-body">
+          <p>Steps 3–7 were correctly parallelized (multiple Bash and Read calls in a single message). The exploration was fast because independent calls ran concurrently rather than sequentially.</p>
+        </div>
+      </div>
+      <div class="fix-card">
+        <div class="fix-header" style="background:rgba(34,197,94,.05);border-bottom-color:rgba(34,197,94,.15);">
+          <h3 style="color:var(--green)">Single-shot HTML write</h3>
+        </div>
+        <div class="fix-body">
+          <p>The entire 20-slide deck (1600+ lines) was written in one Write call. No iteration, no partial writes. This is optimal — all research was in context and used in one pass.</p>
+        </div>
+      </div>
+      <div class="fix-card">
+        <div class="fix-header" style="background:rgba(34,197,94,.05);border-bottom-color:rgba(34,197,94,.15);">
+          <h3 style="color:var(--green)">Accurate content</h3>
+        </div>
+        <div class="fix-body">
+          <p>All 20 slides contained accurate file paths, type definitions, and function names. The direct file reading (rather than relying on memory) produced verifiably correct content.</p>
+        </div>
+      </div>
+      <div class="fix-card">
+        <div class="fix-header" style="background:rgba(34,197,94,.05);border-bottom-color:rgba(34,197,94,.15);">
+          <h3 style="color:var(--green)">Fast self-correction on WT-2</h3>
+        </div>
+        <div class="fix-body">
+          <p>The Write error was immediately diagnosed and fixed in 3 clean steps. No thrashing or repeated errors. The error message was clear and the recovery path obvious.</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">Session retrospective generated 2026-04-14 · Claude Code analysis of the analysis-deck.html build session</div>
+
+</main>
+</div>
+</body>
+</html>

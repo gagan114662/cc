@@ -1,0 +1,141 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Honeycomb Autoresearch Proof</title>
+    <style>
+      :root {
+        --bg: #f7f4ed;
+        --ink: #1d1b18;
+        --muted: #6d665e;
+        --line: #d4c6b6;
+        --panel: #fffaf2;
+        --accent: #0f766e;
+        --warn: #9a3412;
+      }
+      body {
+        margin: 0;
+        font-family: Georgia, 'Times New Roman', serif;
+        background: radial-gradient(circle at top, #fffaf2 0%, var(--bg) 60%);
+        color: var(--ink);
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+      h1, h2 {
+        margin: 0 0 12px;
+      }
+      p {
+        line-height: 1.5;
+      }
+      .hero, section {
+        background: var(--panel);
+        border: 1px solid var(--line);
+        border-radius: 18px;
+        padding: 24px;
+        box-shadow: 0 12px 40px rgba(29, 27, 24, 0.06);
+      }
+      .hero {
+        margin-bottom: 20px;
+      }
+      .meta {
+        color: var(--muted);
+        font-size: 14px;
+      }
+      .verdict {
+        display: inline-block;
+        margin-top: 12px;
+        padding: 10px 14px;
+        border-radius: 999px;
+        background: rgba(154,52,18,0.12);
+        color: var(--warn);
+        font-weight: 600;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 20px;
+        margin-top: 20px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 10px 8px;
+        border-bottom: 1px solid var(--line);
+        text-align: left;
+        vertical-align: top;
+      }
+      th {
+        font-size: 13px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+        color: var(--muted);
+      }
+      .stack {
+        display: grid;
+        gap: 20px;
+      }
+      code {
+        font-family: 'SFMono-Regular', Menlo, monospace;
+        font-size: 13px;
+      }
+      a {
+        color: var(--accent);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="hero" id="overview">
+        <p class="meta">Generated 2026-04-15T15:01:48.538Z</p>
+        <h1>Honeycomb Autoresearch Proof</h1>
+        <p>Honeycomb access is configured with the wrong key type. A configuration key is required for queries.</p>
+        <div class="verdict">wrong_key_type</div>
+      </section>
+      <div class="grid">
+        <section>
+          <h2>Config</h2>
+          <p><strong>Dataset:</strong> <code>cc-autoresearch</code></p>
+          <p><strong>Service:</strong> <code>cc-autoresearch</code></p>
+          <p><strong>Auth Type:</strong> <code>ingest</code></p>
+          <p><strong>Team:</strong> <code>getfoolish</code></p>
+          <p><strong>Environment:</strong> <code>test</code></p>
+          
+        </section>
+        <section>
+          <h2>Claude Lane</h2>
+          <p><strong>Claude-session events present:</strong> no</p>
+          <p><strong>Event types seen:</strong> none</p>
+        </section>
+      </div>
+      <div class="stack" style="margin-top: 20px;">
+        <section>
+          <h2>Event Counts</h2>
+          <table>
+            <thead><tr><th>Event Name</th><th>Count</th></tr></thead>
+            <tbody><tr><td colspan="2">No matching events found.</td></tr></tbody>
+          </table>
+        </section>
+        <section>
+          <h2>Claude Session Event Types</h2>
+          <table>
+            <thead><tr><th>Claude Event Type</th><th>Count</th></tr></thead>
+            <tbody><tr><td colspan="2">No Claude-session events found.</td></tr></tbody>
+          </table>
+        </section>
+        <section>
+          <h2>Recent Claude Sessions</h2>
+          <table>
+            <thead><tr><th>Session ID</th><th>Event Type</th><th>Count</th><th>Result</th><th>Failure Tags</th></tr></thead>
+            <tbody><tr><td colspan="5">No recent Claude-session events found.</td></tr></tbody>
+          </table>
+        </section>
+      </div>
+    </main>
+  </body>
+</html>

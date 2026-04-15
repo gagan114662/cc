@@ -1,0 +1,97 @@
+{
+  "version": "1",
+  "canonicalRoots": [
+    "."
+  ],
+  "requiredDocs": [
+    "ARCHITECTURE.md",
+    "CLAUDE.md"
+  ],
+  "searchExcludes": [
+    "node_modules/",
+    "dist/",
+    "coverage/",
+    "types/generated/",
+    "*.generated.js",
+    "*.generated.d.ts",
+    "*.d.ts",
+    "*.map",
+    "tmp-recover-cli.js",
+    "tmp-*",
+    "archive/launcher-root/"
+  ],
+  "bootstrapCommands": [
+    "bun run repo:bootstrap"
+  ],
+  "analysisCommands": [
+    "bun run repo:facts"
+  ],
+  "implementationVerificationCommands": [
+    "bun run typecheck",
+    "bun run lint",
+    "bun run build",
+    "bun test",
+    "bun run test:test-quality"
+  ],
+  "releaseVerificationCommands": [
+    "bun run pipeline",
+    "bun run test:test-quality"
+  ],
+  "artifactRules": [
+    {
+      "pattern": "*.html",
+      "validationCommand": "bun run report:check",
+      "requiredAnchor": "overview"
+    }
+  ],
+  "riskyCommandAllowlist": [
+    "git status --short",
+    "git diff --",
+    "git rev-parse --is-inside-work-tree"
+  ],
+  "approvedCommandPrefixes": {
+    "discover": [
+      "bun run repo:bootstrap",
+      "bun run repo:facts",
+      "sed -n ",
+      "cat ",
+      "rg -n ",
+      "rg --files "
+    ],
+    "plan": [
+      "bun run repo:facts",
+      "sed -n ",
+      "cat ",
+      "rg -n ",
+      "rg --files "
+    ],
+    "implement": [
+      "sed -n ",
+      "cat ",
+      "rg -n ",
+      "rg --files ",
+      "bun run typecheck",
+      "bun run lint",
+      "bun run build",
+      "bun test",
+      "bun run test:test-quality"
+    ],
+    "verify": [
+      "bun run typecheck",
+      "bun run lint",
+      "bun run build",
+      "bun test",
+      "bun run test:test-quality",
+      "bun run pipeline",
+      "bun run smoke:cli",
+      "bun run smoke:bundle",
+      "bun run smoke:employee",
+      "bun run report:check"
+    ],
+    "release": [
+      "bun run pipeline",
+      "bun run report:check",
+      "bun run report:open"
+    ]
+  }
+}

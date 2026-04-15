@@ -1,0 +1,41 @@
+{
+  "project_name": "claude-code-rebuilt",
+  "code_root": ".",
+  "docs_first": [
+    "ARCHITECTURE.md",
+    "CLAUDE.md"
+  ],
+  "instruction_precedence": [
+    "ARCHITECTURE.md",
+    "CLAUDE.md",
+    "AGENTS.md",
+    "README.md",
+    "START_HERE.md"
+  ],
+  "search_excludes": [
+    "node_modules/",
+    "dist/",
+    "coverage/",
+    "types/generated/",
+    "*.generated.js",
+    "*.generated.d.ts",
+    "*.d.ts",
+    "*.map",
+    "tmp-recover-cli.js",
+    "tmp-*",
+    "archive/launcher-root/"
+  ],
+  "artifact_output_dir": ".",
+  "artifact_reference_files": [
+    "session-transcript.html",
+    "session-review.html",
+    "session-retrospective.html"
+  ],
+  "preferred_anchor": "overview",
+  "validation_commands": {
+    "repo_bootstrap": "bun run repo:bootstrap",
+    "repo_facts": "bun run repo:facts",
+    "report_check": "bun run report:check ./<report>.html",
+    "report_open": "bun run report:open ./<report>.html"
+  }
+}

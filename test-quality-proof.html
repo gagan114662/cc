@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Test Quality Proof</title>
+    <style>
+      :root {
+        --bg: #fffaf0;
+        --panel: #ffffff;
+        --ink: #171717;
+        --muted: #5f5f5f;
+        --accent: #14532d;
+        --error: #991b1b;
+        --warning: #92400e;
+        --border: #e7d9be;
+      }
+      body {
+        margin: 0;
+        font-family: "IBM Plex Sans", "Avenir Next", sans-serif;
+        background: radial-gradient(circle at top, #fff7e2, var(--bg) 42%);
+        color: var(--ink);
+      }
+      main {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 48px 20px 80px;
+      }
+      section, article {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 18px;
+        padding: 20px 24px;
+        box-shadow: 0 20px 40px rgba(23, 23, 23, 0.06);
+      }
+      section + section, article + article {
+        margin-top: 18px;
+      }
+      h1, h2, h3 {
+        margin: 0 0 12px;
+      }
+      .stats {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+        gap: 14px;
+      }
+      .stat {
+        padding: 16px;
+        border-radius: 14px;
+        background: #fffdf8;
+        border: 1px solid var(--border);
+      }
+      .label {
+        color: var(--muted);
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+      }
+      .value {
+        font-size: 32px;
+        font-weight: 700;
+      }
+      .finding.error h3 {
+        color: var(--error);
+      }
+      .finding.warning h3 {
+        color: var(--warning);
+      }
+      pre {
+        overflow-x: auto;
+        padding: 14px;
+        border-radius: 12px;
+        background: #fff8ef;
+        border: 1px solid var(--border);
+      }
+      ul {
+        margin: 0;
+        padding-left: 18px;
+      }
+      p, li {
+        line-height: 1.55;
+      }
+      .meta {
+        color: var(--muted);
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section id="overview">
+        <p class="meta">Generated 2026-04-15T16:12:52.058Z</p>
+        <h1>AI Test Quality Proof</h1>
+        <p>This report flags suspicious lazy-test patterns so agent-written tests have to prove behavior instead of memorizing answers.</p>
+        <div class="stats">
+          <div class="stat">
+            <div class="label">Scanned Files</div>
+            <div class="value">5</div>
+          </div>
+          <div class="stat">
+            <div class="label">Errors</div>
+            <div class="value">0</div>
+          </div>
+          <div class="stat">
+            <div class="label">Warnings</div>
+            <div class="value">0</div>
+          </div>
+        </div>
+      </section>
+      <section>
+        <h2>Rules</h2>
+        <ul>
+          <li>Tests cannot compare a value to itself.</li>
+          <li>Tests cannot assert a literal against the same literal.</li>
+          <li>Expected values cannot be aliases of actual results.</li>
+          <li>Fixture text cannot be copied straight into assertions as the answer.</li>
+          <li>Computed expected values are warnings and should be reviewed carefully.</li>
+        </ul>
+      </section>
+      <section>
+        <h2>Findings</h2>
+        <p>No suspicious AI-style test shortcuts detected.</p>
+      </section>
+    </main>
+  </body>
+</html>

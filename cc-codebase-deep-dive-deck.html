@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CC Codebase Deep Dive</title>
+<style>
+  :root {
+    --paper: #f5efe6;
+    --paper-2: #fffaf3;
+    --ink: #10232f;
+    --muted: #5f6f78;
+    --line: rgba(16, 35, 47, 0.14);
+    --card: rgba(255, 250, 243, 0.86);
+    --accent: #d86f39;
+    --accent-2: #1b8a83;
+    --accent-3: #0e5d78;
+    --shadow: 0 24px 60px rgba(16, 35, 47, 0.12);
+    --mono: "SFMono-Regular", "Menlo", "Monaco", "Consolas", monospace;
+    --sans: "Avenir Next", "Trebuchet MS", "Segoe UI", sans-serif;
+    --serif: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
+  }
+
+  * {
+    box-sizing: border-box;
+  }
+
+  html,
+  body {
+    margin: 0;
+    min-height: 100%;
+    background:
+      radial-gradient(circle at top left, rgba(216, 111, 57, 0.18), transparent 28%),
+      radial-gradient(circle at bottom right, rgba(27, 138, 131, 0.18), transparent 32%),
+      linear-gradient(180deg, #faf6ef 0%, #f5efe6 52%, #efe4d5 100%);
+    color: var(--ink);
+    font-family: var(--sans);
+    overflow: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      linear-gradient(rgba(16, 35, 47, 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(16, 35, 47, 0.03) 1px, transparent 1px);
+    background-size: 36px 36px;
+    mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 92%);
+  }
+
+  a {
+    color: inherit;
+  }
+
+  code {
+    font-family: var(--mono);
+    font-size: 0.92em;
+  }
+
+  #progress {
+    position: fixed;
+    inset: 0 auto auto 0;
+    width: 0;
+    height: 5px;
+    background: linear-gradient(90deg, var(--accent), var(--accent-2));
+    z-index: 20;
+    transition: width 220ms ease;
+  }
+
+  #deck {
+    position: relative;
+    width: 100%;
+    height: 100vh;
+  }
+
+  .slide {
+    position: absolute;
+    inset: 0;
+    padding: 44px 56px 88px;
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: 26px;
+    opacity: 0;
+    pointer-events: none;
+    transform: translateX(24px);
+    transition: opacity 240ms ease, transform 240ms ease;
+    overflow: auto;
+  }
+
+  .slide.active {
+    opacity: 1;
+    pointer-events: auto;
+    transform: translateX(0);
+  }
+
+  .slide-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 16px;
+    align-items: flex-start;
+  }
+
+  .eyebrow {
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    font-size: 12px;
+    color: var(--accent-3);
+    margin-bottom: 10px;
+  }
+
+  .title {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: clamp(2.3rem, 5vw, 4.8rem);
+    line-height: 0.95;
+    letter-spacing: -0.04em;
+  }
+
+  .subtitle {
+    margin: 14px 0 0;
+    max-width: 980px;
+    font-size: 1.08rem;
+    line-height: 1.55;
+    color: var(--muted);
+  }
+
+  .slide-index {
+    flex: 0 0 auto;
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.16em;
+    padding-top: 12px;
+  }
+
+  .panel,
+  .metric,
+  .note,
+  .mini-card {
+    border: 1px solid var(--line);
+    background: var(--card);
+    backdrop-filter: blur(8px);
+    box-shadow: var(--shadow);
+  }
+
+  .panel {
+    border-radius: 28px;
+    padding: 26px 28px;
+  }
+
+  .note {
+    border-radius: 22px;
+    padding: 18px 20px;
+  }
+
+  .mini-card {
+    border-radius: 20px;
+    padding: 18px 20px;
+  }
+
+  .metric-grid,
+  .grid-2,
+  .grid-3,
+  .grid-4 {
+    display: grid;
+    gap: 18px;
+  }
+
+  .metric-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .grid-2 {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .grid-3 {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .grid-4 {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+
+  .metric {
+    border-radius: 24px;
+    padding: 22px 24px;
+  }
+
+  .metric-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+    color: var(--muted);
+    margin-bottom: 14px;
+  }
+
+  .metric-value {
+    font-family: var(--serif);
+    font-size: clamp(2rem, 4vw, 3.5rem);
+    line-height: 0.92;
+    letter-spacing: -0.05em;
+    margin-bottom: 10px;
+  }
+
+  .metric-value.small {
+    font-size: clamp(1.6rem, 3vw, 2.4rem);
+  }
+
+  .metric-copy,
+  .body-copy,
+  .bullet-list li,
+  td {
+    font-size: 0.98rem;
+    line-height: 1.55;
+    color: var(--ink);
+  }
+
+  .muted {
+    color: var(--muted);
+  }
+
+  .accent {
+    color: var(--accent);
+  }
+
+  .accent-2 {
+    color: var(--accent-2);
+  }
+
+  .section-title {
+    margin: 0 0 14px;
+    font-family: var(--serif);
+    font-size: 2rem;
+    line-height: 1;
+    letter-spacing: -0.03em;
+  }
+
+  .section-kicker {
+    margin: 0 0 18px;
+    font-family: var(--mono);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    font-size: 12px;
+    color: var(--muted);
+  }
+
+  .bullet-list {
+    margin: 0;
+    padding-left: 1.1rem;
+  }
+
+  .bullet-list li + li {
+    margin-top: 10px;
+  }
+
+  .timeline {
+    display: grid;
+    gap: 12px;
+  }
+
+  .timeline-step {
+    border-left: 3px solid var(--accent-2);
+    padding: 8px 0 8px 16px;
+  }
+
+  .timeline-step strong,
+  .stack-quote strong {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 0.98rem;
+  }
+
+  .stack-quote {
+    border-radius: 28px;
+    padding: 24px 26px;
+    background: linear-gradient(135deg, rgba(255, 250, 243, 0.9), rgba(239, 228, 213, 0.88));
+    border: 1px solid rgba(16, 35, 47, 0.1);
+    box-shadow: var(--shadow);
+  }
+
+  .stack-quote p {
+    margin: 0;
+    font-family: var(--serif);
+    font-size: clamp(1.35rem, 2vw, 2rem);
+    line-height: 1.2;
+    letter-spacing: -0.03em;
+  }
+
+  .topline {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 24px;
+  }
+
+  .pill {
+    border: 1px solid rgba(16, 35, 47, 0.12);
+    border-radius: 999px;
+    padding: 8px 12px;
+    font-family: var(--mono);
+    font-size: 12px;
+    background: rgba(255, 255, 255, 0.52);
+  }
+
+  .bar-list {
+    display: grid;
+    gap: 14px;
+  }
+
+  .bar-item {
+    display: grid;
+    grid-template-columns: 180px 1fr auto;
+    gap: 14px;
+    align-items: center;
+  }
+
+  .bar-item label,
+  .table-label {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  .bar-track {
+    position: relative;
+    height: 14px;
+    border-radius: 999px;
+    background: rgba(16, 35, 47, 0.08);
+    overflow: hidden;
+  }
+
+  .bar-fill {
+    position: absolute;
+    inset: 0 auto 0 0;
+    border-radius: 999px;
+    background: linear-gradient(90deg, var(--accent-2), var(--accent));
+  }
+
+  .bar-value {
+    font-family: var(--mono);
+    font-size: 12px;
+    color: var(--ink);
+  }
+
+  table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  th {
+    text-align: left;
+    padding-bottom: 10px;
+    font-family: var(--mono);
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--muted);
+    border-bottom: 1px solid var(--line);
+  }
+
+  td {
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(16, 35, 47, 0.08);
+    vertical-align: top;
+  }
+
+  tr:last-child td {
+    border-bottom: none;
+  }
+
+  .code-box {
+    margin: 0;
+    padding: 18px 20px;
+    border-radius: 22px;
+    background: #152934;
+    color: #fdf9f2;
+    font-family: var(--mono);
+    font-size: 0.86rem;
+    line-height: 1.6;
+    overflow: auto;
+    box-shadow: var(--shadow);
+  }
+
+  .flow {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    align-items: center;
+  }
+
+  .flow-box {
+    padding: 12px 14px;
+    border-radius: 18px;
+    border: 1px solid var(--line);
+    background: rgba(255, 255, 255, 0.68);
+    font-size: 0.94rem;
+    line-height: 1.4;
+  }
+
+  .flow-arrow {
+    font-family: var(--mono);
+    color: var(--accent);
+    font-size: 1rem;
+  }
+
+  .emphasis {
+    font-family: var(--serif);
+    font-size: 1.7rem;
+    line-height: 1.08;
+    letter-spacing: -0.03em;
+    margin: 0 0 14px;
+  }
+
+  .footer-note {
+    margin-top: 16px;
+    font-size: 0.9rem;
+    color: var(--muted);
+  }
+
+  .cover-layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(0, 0.75fr);
+    gap: 24px;
+    align-items: stretch;
+  }
+
+  .cover-side {
+    display: grid;
+    gap: 18px;
+  }
+
+  .big-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(16, 35, 47, 0.12);
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    background: rgba(255, 255, 255, 0.58);
+  }
+
+  .source-list {
+    display: grid;
+    gap: 8px;
+    margin-top: 12px;
+    font-size: 0.94rem;
+    color: var(--ink);
+  }
+
+  .source-list span {
+    display: block;
+    padding-left: 16px;
+    position: relative;
+  }
+
+  .source-list span::before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+  }
+
+  #nav {
+    position: fixed;
+    right: 28px;
+    bottom: 24px;
+    z-index: 25;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px 14px;
+    border-radius: 999px;
+    border: 1px solid rgba(16, 35, 47, 0.12);
+    background: rgba(255, 250, 243, 0.82);
+    backdrop-filter: blur(12px);
+    box-shadow: var(--shadow);
+  }
+
+  .nav-button {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid rgba(16, 35, 47, 0.12);
+    background: white;
+    color: var(--ink);
+    font-size: 18px;
+    cursor: pointer;
+  }
+
+  .nav-button:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+
+  #counter {
+    min-width: 110px;
+    text-align: center;
+    font-family: var(--mono);
+    font-size: 12px;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--muted);
+  }
+
+  @media (max-width: 1080px) {
+    .metric-grid,
+    .grid-4 {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .cover-layout,
+    .grid-2,
+    .grid-3 {
+      grid-template-columns: 1fr;
+    }
+
+    .bar-item {
+      grid-template-columns: 1fr;
+      gap: 6px;
+    }
+  }
+
+  @media (max-width: 720px) {
+    html,
+    body {
+      overflow: auto;
+    }
+
+    #deck {
+      height: auto;
+      min-height: 100vh;
+    }
+
+    .slide {
+      position: relative;
+      opacity: 1;
+      pointer-events: auto;
+      transform: none;
+      min-height: 100vh;
+      padding: 28px 20px 96px;
+    }
+
+    .slide + .slide {
+      border-top: 1px solid rgba(16, 35, 47, 0.08);
+    }
+
+    .metric-grid {
+      grid-template-columns: 1fr;
+    }
+
+    #nav,
+    #progress {
+      display: none;
+    }
+  }
+</style>
+</head>
+<body>
+<div id="progress" aria-hidden="true"></div>
+
+<main id="deck">
+  <section class="slide active" id="overview" data-title="Overview">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Technical Deep Dive</div>
+        <h1 class="title">CC is already a platform, not just a CLI.</h1>
+        <p class="subtitle">
+          Deep dive across <code>/Users/gaganarora/Desktop/my projects/cc</code>, a TypeScript/Bun rebuild of Claude Code.
+          The codebase combines a terminal UI, an agent runtime, a tool execution engine, an MCP integration layer,
+          remote session plumbing, and a plugin/skills ecosystem inside one executable.
+        </p>
+        <div class="topline">
+          <span class="big-tag">April 14, 2026</span>
+          <span class="big-tag">Repo root verified</span>
+          <span class="big-tag">HTML deck artifact</span>
+        </div>
+      </div>
+      <div class="slide-index">01 / 11</div>
+    </header>
+
+    <div class="cover-layout">
+      <div class="cover-side">
+        <div class="stack-quote">
+          <strong>Thesis</strong>
+          <p>
+            The strongest architectural story here is <span class="accent-2">breadth with intent</span>:
+            startup is performance-aware, tool execution is thoughtfully staged, and extensibility is everywhere.
+            The biggest risk is that the runtime spine lives in a handful of very large, heavily gated files with a
+            relatively thin verification net.
+          </p>
+        </div>
+
+        <div class="metric-grid">
+          <article class="metric">
+            <div class="metric-label">Source Files Analyzed</div>
+            <div class="metric-value">1,939</div>
+            <div class="metric-copy muted">From <code>bun run repo:facts</code>, excluding vendored and generated output.</div>
+          </article>
+          <article class="metric">
+            <div class="metric-label">Total Source LOC</div>
+            <div class="metric-value">516k</div>
+            <div class="metric-copy muted">Large enough that architectural leverage matters more than local cleanup.</div>
+          </article>
+          <article class="metric">
+            <div class="metric-label">Top-Level Tool Dirs</div>
+            <div class="metric-value">46</div>
+            <div class="metric-copy muted">A full agent toolplane, not a small fixed tool set.</div>
+          </article>
+          <article class="metric">
+            <div class="metric-label">Top-Level Command Dirs</div>
+            <div class="metric-value">89</div>
+            <div class="metric-copy muted">The slash-command surface is product-scale.</div>
+          </article>
+        </div>
+      </div>
+
+      <div class="cover-side">
+        <div class="panel">
+          <div class="section-kicker">Why This Matters</div>
+          <h2 class="section-title">Three findings worth carrying forward</h2>
+          <ul class="bullet-list">
+            <li>The repo is organized around <strong>agentic runtime behavior</strong>, not just static UI screens or API wrappers.</li>
+            <li>The most valuable abstractions are the <strong>tool contract</strong>, <strong>query loop</strong>, and <strong>custom Ink shell</strong>.</li>
+            <li>The main architectural drag is <strong>concentrated complexity</strong>: mega-files, feature-flag fan-out, and limited automated proof.</li>
+          </ul>
+        </div>
+
+        <div class="note">
+          <div class="section-kicker">Evidence Base</div>
+          <div class="source-list">
+            <span><code>ARCHITECTURE.md</code> and <code>CLAUDE.md</code></span>
+            <span><code>bun run repo:facts</code> and <code>bun run repo:bootstrap</code></span>
+            <span><code>package.json</code>, <code>main.tsx</code>, <code>query.ts</code>, <code>QueryEngine.ts</code></span>
+            <span><code>tools.ts</code>, <code>services/tools/*</code>, <code>services/mcp/client.ts</code></span>
+            <span><code>screens/REPL.tsx</code>, <code>state/*</code>, <code>ink.ts</code></span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="shape" data-title="Shape">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Codebase Shape</div>
+        <h1 class="title">The repo’s center of gravity is infrastructure.</h1>
+        <p class="subtitle">
+          Most of the footprint sits in <code>utils</code>, <code>components</code>, <code>tools</code>, and <code>services</code>,
+          which tells us this codebase is spending its energy on runtime behavior, terminal UX, and integration machinery.
+        </p>
+      </div>
+      <div class="slide-index">02 / 11</div>
+    </header>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="section-kicker">Dominant Directories</div>
+        <h2 class="section-title">Where the code actually lives</h2>
+        <div class="bar-list">
+          <div class="bar-item">
+            <label>utils</label>
+            <div class="bar-track"><div class="bar-fill" style="width:100%"></div></div>
+            <div class="bar-value">181,375 LOC</div>
+          </div>
+          <div class="bar-item">
+            <label>components</label>
+            <div class="bar-track"><div class="bar-fill" style="width:45%"></div></div>
+            <div class="bar-value">81,991 LOC</div>
+          </div>
+          <div class="bar-item">
+            <label>services</label>
+            <div class="bar-track"><div class="bar-fill" style="width:30%"></div></div>
+            <div class="bar-value">54,211 LOC</div>
+          </div>
+          <div class="bar-item">
+            <label>tools</label>
+            <div class="bar-track"><div class="bar-fill" style="width:28%"></div></div>
+            <div class="bar-value">51,483 LOC</div>
+          </div>
+          <div class="bar-item">
+            <label>commands</label>
+            <div class="bar-track"><div class="bar-fill" style="width:15%"></div></div>
+            <div class="bar-value">27,193 LOC</div>
+          </div>
+          <div class="bar-item">
+            <label>ink</label>
+            <div class="bar-track"><div class="bar-fill" style="width:11%"></div></div>
+            <div class="bar-value">19,940 LOC</div>
+          </div>
+        </div>
+        <div class="footer-note">Repo facts script also reports <code>478,722</code> non-empty LOC, which means the footprint is dense, not just padding.</div>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Language Mix</div>
+        <h2 class="section-title">Mostly strict TS, with a heavy UI layer</h2>
+        <div class="metric-grid">
+          <article class="mini-card">
+            <div class="metric-label">.ts Files</div>
+            <div class="metric-value small">1,357</div>
+          </article>
+          <article class="mini-card">
+            <div class="metric-label">.tsx Files</div>
+            <div class="metric-value small">558</div>
+          </article>
+          <article class="mini-card">
+            <div class="metric-label">.js Files</div>
+            <div class="metric-value small">23</div>
+          </article>
+          <article class="mini-card">
+            <div class="metric-label">Markdown Docs</div>
+            <div class="metric-value small">8</div>
+          </article>
+        </div>
+        <div class="note" style="margin-top:18px">
+          <strong class="table-label">Interpretation</strong>
+          <div class="body-copy" style="margin-top:10px">
+            This is a <span class="accent">code-first product repo</span>, not a documentation-heavy platform.
+            The high <code>.tsx</code> count also matches the idea that the terminal UI is treated like a real app surface,
+            not a thin shell around API calls.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="runtime-spine" data-title="Runtime Spine">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Runtime Spine</div>
+        <h1 class="title">Startup is intentionally optimized and instrumented.</h1>
+        <p class="subtitle">
+          <code>main.tsx</code> is not just an entrypoint. It is a bootstrap orchestrator that overlaps I/O,
+          loads platform state, initializes plugins and skills, resolves policy, and only then mounts the interactive shell.
+        </p>
+      </div>
+      <div class="slide-index">03 / 11</div>
+    </header>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="section-kicker">Boot Sequence</div>
+        <h2 class="section-title">Observed startup choreography</h2>
+        <div class="timeline">
+          <div class="timeline-step">
+            <strong><code>profileCheckpoint('main_tsx_entry')</code></strong>
+            Fires before heavy module evaluation, which is a strong sign startup timing is an explicit concern.
+          </div>
+          <div class="timeline-step">
+            <strong><code>startMdmRawRead()</code> + <code>startKeychainPrefetch()</code></strong>
+            Platform I/O starts immediately so MDM config and secrets resolve in parallel with import work.
+          </div>
+          <div class="timeline-step">
+            <strong>GrowthBook, telemetry, official MCP registry, plugins, bundled skills</strong>
+            Feature gating and extensibility are first-class startup responsibilities, not late add-ons.
+          </div>
+          <div class="timeline-step">
+            <strong>Command/tool/MCP assembly</strong>
+            The runtime composes commands, skills, plugins, and MCP resources before the user-facing loop starts.
+          </div>
+          <div class="timeline-step">
+            <strong>Interactive-only render root</strong>
+            The custom Ink root is created only for interactive sessions, which avoids swallowing console output in headless mode.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Why It Stands Out</div>
+        <h2 class="section-title">This is productized startup engineering</h2>
+        <ul class="bullet-list">
+          <li><strong>Parallel prefetching</strong> is embedded into the source comments and flow, which shows the team has fought startup latency directly.</li>
+          <li><strong>Dead-code elimination</strong> through <code>feature(...)</code> and conditional <code>require()</code> is pervasive, suggesting one build must cover many product variants.</li>
+          <li><strong>Trust/setup screens</strong> are treated as part of the boot pipeline, which is consistent with a secure agent product rather than a dev-only CLI.</li>
+        </ul>
+        <div class="note" style="margin-top:18px">
+          <strong class="table-label">Key tension</strong>
+          <div class="body-copy" style="margin-top:10px">
+            The same file that optimizes startup also accumulates a lot of ownership: flags, session state, onboarding, rendering,
+            remote mode, and CLI wiring. That makes <code>main.tsx</code> powerful, but expensive to evolve safely.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="turn-lifecycle" data-title="Turn Lifecycle">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Agentic Turn</div>
+        <h1 class="title">The query path is a resilient conversation state machine.</h1>
+        <p class="subtitle">
+          <code>QueryEngine.ts</code> owns per-conversation state, while <code>query.ts</code> owns the heavy turn loop:
+          message shaping, streaming, compaction, retry/recovery, tool execution, and continuation decisions.
+        </p>
+      </div>
+      <div class="slide-index">04 / 11</div>
+    </header>
+
+    <div class="panel">
+      <div class="section-kicker">Prompt to Completion</div>
+      <h2 class="section-title">How one user turn moves through the system</h2>
+      <div class="flow" style="margin-bottom:18px">
+        <div class="flow-box"><code>QueryEngine.submitMessage()</code></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><code>queryLoop()</code></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><code>deps.callModel(...)</code> streaming</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">collect <code>tool_use</code> blocks</div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box"><code>StreamingToolExecutor</code> or <code>runTools()</code></div>
+        <div class="flow-arrow">→</div>
+        <div class="flow-box">normalize tool results + recurse</div>
+      </div>
+
+      <div class="grid-3">
+        <div class="mini-card">
+          <div class="section-kicker">Strength</div>
+          <p class="emphasis">Recovery is built in, not bolted on.</p>
+          <div class="body-copy">
+            The loop explicitly handles auto-compact, reactive compact, prompt-too-long recovery, max-output-token retries,
+            streaming fallback, and token-budget continuation.
+          </div>
+        </div>
+        <div class="mini-card">
+          <div class="section-kicker">Strength</div>
+          <p class="emphasis">Tool execution is part of the same turn grammar.</p>
+          <div class="body-copy">
+            The code treats <code>tool_use</code> arrival as the real follow-up signal because API <code>stop_reason</code> is considered unreliable.
+          </div>
+        </div>
+        <div class="mini-card">
+          <div class="section-kicker">Risk</div>
+          <p class="emphasis">A lot of policy lives in one loop.</p>
+          <div class="body-copy">
+            Compaction, retries, fallback models, streaming behavior, summary generation, and hook interaction all converge in <code>query.ts</code>.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="tools-permissions" data-title="Tools">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Tools and Control Plane</div>
+        <h1 class="title">The tool system is the repo’s core abstraction.</h1>
+        <p class="subtitle">
+          <code>Tool.ts</code> defines the runtime contract, <code>tools.ts</code> assembles the allowed surface, and
+          <code>services/tools/*</code> decides how calls execute, stream, batch, and interact with permissions.
+        </p>
+      </div>
+      <div class="slide-index">05 / 11</div>
+    </header>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="section-kicker">Composition Model</div>
+        <h2 class="section-title">The tool set is assembled, not hardcoded</h2>
+        <ul class="bullet-list">
+          <li><code>getAllBaseTools()</code> builds the runtime surface from feature flags, env gates, and mode checks.</li>
+          <li>Search, REPL, workflows, browser, cron, remote trigger, plan, worktree, MCP resources, and team tools all participate in the same registry.</li>
+          <li>The system is clearly designed for <strong>variant builds</strong> and <strong>conditional capabilities</strong>.</li>
+        </ul>
+        <div class="note" style="margin-top:18px">
+          <strong class="table-label">What this says architecturally</strong>
+          <div class="body-copy" style="margin-top:10px">
+            Tooling here is not a thin wrapper around shell access. It is the contract that unifies local execution,
+            MCP, UI progress, permissioning, and multi-agent control.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Execution Semantics</div>
+        <h2 class="section-title">Concurrency is deliberate</h2>
+        <ul class="bullet-list">
+          <li><code>runTools()</code> partitions read-only/concurrency-safe batches from serial batches.</li>
+          <li><code>StreamingToolExecutor</code> starts safe tools as soon as streaming reveals them, but still yields final results in arrival order.</li>
+          <li>Sibling tools can be cancelled on bash failure, user interruption, or streaming fallback without killing the whole query turn.</li>
+          <li><code>onChangeAppState.ts</code> acts as the sync choke point for permission mode updates across external consumers.</li>
+        </ul>
+        <div class="footer-note">
+          Net effect: strong runtime behavior, but a very rich <code>ToolUseContext</code> object and multiple execution modes
+          make the abstraction heavy to reason about.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="ui-state" data-title="UI and State">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Terminal App</div>
+        <h1 class="title">The REPL is closer to an app shell than a view.</h1>
+        <p class="subtitle">
+          The terminal UI is a serious product surface: custom Ink root, theming, keyboard systems, task views,
+          notifications, bridge state, MCP status, prompts, surveys, and remote session affordances all live inside the same interaction model.
+        </p>
+      </div>
+      <div class="slide-index">06 / 11</div>
+    </header>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="section-kicker">State Story</div>
+        <h2 class="section-title">App-wide immutable state with selector discipline</h2>
+        <ul class="bullet-list">
+          <li><code>AppStateStore.ts</code> defines an expansive global shape: tools, tasks, MCP, plugins, prompts, bridge status, notifications, surveys, tmux/web panels, and more.</li>
+          <li><code>useAppState(selector)</code> guardrails are designed to avoid broad subscriptions and re-render traps.</li>
+          <li><code>onChangeAppState.ts</code> maps selected state changes back into config, session metadata, auth caches, and environment side effects.</li>
+        </ul>
+        <div class="note" style="margin-top:18px">
+          <strong class="table-label">Architectural read</strong>
+          <div class="body-copy" style="margin-top:10px">
+            This is a practical compromise between centralized state and a terminal-first app shell.
+            It works, but it also means state, orchestration, and side effects are tightly coupled.
+          </div>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Hotspot Evidence</div>
+        <h2 class="section-title">Runtime complexity is concentrated in a few files</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th>LOC</th>
+              <th>Signal</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>screens/REPL.tsx</code></td>
+              <td>5,006</td>
+              <td>Primary app shell, state hub, and interaction coordinator</td>
+            </tr>
+            <tr>
+              <td><code>cli/print.ts</code></td>
+              <td>5,642</td>
+              <td>Large output/rendering path outside the main REPL</td>
+            </tr>
+            <tr>
+              <td><code>utils/messages.ts</code></td>
+              <td>5,513</td>
+              <td>Serialization and message shaping gravity well</td>
+            </tr>
+            <tr>
+              <td><code>utils/sessionStorage.ts</code></td>
+              <td>5,106</td>
+              <td>Persistence complexity and transcript behavior</td>
+            </tr>
+            <tr>
+              <td><code>utils/hooks.ts</code></td>
+              <td>5,023</td>
+              <td>Cross-cutting hook orchestration</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="extensibility" data-title="Extensibility">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Extensibility Plane</div>
+        <h1 class="title">MCP, plugins, skills, and remote sessions are built into the architecture.</h1>
+        <p class="subtitle">
+          The repo’s real ambition shows up here: it is trying to be a host environment for tools and agents,
+          not just a fixed client for one model API.
+        </p>
+      </div>
+      <div class="slide-index">07 / 11</div>
+    </header>
+
+    <div class="grid-3">
+      <div class="panel">
+        <div class="section-kicker">MCP</div>
+        <h2 class="section-title">Protocol gateway</h2>
+        <ul class="bullet-list">
+          <li><code>services/mcp/client.ts</code> supports <strong>stdio</strong>, <strong>SSE</strong>, <strong>streamable HTTP</strong>, and <strong>WebSocket</strong> transports.</li>
+          <li>It also owns auth refresh, session-expiry handling, resource listing, tool wrapping, truncation, and persistence.</li>
+          <li>This file is effectively an integration platform inside the app.</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Plugins + Skills</div>
+        <h2 class="section-title">Runtime surface expansion</h2>
+        <ul class="bullet-list">
+          <li>Bundled plugins and bundled skills initialize during startup.</li>
+          <li>Skills, tools, and MCP resources can all influence what the model sees and can do.</li>
+          <li>That creates a powerful extension story, but also multiplies the configuration matrix.</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Remote + Multi-Agent</div>
+        <h2 class="section-title">Not limited to a local foreground loop</h2>
+        <ul class="bullet-list">
+          <li>Remote sessions, bridge mode, direct connect, tasks, teams, workflows, and swarms are all first-class concepts.</li>
+          <li>The task model already distinguishes local bash, local agent, remote agent, workflows, MCP monitors, and dream agents.</li>
+          <li>That is platform DNA, not CLI convenience code.</li>
+        </ul>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:18px">
+      <strong class="table-label">Bottom-line read</strong>
+      <div class="body-copy" style="margin-top:10px">
+        The codebase’s hardest problem is not rendering or API calling. It is <span class="accent-2">orchestrating many capability surfaces</span>
+        while preserving one coherent user experience and one coherent permission model.
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="hotspots" data-title="Hotspots">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Hotspots</div>
+        <h1 class="title">Complexity clusters in the runtime shell, not at the edges.</h1>
+        <p class="subtitle">
+          The main risk isn’t one obviously broken subsystem. It’s that cross-cutting behavior has pooled into a few strategic files that now carry a lot of change risk.
+        </p>
+      </div>
+      <div class="slide-index">08 / 11</div>
+    </header>
+
+    <div class="grid-3">
+      <div class="panel">
+        <div class="section-kicker">Feature Gate Density</div>
+        <h2 class="section-title">Heavy build/runtime branching</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>File</th>
+              <th><code>feature(...)</code></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>main.tsx</code></td><td>62</td></tr>
+            <tr><td><code>screens/REPL.tsx</code></td><td>56</td></tr>
+            <tr><td><code>cli/print.ts</code></td><td>31</td></tr>
+            <tr><td><code>tools/BashTool/bashPermissions.ts</code></td><td>25</td></tr>
+            <tr><td><code>query.ts</code></td><td>23</td></tr>
+          </tbody>
+        </table>
+        <div class="footer-note">Repo-wide search found <strong>992</strong> feature-gate call sites.</div>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Debt Signals</div>
+        <h2 class="section-title">TODO concentration</h2>
+        <table>
+          <thead>
+            <tr>
+              <th>Area</th>
+              <th>Markers</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>utils</code></td><td>50</td></tr>
+            <tr><td><code>services</code></td><td>21</td></tr>
+            <tr><td><code>hooks</code></td><td>10</td></tr>
+            <tr><td><code>components</code></td><td>10</td></tr>
+            <tr><td><code>tools</code></td><td>9</td></tr>
+          </tbody>
+        </table>
+        <div class="footer-note">That pattern matches the rest of the repo: technical debt is clustering where orchestration and cross-cutting behavior live.</div>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Architectural Meaning</div>
+        <h2 class="section-title">The codebase is paying for breadth</h2>
+        <ul class="bullet-list">
+          <li>Flag-heavy files are often the same files that own session boot, REPL behavior, or tool execution.</li>
+          <li>That raises the odds of regressions in rarely exercised product combinations.</li>
+          <li>The repo already has good abstractions; the remaining need is <strong>boundary hardening</strong>.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="verification" data-title="Verification">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Verification</div>
+        <h1 class="title">The safety net is much smaller than the product surface.</h1>
+        <p class="subtitle">
+          This is the sharpest technical risk I found. The repo behaves like a large platform, but the scripted verification path currently protects only a narrow slice of it.
+        </p>
+      </div>
+      <div class="slide-index">09 / 11</div>
+    </header>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="section-kicker">Pipeline Reality</div>
+        <h2 class="section-title">What the repo scripts actually verify</h2>
+        <pre class="code-box">"typecheck": "tsc --noEmit ... ./types/employee.ts"
+"lint": "eslint ... ./types/employee.ts ... ./entrypoints/cli.tsx"
+"build": "bun build ./entrypoints/cli.tsx ..."
+"smoke:cli": "bun ./entrypoints/cli.tsx --version"
+"smoke:bundle": "bun ./dist/cli.js --version"
+"smoke:employee": "bun ./scripts/employeeSmoke.ts"</pre>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">Observed Gap</div>
+        <h2 class="section-title">Why that matters here</h2>
+        <ul class="bullet-list">
+          <li>The repo-wide typecheck is effectively <strong>not repo-wide</strong>; it targets a single file.</li>
+          <li>Linting is also targeted at a narrow employee/CLI slice, not the full tree.</li>
+          <li>I found <strong>no conventional <code>test/spec</code> tree</strong> through repo-wide filename search.</li>
+          <li>That leaves a lot of mega-file and feature-gated behavior protected mainly by build success and smoke commands.</li>
+        </ul>
+        <div class="note" style="margin-top:18px">
+          <strong class="table-label">Risk profile</strong>
+          <div class="body-copy" style="margin-top:10px">
+            This setup can still work for a fast-moving internal platform, but it becomes fragile as more runtime variants,
+            more MCP integrations, and more remote/multi-agent flows are added.
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="strengths-risks" data-title="Strengths and Risks">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Balanced View</div>
+        <h1 class="title">What is strongest, and what most needs hardening.</h1>
+        <p class="subtitle">
+          The architecture is not messy by accident. It is ambitious. The question is where to invest so the ambition remains sustainable.
+        </p>
+      </div>
+      <div class="slide-index">10 / 11</div>
+    </header>
+
+    <div class="grid-2">
+      <div class="panel">
+        <div class="section-kicker">What Looks Strong</div>
+        <h2 class="section-title">Keep leaning into these</h2>
+        <ul class="bullet-list">
+          <li><strong>Tool contract + execution model</strong>: a real abstraction with concurrency, progress, permissions, and UI integration.</li>
+          <li><strong>Startup engineering</strong>: performance-aware boot sequencing and explicit profiling checkpoints.</li>
+          <li><strong>Extensibility model</strong>: MCP, plugins, skills, remote tasks, and background agents fit into one host.</li>
+          <li><strong>Terminal UX ambition</strong>: custom Ink and REPL behavior give the product room to differentiate.</li>
+        </ul>
+      </div>
+
+      <div class="panel">
+        <div class="section-kicker">What Looks Fragile</div>
+        <h2 class="section-title">Hardening targets</h2>
+        <ul class="bullet-list">
+          <li><strong>Mega-file ownership</strong>: <code>main.tsx</code>, <code>query.ts</code>, <code>screens/REPL.tsx</code>, <code>utils/messages.ts</code>, and friends are now architectural choke points.</li>
+          <li><strong>Feature-flag sprawl</strong>: many variants are compiled into the same code paths, which raises reasoning and test cost.</li>
+          <li><strong>Verification gap</strong>: the current scripts do not provide broad confidence across a 500k+ LOC platform.</li>
+          <li><strong>Cross-cutting state/effects</strong>: some behavior is discoverable only by reading both state transitions and their side-effect adapters.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="slide" id="recommendations" data-title="Recommendations">
+    <header class="slide-header">
+      <div>
+        <div class="eyebrow">Recommendations</div>
+        <h1 class="title">Four moves would buy the most leverage.</h1>
+        <p class="subtitle">
+          These are ordered for architectural return, not cosmetic cleanup. The goal is to protect the runtime spine while preserving the platform flexibility that already exists.
+        </p>
+      </div>
+      <div class="slide-index">11 / 11</div>
+    </header>
+
+    <div class="grid-4">
+      <div class="panel">
+        <div class="section-kicker">1</div>
+        <h2 class="section-title">Protect the spine</h2>
+        <div class="body-copy">
+          Add repo-wide typecheck/lint coverage and targeted automated tests for <code>query.ts</code>, tool execution,
+          permissions, and MCP transport/auth paths before broadening features further.
+        </div>
+      </div>
+      <div class="panel">
+        <div class="section-kicker">2</div>
+        <h2 class="section-title">Extract controllers</h2>
+        <div class="body-copy">
+          Split <code>main.tsx</code>, <code>screens/REPL.tsx</code>, and <code>query.ts</code> into orchestration modules with explicit seams:
+          boot, session wiring, turn state machine, and UI composition.
+        </div>
+      </div>
+      <div class="panel">
+        <div class="section-kicker">3</div>
+        <h2 class="section-title">Own the gate matrix</h2>
+        <div class="body-copy">
+          Turn feature-flag sprawl into an asset by defining which combinations are supported, which are legacy,
+          and which files are allowed to branch on them.
+        </div>
+      </div>
+      <div class="panel">
+        <div class="section-kicker">4</div>
+        <h2 class="section-title">Stabilize architectural docs</h2>
+        <div class="body-copy">
+          Keep the excellent orientation docs, but make them generated or checked against the live tree so the map stays trustworthy
+          as files move or split.
+        </div>
+      </div>
+    </div>
+
+    <div class="note" style="margin-top:18px">
+      <strong class="table-label">Bottom line</strong>
+      <div class="body-copy" style="margin-top:10px">
+        This repo already demonstrates <span class="accent">serious systems thinking</span>. The next maturity step is not more capability,
+        it is making the existing capability easier to reason about, easier to verify, and cheaper to change.
+      </div>
+    </div>
+  </section>
+</main>
+
+<div id="nav" aria-label="Slide controls">
+  <button class="nav-button" id="prev" aria-label="Previous slide">‹</button>
+  <div id="counter">1 / 11</div>
+  <button class="nav-button" id="next" aria-label="Next slide">›</button>
+</div>
+
+<script>
+  const slides = Array.from(document.querySelectorAll(".slide"));
+  const progress = document.getElementById("progress");
+  const counter = document.getElementById("counter");
+  const prev = document.getElementById("prev");
+  const next = document.getElementById("next");
+  const isMobile = () => window.innerWidth <= 720;
+
+  function getIndexFromHash() {
+    const hash = window.location.hash.replace("#", "");
+    if (!hash) return 0;
+    const idx = slides.findIndex(slide => slide.id === hash);
+    return idx === -1 ? 0 : idx;
+  }
+
+  let currentIndex = getIndexFromHash();
+
+  function syncHash(index) {
+    const id = slides[index].id;
+    if (window.location.hash !== "#" + id) {
+      history.replaceState(null, "", "#" + id);
+    }
+  }
+
+  function render(index, updateHash = true) {
+    currentIndex = Math.max(0, Math.min(index, slides.length - 1));
+
+    if (!isMobile()) {
+      slides.forEach((slide, i) => {
+        slide.classList.toggle("active", i === currentIndex);
+      });
+      progress.style.width = (((currentIndex + 1) / slides.length) * 100) + "%";
+      counter.textContent = (currentIndex + 1) + " / " + slides.length;
+      prev.disabled = currentIndex === 0;
+      next.disabled = currentIndex === slides.length - 1;
+      if (updateHash) syncHash(currentIndex);
+    } else {
+      slides.forEach(slide => slide.classList.add("active"));
+    }
+  }
+
+  prev.addEventListener("click", () => render(currentIndex - 1));
+  next.addEventListener("click", () => render(currentIndex + 1));
+
+  window.addEventListener("hashchange", () => render(getIndexFromHash(), false));
+
+  window.addEventListener("keydown", event => {
+    if (isMobile()) return;
+    if (["ArrowRight", "PageDown", " "].includes(event.key)) {
+      event.preventDefault();
+      render(currentIndex + 1);
+    }
+    if (["ArrowLeft", "PageUp", "Backspace"].includes(event.key)) {
+      event.preventDefault();
+      render(currentIndex - 1);
+    }
+    if (event.key === "Home") {
+      event.preventDefault();
+      render(0);
+    }
+    if (event.key === "End") {
+      event.preventDefault();
+      render(slides.length - 1);
+    }
+  });
+
+  window.addEventListener("resize", () => render(currentIndex, false));
+
+  render(currentIndex);
+</script>
+</body>
+</html>

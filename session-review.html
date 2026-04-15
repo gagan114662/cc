@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Review — Agent Efficiency Report</title>
+<style>
+  :root {
+    --bg: #0d1117; --bg2: #161b22; --bg3: #21262d;
+    --border: #30363d; --text: #e6edf3; --muted: #8b949e;
+    --red: #f85149; --yellow: #e3b341; --green: #3fb950;
+    --blue: #58a6ff; --purple: #bc8cff; --orange: #f0883e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; font-size: 14px; line-height: 1.7; max-width: 960px; margin: 0 auto; padding: 48px 32px 80px; }
+  h1 { font-size: 32px; font-weight: 800; margin-bottom: 6px; }
+  h2 { font-size: 20px; font-weight: 700; margin: 40px 0 16px; color: var(--text); border-bottom: 1px solid var(--border); padding-bottom: 8px; }
+  h3 { font-size: 15px; font-weight: 700; margin: 24px 0 8px; }
+  p { margin-bottom: 10px; color: #c9d1d9; }
+  code { font-family: 'JetBrains Mono', 'Fira Code', monospace; font-size: 12px; background: var(--bg3); border: 1px solid var(--border); padding: 1px 6px; border-radius: 4px; color: var(--blue); }
+  pre { background: var(--bg2); border: 1px solid var(--border); border-radius: 8px; padding: 16px 18px; font-family: monospace; font-size: 12px; line-height: 1.6; overflow-x: auto; margin: 10px 0 14px; color: #c9d1d9; }
+  .subtitle { color: var(--muted); margin-bottom: 32px; font-size: 15px; }
+  .divider { height: 1px; background: var(--border); margin: 32px 0; }
+
+  /* VERDICT BANNER */
+  .verdict { display: flex; gap: 24px; margin: 24px 0 32px; }
+  .v-box { flex: 1; background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; text-align: center; }
+  .v-num { font-size: 40px; font-weight: 800; line-height: 1; }
+  .v-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-top: 4px; }
+
+  /* INCIDENT CARD */
+  .incident { background: var(--bg2); border: 1px solid var(--border); border-radius: 10px; padding: 20px 24px; margin-bottom: 20px; }
+  .incident-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+  .sev { display: inline-block; padding: 3px 10px; border-radius: 5px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; }
+  .sev-high { background: rgba(248,81,73,0.15); color: var(--red); border: 1px solid rgba(248,81,73,0.3); }
+  .sev-med { background: rgba(227,179,65,0.15); color: var(--yellow); border: 1px solid rgba(227,179,65,0.3); }
+  .sev-low { background: rgba(63,185,80,0.15); color: var(--green); border: 1px solid rgba(63,185,80,0.3); }
+  .inc-title { font-size: 16px; font-weight: 700; }
+  .inc-num { font-size: 24px; font-weight: 800; color: var(--muted); min-width: 32px; }
+  .tag { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: var(--bg3); border: 1px solid var(--border); color: var(--muted); margin-right: 4px; }
+
+  /* QUOTE */
+  .quote { border-left: 3px solid var(--border); padding: 8px 14px; margin: 10px 0; background: var(--bg3); border-radius: 0 6px 6px 0; font-size: 13px; color: var(--muted); font-style: italic; }
+  .quote.red { border-left-color: var(--red); }
+  .quote.green { border-left-color: var(--green); }
+  .quote.yellow { border-left-color: var(--yellow); }
+
+  /* COLS */
+  .cols { display: grid; gap: 16px; }
+  .cols-2 { grid-template-columns: 1fr 1fr; }
+
+  /* BEFORE/AFTER */
+  .ba { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin: 12px 0; }
+  .ba-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 6px; padding: 12px 14px; }
+  .ba-label { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 8px; }
+  .ba-label.bad { color: var(--red); }
+  .ba-label.good { color: var(--green); }
+
+  /* REC CARD */
+  .rec { background: var(--bg2); border: 1px solid rgba(88,166,255,0.3); border-radius: 10px; padding: 20px 24px; margin-bottom: 16px; }
+  .rec-header { display: flex; align-items: center; gap: 12px; margin-bottom: 10px; }
+  .rec-num { width: 28px; height: 28px; border-radius: 50%; background: rgba(88,166,255,0.15); border: 1px solid rgba(88,166,255,0.4); display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 700; color: var(--blue); flex-shrink: 0; }
+  .rec-title { font-size: 15px; font-weight: 700; color: var(--blue); }
+  .rec-sub { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+  /* TABLE */
+  table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+  th { text-align: left; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: 0.8px; padding: 8px 12px; border-bottom: 1px solid var(--border); }
+  td { padding: 9px 12px; border-bottom: 1px solid rgba(48,54,61,0.5); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+
+  ul { padding-left: 20px; margin: 8px 0; }
+  ul li { margin-bottom: 5px; color: #c9d1d9; }
+
+  .file { font-family: monospace; font-size: 12px; color: var(--orange); }
+  .green { color: var(--green); }
+  .red { color: var(--red); }
+  .yellow { color: var(--yellow); }
+
+  /* SUMMARY TABLE */
+  .sum-table { width: 100%; border-collapse: collapse; }
+  .sum-table td, .sum-table th { padding: 10px 14px; border: 1px solid var(--border); font-size: 13px; }
+  .sum-table th { background: var(--bg3); color: var(--muted); font-size: 11px; text-transform: uppercase; }
+  .sum-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+</style>
+</head>
+<body>
+
+<h1>Agent Session Review</h1>
+<p class="subtitle">
+  Task: <em>"technical deep dive of my codebase → comprehensive single page HTML slide deck"</em><br>
+  Review scope: full transcript including all tool calls and hook feedback
+</p>
+
+<!-- VERDICT -->
+<div class="verdict">
+  <div class="v-box">
+    <div class="v-num" style="color: var(--red);">5</div>
+    <div class="v-label">Wrong-direction incidents</div>
+  </div>
+  <div class="v-box">
+    <div class="v-num" style="color: var(--yellow);">1</div>
+    <div class="v-label">Broken environment config</div>
+  </div>
+  <div class="v-box">
+    <div class="v-num" style="color: var(--green);">6</div>
+    <div class="v-label">Repo fixes recommended</div>
+  </div>
+  <div class="v-box">
+    <div class="v-num" style="color: var(--blue);">57</div>
+    <div class="v-label">Research agent tool uses</div>
+  </div>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════
+     PART 1: INCIDENTS
+═══════════════════════════════════════ -->
+<h2>Part 1 — Where the Agent Went Wrong</h2>
+
+<!-- INCIDENT 1 -->
+<div class="incident">
+  <div class="incident-header">
+    <span class="inc-num">01</span>
+    <span class="sev sev-high">High</span>
+    <span class="inc-title">Glob scoped to project root — twice</span>
+    <span class="tag">tool misuse</span>
+    <span class="tag">repeated</span>
+  </div>
+  <p>
+    The agent's first action was two parallel <code>Glob</code> calls, both with
+    <code>path: "/Users/gaganarora/Desktop/my projects/cc"</code> — the project root.
+    Both triggered the pre-tool-use hook warning:
+  </p>
+  <div class="quote red">
+    "⚠️ GLOB SCOPE WARNING: path='…/cc' — this root contains node_modules and will return thousands of irrelevant files. Scope to 'src 2/' or a specific subdirectory."
+  </div>
+  <p>
+    The warning fired for <em>both</em> calls simultaneously. Despite being caught by the hook,
+    the agent still received noisy output (node_modules READMEs) for the <code>*.md</code> search
+    and had to wade through it. The same mistake was then repeated later in the same session when
+    checking for <code>session-review*.html</code>.
+  </p>
+  <p><strong>Root cause:</strong> The instruction in both CLAUDE.md files to scope Glob to <code>src 2/</code>
+  was read <em>after</em> the first tool call, not before. The agent evaluated the file-exists check
+  (was <code>analysis-deck.html</code> already written?) without first checking where it should look.</p>
+  <div class="ba">
+    <div class="ba-box">
+      <div class="ba-label bad">What happened</div>
+      <pre>Glob("analysis-deck.html",
+  path: "/Users/gaganarora/Desktop/my projects/cc")
+// → hook warning + noisy results</pre>
+    </div>
+    <div class="ba-box">
+      <div class="ba-label good">Should have been</div>
+      <pre>Glob("analysis-deck.html",
+  path: "/Users/gaganarora/Desktop/my projects/cc/src 2")
+// → direct hit, no noise</pre>
+    </div>
+  </div>
+  <p><strong>Time lost:</strong> The result was truncated mid-output (thousands of node_modules files),
+  forcing the agent to continue regardless. The correct file location (<code>src 2/</code>) was
+  only discovered later by the research agent, not the main agent.</p>
+</div>
+
+<!-- INCIDENT 2 -->
+<div class="incident">
+  <div class="incident-header">
+    <span class="inc-num">02</span>
+    <span class="sev sev-high">High</span>
+    <span class="inc-title">ARCHITECTURE.md never read</span>
+    <span class="tag">missing step</span>
+    <span class="tag">explicit instruction violated</span>
+  </div>
+  <p>
+    The <code>src 2/CLAUDE.md</code> contains an explicit mandatory instruction:
+  </p>
+  <div class="quote red">
+    "Read <code>ARCHITECTURE.md</code> first — it has the full directory map. Skip broad find sweeps."
+  </div>
+  <p>
+    The agent never read <code>ARCHITECTURE.md</code>. Instead, it launched a general-purpose
+    research agent that spent <strong>57 tool uses</strong> and ~760 seconds rediscovering the
+    directory structure from scratch via Glob and Grep. If <code>ARCHITECTURE.md</code> had been
+    read first and passed to the research agent, many of those exploratory tool calls would have
+    been unnecessary.
+  </p>
+  <p>
+    This also matters because the agent was supposed to ask a scope question before researching
+    (also specified in <code>src 2/CLAUDE.md</code>):
+  </p>
+  <div class="quote yellow">
+    "Ask ONE scope question before researching: 'I'll cover all major subsystems (~20 slides) for a technical audience. Want me to adjust scope or focus on specific areas?'"
+  </div>
+  <p>
+    Neither step happened. The agent jumped straight to launching the research agent.
+  </p>
+  <p><strong>Root cause:</strong> The agent read the global CLAUDE.md (which says "Skip scope confirmation if the user says 'comprehensive'. Go straight to research + output") and treated this as overriding the project-level <code>src 2/CLAUDE.md</code> instruction. These two CLAUDE.md files were in conflict and the agent resolved the conflict in favor of the global one without noticing the contradiction.</p>
+</div>
+
+<!-- INCIDENT 3 -->
+<div class="incident">
+  <div class="incident-header">
+    <span class="inc-num">03</span>
+    <span class="sev sev-med">Medium</span>
+    <span class="inc-title">No skill invoked despite applicable skills existing</span>
+    <span class="tag">skill system</span>
+    <span class="tag">skipped step</span>
+  </div>
+  <p>
+    The <code>using-superpowers</code> skill is loaded at session start and states:
+  </p>
+  <div class="quote red">
+    "If you think there is even a 1% chance a skill might apply, you ABSOLUTELY MUST invoke the skill."
+  </div>
+  <p>
+    The task was to generate an HTML deck — the skill table in CLAUDE.md maps this to <code>design-html</code>
+    (if mockup exists). Even if <code>design-html</code> wasn't the right fit (no prior mockup),
+    the agent should have invoked it to check. It did not invoke any skill.
+  </p>
+  <p>
+    Additionally, the CLAUDE.md skill table includes:
+  </p>
+  <table>
+    <thead><tr><th>Task type</th><th>Correct skill</th></tr></thead>
+    <tr><td>Generate HTML / UI output</td><td><code>design-html</code> (if mockup exists)</td></tr>
+    <tr><td>Multi-step implementation</td><td><code>writing-plans</code> → <code>executing-plans</code></td></tr>
+  </table>
+  <p>
+    A research → HTML generation task is a multi-step implementation. The agent skipped the
+    planning phase entirely and went directly from user message to launching a research agent.
+  </p>
+</div>
+
+<!-- INCIDENT 4 -->
+<div class="incident">
+  <div class="incident-header">
+    <span class="inc-num">04</span>
+    <span class="sev sev-med">Medium</span>
+    <span class="inc-title">research-findings.md read exceeded token limit</span>
+    <span class="tag">context window</span>
+    <span class="tag">inefficiency</span>
+  </div>
+  <p>
+    After the research agent completed and wrote findings to <code>research-findings.md</code>
+    (942 lines, ~10,686 tokens), the agent attempted to read the entire file in one call:
+  </p>
+  <pre>Read("/…/research-findings.md")
+// → error: content (10,686 tokens) exceeds maximum (10,000)</pre>
+  <p>
+    This forced a second set of chunked reads (2 additional tool calls) to get the full content.
+    The CLAUDE.md explicitly covers this:
+  </p>
+  <div class="quote yellow">
+    "When accumulated file reads exceed ~5,000 tokens: Write findings to <code>research-findings.md</code>. Reference the file path for subsequent work — read sections as needed. Never load a full Explore agent result into the main context."
+  </div>
+  <p>
+    The agent <em>did</em> write to the file correctly, but then violated its own protocol by
+    trying to read the whole thing back. The correct pattern was to read targeted sections
+    (e.g., by section heading offset) as needed during HTML generation.
+  </p>
+</div>
+
+<!-- INCIDENT 5 -->
+<div class="incident">
+  <div class="incident-header">
+    <span class="inc-num">05</span>
+    <span class="sev sev-low">Low</span>
+    <span class="inc-title">No proof shown after task completion</span>
+    <span class="tag">validation</span>
+    <span class="tag">CLAUDE.md requirement</span>
+  </div>
+  <p>
+    The global CLAUDE.md says:
+  </p>
+  <div class="quote yellow">
+    "You are NOT allowed to say 'done' until you show: Command output proving it runs; A test that passes; If UI: show it."
+  </div>
+  <p>
+    The agent opened the file with <code>open</code> (bash) and then immediately summarised the
+    deck contents in prose. It did not show a screenshot or any other evidence that the HTML
+    actually rendered correctly in the browser. The harness requirement (screenshots, evidence
+    manifest) from the auto-harness section was entirely skipped.
+  </p>
+  <p>
+    For a UI output task, the minimum proof would have been a screenshot of at least the first
+    slide rendered in the browser.
+  </p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════
+     PART 2: BROKEN ENVIRONMENT
+═══════════════════════════════════════ -->
+<h2>Part 2 — Broken Environment Configuration</h2>
+
+<div class="incident" style="border-color: rgba(248,81,73,0.4);">
+  <div class="incident-header">
+    <span class="inc-num">E1</span>
+    <span class="sev sev-high">Config Bug</span>
+    <span class="inc-title">UserPromptSubmit hook references non-existent skill "expect"</span>
+    <span class="tag">hook</span>
+    <span class="tag">broken</span>
+  </div>
+  <p>
+    A <code>UserPromptSubmit</code> hook fires on every user message with the instruction:
+  </p>
+  <div class="quote red">
+    "QA task detected. You MUST invoke the expect skill FIRST before doing anything else. Call the Skill tool with skill='expect' now."
+  </div>
+  <p>
+    The skill <code>expect</code> does not exist in the skills list. A <code>ToolSearch</code>
+    for it returned <em>"No matching deferred tools found."</em> This hook will fire on every
+    message that contains QA-adjacent keywords and always request a non-existent skill, which
+    the agent cannot satisfy. The result is wasted time (ToolSearch call) and a confusing
+    instruction the agent cannot follow.
+  </p>
+  <p><strong>Fix:</strong> Either create the <code>expect</code> skill, remove this hook entry,
+  or update it to reference a real skill name.</p>
+</div>
+
+<div class="divider"></div>
+
+<!-- ═══════════════════════════════════════
+     PART 3: RECOMMENDATIONS
+═══════════════════════════════════════ -->
+<h2>Part 3 — Repository Recommendations</h2>
+<p style="color: var(--muted); margin-bottom: 24px;">Changes to add to the repository that would prevent these mistakes in future sessions.</p>
+
+<!-- REC 1 -->
+<div class="rec">
+  <div class="rec-header">
+    <div class="rec-num">1</div>
+    <div>
+      <div class="rec-title">Verify ARCHITECTURE.md exists and is up to date</div>
+      <div class="rec-sub">Fixes: Incident 02 — agent spent 760s rediscovering structure that was already documented</div>
+    </div>
+  </div>
+  <p>
+    The <code>src 2/CLAUDE.md</code> references <span class="file">ARCHITECTURE.md</span> as the
+    primary source of directory structure. If this file exists but wasn't current, or doesn't exist at all, the instruction
+    "Read ARCHITECTURE.md first" is unactionable and the agent falls back to expensive Glob sweeps.
+  </p>
+  <p>Ensure <span class="file">src 2/ARCHITECTURE.md</span> exists and contains:</p>
+  <ul>
+    <li>Full directory tree with one-line descriptions per subdirectory</li>
+    <li>File counts per subsystem (the research agent had to count these manually)</li>
+    <li>Entry point chain: <code>cli.tsx → main.tsx → App.tsx</code></li>
+    <li>Key orchestrator files with line counts</li>
+  </ul>
+  <p>
+    If this file exists, add an explicit check to the CLAUDE.md instruction:
+    <em>"Run <code>Glob('ARCHITECTURE.md', path: 'src 2/')</code> to confirm it exists before using it."</em>
+  </p>
+</div>
+
+<!-- REC 2 -->
+<div class="rec">
+  <div class="rec-header">
+    <div class="rec-num">2</div>
+    <div>
+      <div class="rec-title">Resolve the CLAUDE.md conflict between global and project-level scope instructions</div>
+      <div class="rec-sub">Fixes: Incident 02 — agent chose global instruction over project-level one</div>
+    </div>
+  </div>
+  <p>
+    The global <span class="file">~/.claude/CLAUDE.md</span> says for deck tasks: <em>"Skip scope confirmation if the user says 'comprehensive'. Go straight to research + output."</em>
+  </p>
+  <p>
+    The project <span class="file">src 2/CLAUDE.md</span> says: <em>"Ask ONE scope question before researching."</em>
+  </p>
+  <p>
+    These directly conflict. The agent resolved this silently in favour of the global instruction.
+    Add an explicit precedence note to <em>both</em> files:
+  </p>
+  <pre># src 2/CLAUDE.md — add at top of deck/report section:
+# NOTE: This overrides the global CLAUDE.md "skip scope confirmation" rule.
+# Project-level instructions take precedence over global instructions.</pre>
+  <p>
+    Or, if the global rule is intended to win, remove the conflicting instruction from the project CLAUDE.md.
+  </p>
+</div>
+
+<!-- REC 3 -->
+<div class="rec">
+  <div class="rec-header">
+    <div class="rec-num">3</div>
+    <div>
+      <div class="rec-title">Upgrade the Glob scope hook from warning to blocking</div>
+      <div class="rec-sub">Fixes: Incident 01 — hook warned but agent proceeded anyway</div>
+    </div>
+  </div>
+  <p>
+    The current pre-tool-use hook emits a warning when Glob is scoped to the project root.
+    The agent received the warning and still used the (noisy, truncated) results.
+    A warning that doesn't change behaviour is not effective.
+  </p>
+  <p>Upgrade the hook to <strong>block the tool call</strong> (non-zero exit) with a corrective message:</p>
+  <pre># In settings.json hooks:
+{
+  "event": "PreToolUse",
+  "matcher": "Glob",
+  "command": "node -e \"
+    const input = JSON.parse(process.argv[1]);
+    const p = input.tool_input?.path ?? '';
+    const bad = [
+      '/Users/gaganarora/Desktop/my projects/cc',
+      '/Users/gaganarora/Desktop/my projects'
+    ];
+    if (bad.some(b => p === b || p === b + '/')) {
+      process.stderr.write('BLOCKED: Glob at repo root. Use path: \\'src 2/\\' instead.');
+      process.exit(1);
+    }
+  \" \"$CLAUDE_TOOL_INPUT\""
+}</pre>
+  <p>
+    A blocked call forces the agent to correct the path before retrying, rather than
+    silently consuming noisy output.
+  </p>
+</div>
+
+<!-- REC 4 -->
+<div class="rec">
+  <div class="rec-header">
+    <div class="rec-num">4</div>
+    <div>
+      <div class="rec-title">Fix or remove the broken "expect" skill hook</div>
+      <div class="rec-sub">Fixes: Environment Bug E1 — every QA-adjacent prompt wastes a ToolSearch call</div>
+    </div>
+  </div>
+  <p>
+    The <code>UserPromptSubmit</code> hook fires on every message and instructs the agent to invoke
+    <code>skill="expect"</code>. This skill does not exist. Three options:
+  </p>
+  <table>
+    <thead><tr><th>Option</th><th>Action</th></tr></thead>
+    <tr><td><strong>Create the skill</strong></td><td>Write <span class="file">~/.claude/skills/expect.md</span> with the intended QA/assertion workflow</td></tr>
+    <tr><td><strong>Remove the hook</strong></td><td>Delete the hook entry from <span class="file">settings.json</span></td></tr>
+    <tr><td><strong>Fix the name</strong></td><td>Point it at an existing skill — e.g. <code>validation-runner</code> or <code>qa</code> — if one of those covers the intended behaviour</td></tr>
+  </table>
+</div>
+
+<!-- REC 5 -->
+<div class="rec">
+  <div class="rec-header">
+    <div class="rec-num">5</div>
+    <div>
+      <div class="rec-title">Add a research agent briefing template to CLAUDE.md</div>
+      <div class="rec-sub">Fixes: Incident 02 — 57 tool uses and 760s because the agent had no starting map</div>
+    </div>
+  </div>
+  <p>
+    The research agent prompt lacked an explicit instruction to read
+    <code>ARCHITECTURE.md</code> first. Add a reusable briefing block to
+    <span class="file">src 2/CLAUDE.md</span>:
+  </p>
+  <pre>## Research Agent Briefing (use this when spawning research agents)
+
+Before any Glob/Grep exploration:
+1. Read `src 2/ARCHITECTURE.md` for the full directory map
+2. Read `src 2/CLAUDE.md` for project conventions
+3. Only explore directories listed in ARCHITECTURE.md as relevant
+4. Maximum 25 tool uses — if you need more, write partial findings first</pre>
+  <p>
+    Including this template in agent prompts would have reduced the 57-tool-use research
+    run to an estimated 20–25 targeted lookups.
+  </p>
+</div>
+
+<!-- REC 6 -->
+<div class="rec">
+  <div class="rec-header">
+    <div class="rec-num">6</div>
+    <div>
+      <div class="rec-title">Add a proof/validation step for HTML output tasks</div>
+      <div class="rec-sub">Fixes: Incident 05 — deck was written but never visually verified</div>
+    </div>
+  </div>
+  <p>
+    The CLAUDE.md auto-harness section is comprehensive but framed around feature development
+    (before/after measurements, evidence manifests). It doesn't directly address static HTML output tasks.
+    Add a lightweight "HTML output checklist" section:
+  </p>
+  <pre>## HTML Output Verification (deck, report, dashboard)
+
+After writing any HTML file:
+1. Open with: `open "path/to/file.html"`
+2. Capture screenshot of first view: use `screencapture -t png /tmp/deck-verify.png`
+3. Report file size and slide/section count
+4. Confirm no JS errors in brief: `node -e "require('fs').readFileSync('file.html', 'utf8')" 2>&1`
+
+Do NOT say "done" without completing steps 1–3.</pre>
+  <p>
+    This gives the agent a concrete, lightweight verification path that doesn't require
+    a full harness but still produces evidence.
+  </p>
+</div>
+
+<div class="divider"></div>
+
+<!-- SUMMARY TABLE -->
+<h2>Summary</h2>
+<table class="sum-table">
+  <thead>
+    <tr>
+      <th>#</th>
+      <th>Incident</th>
+      <th>Severity</th>
+      <th>Root Cause</th>
+      <th>Fix Location</th>
+    </tr>
+  </thead>
+  <tr>
+    <td>01</td>
+    <td>Glob at root (×3 in session)</td>
+    <td class="red">High</td>
+    <td>Tool call fired before CLAUDE.md was read</td>
+    <td>Block hook in settings.json (Rec 3)</td>
+  </tr>
+  <tr>
+    <td>02</td>
+    <td>ARCHITECTURE.md never read</td>
+    <td class="red">High</td>
+    <td>Global/project CLAUDE.md conflict; no enforcement</td>
+    <td>Verify file exists + resolve conflict (Rec 1, 2)</td>
+  </tr>
+  <tr>
+    <td>03</td>
+    <td>No skill invoked</td>
+    <td class="yellow">Medium</td>
+    <td>Agent rationalised "no exact skill match"</td>
+    <td>Explicit deck-task skill mapping in CLAUDE.md</td>
+  </tr>
+  <tr>
+    <td>04</td>
+    <td>research-findings.md over token limit</td>
+    <td class="yellow">Medium</td>
+    <td>Read whole file instead of targeted sections</td>
+    <td>Add research agent briefing template (Rec 5)</td>
+  </tr>
+  <tr>
+    <td>05</td>
+    <td>No proof after HTML output</td>
+    <td class="green">Low</td>
+    <td>Harness instructions don't cover static HTML tasks</td>
+    <td>Add HTML output checklist to CLAUDE.md (Rec 6)</td>
+  </tr>
+  <tr>
+    <td>E1</td>
+    <td>Broken "expect" hook</td>
+    <td class="red">Config Bug</td>
+    <td>Hook references non-existent skill</td>
+    <td>Fix or remove hook entry (Rec 4)</td>
+  </tr>
+</table>
+
+<div class="divider"></div>
+<p style="color: var(--muted); font-size: 12px;">
+  Generated from full session transcript review · Claude Code · 2026-04-14
+</p>
+
+</body>
+</html>

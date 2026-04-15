@@ -1,0 +1,88 @@
+{
+  "version": "1",
+  "seedCorpusPath": "./autoresearch.seed-corpus.json",
+  "seedChallengeSetPath": "./autoresearch.seed-challenge-set.json",
+  "evaluationCommand": "bun run scripts/autoresearchEval.ts",
+  "mutationSources": [
+    {
+      "type": "manifest_directory",
+      "path": "./autoresearch.experiments/candidates"
+    }
+  ],
+  "immutableCandidateGlobs": [
+    "services/autoresearch/**",
+    "autoresearch.config.json",
+    "autoresearch.seed-corpus.json",
+    "autoresearch.seed-challenge-set.json"
+  ],
+  "splitter": {
+    "enabled": true,
+    "executionMode": "topology_only",
+    "serviceId": "cc-autoresearch",
+    "region": "local",
+    "domains": [
+      {
+        "id": "eval-tasks",
+        "workstream": "candidate_eval",
+        "type": "global",
+        "shardKeyStrategy": "candidate_case_digest",
+        "description": "Distributes candidate-by-case benchmark execution across evaluator workers.",
+        "regionAffinity": false
+      },
+      {
+        "id": "benchmark-admission",
+        "workstream": "benchmark_admission",
+        "type": "global",
+        "shardKeyStrategy": "proposal_case_digest",
+        "description": "Owns replay, stability, and challenge-discrimination checks for benchmark proposals.",
+        "regionAffinity": false
+      },
+      {
+        "id": "dogfood-observations",
+        "workstream": "dogfood_observation",
+        "type": "regional",
+        "shardKeyStrategy": "observation_digest",
+        "description": "Processes dogfood regressions and transcript-derived observations near the source region.",
+        "regionAffinity": true
+      },
+      {
+        "id": "promotion-controller",
+        "workstream": "promotion_controller",
+        "type": "unit",
+        "shardKeyStrategy": "singleton",
+        "description": "Holds singleton ownership for promotion, rollback, and teacher-freeze decisions.",
+        "regionAffinity": false
+      }
+    ]
+  },
+  "reliabilityFloors": {
+    "unsupportedClaimRate": 0,
+    "verifierBypassRate": 0,
+    "phaseViolationRate": 0,
+    "missingEvidenceCompletionRate": 0,
+    "challengeSetCatchRate": 1,
+    "hiddenHoldoutPredictiveAccuracy": 1,
+    "dogfoodMissRate": 0,
+    "benchmarkStabilityRate": 0.9
+  },
+  "costCeilings": {
+    "maxTokenCostDeltaPct": 5,
+    "maxRuntimeDeltaPct": 10
+  },
+  "admissionThresholds": {
+    "minimumReplayCount": 2,
+    "minimumStabilityScore": 0.9,
+    "requireChallengeDiscrimination": true
+  },
+  "rolloutThresholds": {
+    "shadowSuccessCount": 2,
+    "dogfoodSuccessCount": 2,
+    "canarySuccessCount": 3,
+    "maxRegressionRate": 0
+  },
+  "teacherFreezeThresholds": {
+    "challengeEscapeRate": 0,
+    "dogfoodMissRate": 0,
+    "benchmarkInstabilityRate": 0.2
+  }
+}

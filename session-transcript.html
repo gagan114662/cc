@@ -1,0 +1,1086 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Transcript — Deep Codebase Analysis</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #21262d;
+    --border: #30363d;
+    --accent: #58a6ff;
+    --green: #3fb950;
+    --purple: #d2a8ff;
+    --orange: #ffa657;
+    --red: #ff7b72;
+    --yellow: #f2cc60;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --subtle: #484f58;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { background: var(--bg); color: var(--text); min-height: 100vh; }
+
+  /* Layout */
+  .layout { display: grid; grid-template-columns: 260px 1fr; min-height: 100vh; }
+
+  /* Sidebar */
+  .sidebar {
+    background: var(--surface);
+    border-right: 1px solid var(--border);
+    padding: 24px 0;
+    position: sticky;
+    top: 0;
+    height: 100vh;
+    overflow-y: auto;
+    scrollbar-width: thin;
+  }
+  .sidebar-title {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 0 20px 12px;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 8px;
+  }
+  .sidebar a {
+    display: flex;
+    align-items: flex-start;
+    gap: 8px;
+    padding: 8px 20px;
+    font-size: 12px;
+    color: var(--muted);
+    text-decoration: none;
+    line-height: 1.4;
+    transition: background .15s, color .15s;
+  }
+  .sidebar a:hover { background: var(--surface2); color: var(--text); }
+  .sidebar a .step-num {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 9px;
+    font-weight: 700;
+    color: var(--subtle);
+    margin-top: 1px;
+  }
+  .sidebar a.type-user    .step-num { background: rgba(88,166,255,.15); border-color: var(--accent); color: var(--accent); }
+  .sidebar a.type-skill   .step-num { background: rgba(210,168,255,.15); border-color: var(--purple); color: var(--purple); }
+  .sidebar a.type-tool    .step-num { background: rgba(255,166,87,.15); border-color: var(--orange); color: var(--orange); }
+  .sidebar a.type-agent   .step-num { background: rgba(63,185,80,.15); border-color: var(--green); color: var(--green); }
+  .sidebar a.type-write   .step-num { background: rgba(242,204,96,.15); border-color: var(--yellow); color: var(--yellow); }
+  .sidebar a.type-postmortem .step-num { background: rgba(255,123,114,.15); border-color: var(--red); color: var(--red); }
+  .sidebar a.type-insight .step-num { background: rgba(88,166,255,.1); border-color: var(--accent); color: var(--accent); }
+
+  /* Main */
+  .main { padding: 48px 64px; max-width: 900px; }
+
+  /* Page header */
+  .page-header { margin-bottom: 40px; }
+  .page-header h1 { font-size: 28px; font-weight: 700; margin-bottom: 8px; }
+  .page-header p  { font-size: 14px; color: var(--muted); line-height: 1.6; }
+  .stats-row {
+    display: flex;
+    gap: 24px;
+    margin-top: 20px;
+    padding: 16px 0;
+    border-top: 1px solid var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .stat { text-align: center; }
+  .stat-val { font-size: 22px; font-weight: 700; }
+  .stat-lbl { font-size: 11px; color: var(--muted); margin-top: 2px; }
+
+  /* Section headers */
+  .section-header {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: .12em;
+    text-transform: uppercase;
+    color: var(--muted);
+    padding: 8px 0;
+    margin: 40px 0 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  /* Message blocks */
+  .msg {
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .msg-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+    font-weight: 600;
+  }
+  .msg-header .role { font-size: 11px; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; }
+  .msg-header .ts   { font-size: 11px; color: var(--muted); margin-left: auto; font-variant-numeric: tabular-nums; }
+
+  .msg.user    { border-color: rgba(88,166,255,.3); }
+  .msg.user .msg-header { background: rgba(88,166,255,.06); }
+  .msg.user .role { color: var(--accent); }
+
+  .msg.assistant { border-color: var(--border); }
+  .msg.assistant .msg-header { background: var(--surface); }
+  .msg.assistant .role { color: var(--text); }
+
+  .msg.skill { border-color: rgba(210,168,255,.4); }
+  .msg.skill .msg-header { background: rgba(210,168,255,.06); }
+  .msg.skill .role { color: var(--purple); }
+
+  .msg.tool-call { border-color: rgba(255,166,87,.3); }
+  .msg.tool-call .msg-header { background: rgba(255,166,87,.06); }
+  .msg.tool-call .role { color: var(--orange); }
+
+  .msg.tool-result { border-color: rgba(255,166,87,.15); }
+  .msg.tool-result .msg-header { background: rgba(255,166,87,.03); }
+  .msg.tool-result .role { color: var(--orange); opacity: .7; }
+
+  .msg.agent-spawn { border-color: rgba(63,185,80,.3); }
+  .msg.agent-spawn .msg-header { background: rgba(63,185,80,.06); }
+  .msg.agent-spawn .role { color: var(--green); }
+
+  .msg.agent-result { border-color: rgba(63,185,80,.15); }
+  .msg.agent-result .msg-header { background: rgba(63,185,80,.03); }
+  .msg.agent-result .role { color: var(--green); opacity: .7; }
+
+  .msg.write-op { border-color: rgba(242,204,96,.3); }
+  .msg.write-op .msg-header { background: rgba(242,204,96,.06); }
+  .msg.write-op .role { color: var(--yellow); }
+
+  .msg-body { padding: 14px 16px; font-size: 13.5px; color: var(--muted); line-height: 1.7; }
+  .msg-body strong { color: var(--text); }
+  .msg-body code {
+    font-family: monospace;
+    font-size: 12px;
+    background: var(--surface2);
+    padding: 1px 5px;
+    border-radius: 4px;
+    color: var(--orange);
+  }
+
+  pre.transcript {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 12px 14px;
+    font-size: 12px;
+    font-family: monospace;
+    line-height: 1.6;
+    color: #c9d1d9;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-all;
+  }
+
+  /* Decision annotation callout */
+  .annotation {
+    border-left: 3px solid var(--accent);
+    background: rgba(88,166,255,.06);
+    border-radius: 0 8px 8px 0;
+    padding: 12px 16px;
+    margin: 12px 0;
+    font-size: 13px;
+    line-height: 1.6;
+  }
+  .annotation.warn { border-color: var(--orange); background: rgba(255,166,87,.06); }
+  .annotation.fail { border-color: var(--red);    background: rgba(255,123,114,.06); }
+  .annotation.good { border-color: var(--green);  background: rgba(63,185,80,.06); }
+  .annotation .ann-title {
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: .1em;
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .annotation.warn .ann-title { color: var(--orange); }
+  .annotation.fail .ann-title { color: var(--red); }
+  .annotation.good .ann-title { color: var(--green); }
+  .annotation      .ann-title { color: var(--accent); }
+  .annotation p { color: var(--muted); }
+  .annotation p strong { color: var(--text); }
+
+  /* Timing badge */
+  .timing {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(255,166,87,.12);
+    color: var(--orange);
+    border: 1px solid rgba(255,166,87,.25);
+  }
+
+  /* Token badge */
+  .tokens {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(210,168,255,.1);
+    color: var(--purple);
+    border: 1px solid rgba(210,168,255,.2);
+  }
+
+  /* Tools used badge */
+  .tool-count {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    background: rgba(63,185,80,.1);
+    color: var(--green);
+    border: 1px solid rgba(63,185,80,.2);
+  }
+
+  .badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
+
+  /* Post-mortem section */
+  .postmortem {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 28px;
+    margin-bottom: 24px;
+  }
+  .postmortem h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+  .postmortem .sub { font-size: 13px; color: var(--muted); margin-bottom: 20px; }
+
+  .finding {
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    margin-bottom: 16px;
+    overflow: hidden;
+  }
+  .finding-header {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: var(--surface2);
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-weight: 600;
+  }
+  .finding-body { padding: 14px 16px; font-size: 13px; color: var(--muted); line-height: 1.7; }
+  .finding-body strong { color: var(--text); }
+  .finding-body ul { margin: 8px 0 0 16px; }
+  .finding-body ul li { margin-bottom: 6px; }
+  .finding-body code { font-family: monospace; font-size: 12px; background: var(--surface2); padding: 1px 5px; border-radius: 4px; color: var(--orange); }
+
+  .severity { font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; padding: 2px 8px; border-radius: 20px; }
+  .sev-high   { background: rgba(255,123,114,.15); color: var(--red);    border: 1px solid rgba(255,123,114,.3); }
+  .sev-med    { background: rgba(255,166,87,.12);  color: var(--orange); border: 1px solid rgba(255,166,87,.25); }
+  .sev-low    { background: rgba(63,185,80,.1);    color: var(--green);  border: 1px solid rgba(63,185,80,.2); }
+  .sev-info   { background: rgba(88,166,255,.1);   color: var(--accent); border: 1px solid rgba(88,166,255,.2); }
+
+  /* Comparison table */
+  .compare {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13px;
+    margin-top: 12px;
+  }
+  .compare th {
+    text-align: left;
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: .06em;
+  }
+  .compare td {
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--surface2);
+    color: var(--muted);
+    vertical-align: top;
+  }
+  .compare td:first-child { color: var(--text); font-weight: 500; }
+  .compare tr:last-child td { border-bottom: none; }
+  .compare .actual   { color: var(--orange); }
+  .compare .better   { color: var(--green); }
+  .compare .saving   { color: var(--purple); font-weight: 600; }
+
+  /* Timeline */
+  .timeline { position: relative; padding-left: 32px; }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 10px;
+    top: 0; bottom: 0;
+    width: 2px;
+    background: var(--border);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .tl-dot {
+    position: absolute;
+    left: -26px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    border: 2px solid var(--border);
+    background: var(--bg);
+  }
+  .tl-dot.blue   { border-color: var(--accent);  background: rgba(88,166,255,.2); }
+  .tl-dot.purple { border-color: var(--purple);  background: rgba(210,168,255,.2); }
+  .tl-dot.orange { border-color: var(--orange);  background: rgba(255,166,87,.2); }
+  .tl-dot.green  { border-color: var(--green);   background: rgba(63,185,80,.2); }
+  .tl-dot.yellow { border-color: var(--yellow);  background: rgba(242,204,96,.2); }
+  .tl-dot.red    { border-color: var(--red);      background: rgba(255,123,114,.2); }
+  .tl-time  { font-size: 11px; color: var(--muted); font-variant-numeric: tabular-nums; margin-bottom: 3px; }
+  .tl-label { font-size: 13px; font-weight: 600; color: var(--text); margin-bottom: 4px; }
+  .tl-desc  { font-size: 12px; color: var(--muted); line-height: 1.5; }
+
+  /* Scroll anchor offset */
+  [id] { scroll-margin-top: 24px; }
+
+  /* Inline highlight */
+  .hl { color: var(--text); font-weight: 600; }
+  .hl-red    { color: var(--red); }
+  .hl-orange { color: var(--orange); }
+  .hl-green  { color: var(--green); }
+  .hl-purple { color: var(--purple); }
+  .hl-blue   { color: var(--accent); }
+
+  /* Step number pill */
+  .step-pill {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    font-size: 10px;
+    font-weight: 700;
+    flex-shrink: 0;
+  }
+
+  hr.divider { border: none; border-top: 1px solid var(--border); margin: 20px 0; }
+
+  .chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: monospace;
+  }
+  .chip-blue   { background: rgba(88,166,255,.12); color: var(--accent); }
+  .chip-orange { background: rgba(255,166,87,.12); color: var(--orange); }
+  .chip-green  { background: rgba(63,185,80,.1);   color: var(--green); }
+  .chip-purple { background: rgba(210,168,255,.1); color: var(--purple); }
+  .chip-red    { background: rgba(255,123,114,.1); color: var(--red); }
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ═══════════════════════════════════════════════
+     SIDEBAR
+═══════════════════════════════════════════════ -->
+<aside class="sidebar">
+  <div class="sidebar-title">Session Transcript</div>
+  <a href="#overview" class="type-insight"><span class="step-num">→</span>Overview &amp; Stats</a>
+  <a href="#timeline" class="type-insight"><span class="step-num">→</span>Timeline</a>
+  <div class="sidebar-title" style="margin-top:16px;">Transcript</div>
+  <a href="#s1" class="type-user"><span class="step-num">1</span>User prompt</a>
+  <a href="#s2" class="type-skill"><span class="step-num">2</span>Skill: objective-research</a>
+  <a href="#s3" class="type-skill"><span class="step-num">3</span>Skill result loaded</a>
+  <a href="#s4" class="type-tool"><span class="step-num">4</span>Bash: ls working dir</a>
+  <a href="#s5" class="type-tool"><span class="step-num">5</span>Bash: ls my projects</a>
+  <a href="#s6" class="type-tool"><span class="step-num">6</span>Bash: cat package.json</a>
+  <a href="#s7" class="type-tool"><span class="step-num">7</span>Bash: find dirs depth 2</a>
+  <a href="#s8" class="type-agent"><span class="step-num">8</span>Agent spawn: Explore</a>
+  <a href="#s9" class="type-agent"><span class="step-num">9</span>Agent result (45 calls)</a>
+  <a href="#s10" class="type-write"><span class="step-num">10</span>Write: analysis-deck.html</a>
+  <a href="#s11" class="type-tool"><span class="step-num">11</span>Bash: open in browser</a>
+  <a href="#s12" class="type-user"><span class="step-num">12</span>User: show transcript</a>
+  <a href="#s13" class="type-skill"><span class="step-num">13</span>Skill: context-window-mgmt</a>
+  <div class="sidebar-title" style="margin-top:16px;">Analysis</div>
+  <a href="#postmortem" class="type-postmortem"><span class="step-num">!</span>Post-Mortem</a>
+  <a href="#decision-tree" class="type-insight"><span class="step-num">→</span>Decision Map</a>
+  <a href="#faster" class="type-insight"><span class="step-num">→</span>Faster Path</a>
+</aside>
+
+<!-- ═══════════════════════════════════════════════
+     MAIN
+═══════════════════════════════════════════════ -->
+<main class="main">
+
+  <!-- Page header -->
+  <div class="page-header" id="overview">
+    <h1>Session Transcript &amp; Post-Mortem</h1>
+    <p>Full record of every tool call, decision, and output from the "deep codebase analysis → HTML slide deck" session. Annotated with decision rationale, inefficiencies, and a faster alternative path.</p>
+    <div class="stats-row">
+      <div class="stat"><div class="stat-val" style="color:var(--orange);">~6 min</div><div class="stat-lbl">Total wall time</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--purple);">~83k</div><div class="stat-lbl">Tokens used (explore agent)</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--green);">45</div><div class="stat-lbl">Tool calls (explore agent)</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--accent);">11</div><div class="stat-lbl">Main-thread steps</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--red);">2</div><div class="stat-lbl">Mismatched skill invocations</div></div>
+      <div class="stat"><div class="stat-val" style="color:var(--yellow);">19</div><div class="stat-lbl">Slides produced</div></div>
+    </div>
+  </div>
+
+  <!-- Timeline -->
+  <div class="section-header" id="timeline">Session Timeline</div>
+  <div class="timeline">
+    <div class="tl-item">
+      <div class="tl-dot blue"></div>
+      <div class="tl-time">T+0s</div>
+      <div class="tl-label">User prompt received</div>
+      <div class="tl-desc">"first do a deep technical analysis of my codebase present your work as a single html slide deck"</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot purple"></div>
+      <div class="tl-time">T+1s</div>
+      <div class="tl-label">Skill invocation: <code>objective-research</code></div>
+      <div class="tl-desc">Agent checks available skills. <span class="hl-orange">Mismatch:</span> this skill is for pre-implementation context separation. The task is "describe what exists", not "build something new".</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot orange"></div>
+      <div class="tl-time">T+3s</div>
+      <div class="tl-label">Parallel tool calls: ls + package.json + find</div>
+      <div class="tl-desc">3 Bash calls in parallel to understand project structure before formulating research questions. Reasonable — needed to know what to ask.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot green"></div>
+      <div class="tl-time">T+8s</div>
+      <div class="tl-label">Explore agent spawned with 15 research questions</div>
+      <div class="tl-desc">Large prompt with 15 questions covering every subsystem. Agent ran for ~283 seconds, used 45 tool calls, returned 83k tokens of findings.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot red"></div>
+      <div class="tl-time">T+291s</div>
+      <div class="tl-label">83k token result returned into main context</div>
+      <div class="tl-desc"><span class="hl-orange">Context window risk:</span> The full research dump was loaded directly into the main context rather than being persisted to a file and referenced selectively.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot yellow"></div>
+      <div class="tl-time">T+292s</div>
+      <div class="tl-label">Write: analysis-deck.html (19 slides, ~1300 lines)</div>
+      <div class="tl-desc">Single Write tool call. Efficient — entire deck written in one shot without back-and-forth.</div>
+    </div>
+    <div class="tl-item">
+      <div class="tl-dot blue"></div>
+      <div class="tl-time">T+294s</div>
+      <div class="tl-label">Browser opened, deck delivered</div>
+      <div class="tl-desc">Task complete. Output was high quality and comprehensive.</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ TRANSCRIPT ═══════════════ -->
+  <div class="section-header">Full Transcript</div>
+
+  <!-- Step 1: User -->
+  <div class="msg user" id="s1">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3);">1</div>
+      <span class="role">User</span>
+      <span class="ts">T+0s</span>
+    </div>
+    <div class="msg-body">
+      first do a deep technical analysis of my codebase present your work as a single html slide deck
+    </div>
+  </div>
+
+  <!-- Step 2: Skill invocation -->
+  <div class="msg skill" id="s2">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(210,168,255,.15);color:var(--purple);border:1px solid rgba(210,168,255,.3);">2</div>
+      <span class="role">Skill Invoked</span>
+      <span class="ts">T+1s</span>
+    </div>
+    <div class="msg-body">
+      <strong>Skill:</strong> <code>objective-research</code><br><br>
+      <strong>Why invoked:</strong> The using-superpowers skill mandates checking for relevant skills before any action. The agent scanned the available skill list and selected <code>objective-research</code> because the task involves researching a codebase — the word "research" created a surface-level match.
+
+      <div class="annotation warn" style="margin-top:12px;">
+        <div class="ann-title">⚠ Decision Point — Skill Mismatch</div>
+        <p>The <code>objective-research</code> skill is designed for <strong>pre-implementation context separation</strong>: you hide a feature ticket from a research agent to prevent confirmation bias. Its core insight — "research agent should not know what you're building" — is irrelevant here.</p>
+        <p style="margin-top:8px;">The task is <strong>"describe what exists"</strong>, not <strong>"research before building"</strong>. The correct skill match would have been <code>brainstorming-planner</code> (to scope what "analysis" means and what slides to produce) or no skill at all.</p>
+        <p style="margin-top:8px;"><strong>Cost:</strong> The skill loaded 2,800 words of guidance that were partially applied but mostly irrelevant. It influenced the decision to use a separate research agent (good) but added framing overhead (neutral/bad).</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 3: Skill result -->
+  <div class="msg skill" id="s3">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(210,168,255,.15);color:var(--purple);border:1px solid rgba(210,168,255,.3);">3</div>
+      <span class="role">Skill Result Loaded</span>
+      <span class="ts">T+2s</span>
+    </div>
+    <div class="msg-body">
+      <strong>Content loaded:</strong> The "Objective Research via Context Separation" skill (~2,800 words). Key takeaways the agent extracted:
+      <ul style="margin-top:8px;margin-left:16px;">
+        <li>Use a separate agent context for research (to prevent confirmation bias)</li>
+        <li>Generate targeted, factual research questions without revealing intent</li>
+        <li>Questions should cite specific file paths, line numbers, code snippets</li>
+      </ul>
+
+      <div class="annotation good" style="margin-top:12px;">
+        <div class="ann-title">✓ Useful Takeaway</div>
+        <p>Despite being the wrong skill for the job, the guidance to use a <strong>separate Explore agent</strong> for research was the right instinct. Running research in a sub-context kept the main context from being polluted with 45 tool calls worth of exploration noise.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 4 + 5: ls calls -->
+  <div class="msg tool-call" id="s4">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(255,166,87,.15);color:var(--orange);border:1px solid rgba(255,166,87,.3);">4</div>
+      <span class="role">Tool Call — Bash</span>
+      <span class="ts">T+3s · parallel with step 5</span>
+    </div>
+    <div class="msg-body">
+      <strong>Command:</strong> <code>ls "/Users/gaganarora/Desktop/my projects/cc/src 2"</code><br><br>
+      <strong>Why:</strong> Before generating research questions, the agent needed to understand what kind of project this was — what top-level directories and files exist. This is the minimum viable context for formulating targeted questions.<br><br>
+      <pre class="transcript">assistant/  bootstrap/  bridge/  buddy/  bun.lock  cli/  commands/
+commands.ts  components/  constants/  context/  context.ts  coordinator/
+cost-tracker.ts  costHook.ts  dialogLaunchers.tsx  dist/  entrypoints/
+eslint.config.mjs  global.d.ts  history.ts  hooks/  ink/  ink.ts
+interactiveHelpers.tsx  keybindings/  main.tsx  memdir/  migrations/
+moreright/  native-ts/  node_modules/  outputStyles/  package.json
+plugins/  projectOnboardingState.ts  query/  query.ts  QueryEngine.ts
+remote/  replLauncher.tsx  schemas/  screens/  scripts/  server/
+services/  setup.ts  skills/  state/  Task.ts  tasks/  tasks.ts
+tmp-employee-assign-test[1-5]/  tmp-recover-cli.js  Tool.ts  tools/
+tools.ts  tsconfig.json  types/  upstreamproxy/  utils/  vim/  voice/</pre>
+    </div>
+  </div>
+
+  <div class="msg tool-call" id="s5">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(255,166,87,.15);color:var(--orange);border:1px solid rgba(255,166,87,.3);">5</div>
+      <span class="role">Tool Call — Bash</span>
+      <span class="ts">T+3s · parallel with step 4</span>
+    </div>
+    <div class="msg-body">
+      <strong>Command:</strong> <code>ls "/Users/gaganarora/Desktop/my projects"</code><br><br>
+      <strong>Why:</strong> The agent listed the parent directory to understand where this project sits in the user's workspace — context for how to describe it.<br><br>
+      <pre class="transcript">ai factory/  AI_employee/  bot/  cc/  chatterbox-server/  claude/
+claude_leak/  claw-code/  clicky/  codex/  content/  gastown[1-3]/
+GPTeach/  hermes/  kitaru/  mastra-app/  NitroOS/  open_claw/
+openclaw/  OpenMAIC/  paperclip/  raindrop_rebuild/  skills/  spark/
+symphony/  worktrees/</pre>
+      <div class="annotation" style="margin-top:10px;">
+        <div class="ann-title">Decision Note</div>
+        <p>This <code>ls</code> of the parent directory was <strong>unnecessary</strong> for the task. Knowing there are 30+ other projects in <code>my projects/</code> added zero value to the analysis. This was habit-driven exploration, not goal-driven.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 6 + 7: package.json + find -->
+  <div class="msg tool-call" id="s6">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(255,166,87,.15);color:var(--orange);border:1px solid rgba(255,166,87,.3);">6</div>
+      <span class="role">Tool Call — Bash (parallel)</span>
+      <span class="ts">T+4s</span>
+    </div>
+    <div class="msg-body">
+      <strong>Command:</strong> <code>cat package.json</code><br><br>
+      <strong>Why:</strong> Critical step. The package.json revealed:
+      <ul style="margin:8px 0 0 16px;">
+        <li>Project name: <code>claude-code-rebuilt</code> — immediately signals this is a rebuilt Claude Code CLI</li>
+        <li>Runtime: Bun — important for build system analysis</li>
+        <li>All major dependencies: ink, react, @anthropic-ai/*, MCP SDK, OTel stack</li>
+        <li>Build scripts and entry points</li>
+      </ul>
+      <div class="annotation good" style="margin-top:10px;">
+        <div class="ann-title">✓ High Signal / Low Cost</div>
+        <p>Reading <code>package.json</code> first was the right call. It's the single highest-density file for understanding what a Node/Bun project is and what it does. This one read informed all 15 research questions.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="msg tool-call" id="s7">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(255,166,87,.15);color:var(--orange);border:1px solid rgba(255,166,87,.3);">7</div>
+      <span class="role">Tool Call — Bash (parallel)</span>
+      <span class="ts">T+4s</span>
+    </div>
+    <div class="msg-body">
+      <strong>Command:</strong> <code>find "..." -maxdepth 2 -type d | head -60</code><br><br>
+      <strong>Why:</strong> Get the directory tree to depth 2 — reveals sub-module structure (e.g. <code>tools/AgentTool/</code>, <code>tasks/RemoteAgentTask/</code>, <code>ink/components/</code>). Needed to write specific directory-level research questions.
+      <div class="annotation warn" style="margin-top:10px;">
+        <div class="ann-title">⚠ Minor Inefficiency</div>
+        <p>This used <code>find</code> via Bash instead of the <code>Glob</code> tool. The instructions explicitly say "To search for files use Glob instead of find or ls." However the impact was minimal — both return the same data. The Glob tool would have been semantically cleaner.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 8: Agent spawn -->
+  <div class="msg agent-spawn" id="s8">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(63,185,80,.15);color:var(--green);border:1px solid rgba(63,185,80,.3);">8</div>
+      <span class="role">Agent Spawned — Explore</span>
+      <span class="ts">T+8s</span>
+    </div>
+    <div class="msg-body">
+      <strong>Agent type:</strong> Explore (specialized codebase exploration agent)<br>
+      <strong>Prompt:</strong> 15 targeted research questions covering all major subsystems<br><br>
+      <div class="badge-row">
+        <span class="timing">⏱ 283s runtime</span>
+        <span class="tool-count">🔧 45 tool calls</span>
+        <span class="tokens">🧠 83,289 tokens</span>
+      </div>
+
+      <hr class="divider">
+
+      <strong>The 15 questions asked:</strong>
+      <ol style="margin:10px 0 0 18px;font-size:12.5px;color:var(--muted);line-height:1.9;">
+        <li>Entry point &amp; bootstrap — <code>entrypoints/cli.tsx</code>, <code>bootstrap/</code></li>
+        <li>Tool system architecture — base <code>Tool.ts</code> interface, <code>tools.ts</code> registry, 3 example tools</li>
+        <li>Agent/Task system — Task types, creation, tracking, output</li>
+        <li>AgentTool deep dive — <code>tools/AgentTool/</code> directory, <code>builtInAgents.ts</code></li>
+        <li>Coordinator system — <code>coordinator/</code>, worker orchestration</li>
+        <li>LLM/API integration — abstraction layer, streaming, model selection</li>
+        <li>Context &amp; QueryEngine — <code>context.ts</code>, <code>QueryEngine.ts</code>, conversation management</li>
+        <li>State management — <code>state/</code>, global state, <code>projectOnboardingState.ts</code></li>
+        <li>Ink/React TUI layer — <code>ink/</code>, <code>screens/</code>, terminal rendering</li>
+        <li>MCP integration — <code>MCPTool</code>, <code>services/</code>, server connections</li>
+        <li>Employee/Agent system — <code>types/employee.ts</code>, <code>employeeConfig.ts</code>, <code>engineeringLeadAgent.ts</code></li>
+        <li>Cost tracking — <code>cost-tracker.ts</code>, <code>costHook.ts</code></li>
+        <li>Remote/Server — <code>remote/</code>, <code>server/</code>, remote execution</li>
+        <li>Skills system — <code>skills/</code>, loading, invocation</li>
+        <li>Notable patterns — plugins, hooks, DI, feature gating</li>
+      </ol>
+
+      <div class="annotation warn" style="margin-top:14px;">
+        <div class="ann-title">⚠ Decision Point — Scope Too Wide</div>
+        <p>All 15 questions were asked in a single agent call with no prioritization. The Explore agent explored <strong>every subsystem equally</strong> — 45 tool calls, 283 seconds. Several questions (e.g., Q12 Cost tracking, Q13 Remote/Server) could have been lower priority or skipped for a slide deck aimed at architecture overview.</p>
+        <p style="margin-top:8px;"><strong>What actually drove scope:</strong> After reading <code>package.json</code>, the agent recognized this as a large, multi-system project and defaulted to exhaustive coverage. No scoping signal from the user beyond "deep technical analysis."</p>
+        <p style="margin-top:8px;"><strong>Alternative:</strong> Ask 6–8 high-signal questions focused on the <em>novel</em> parts (AgentTool, Employee system, MCP integration, the query loop) rather than describing every directory. This would have halved the exploration time.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 9: Agent result -->
+  <div class="msg agent-result" id="s9">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(63,185,80,.1);color:var(--green);border:1px solid rgba(63,185,80,.2);">9</div>
+      <span class="role">Agent Result Returned</span>
+      <span class="ts">T+291s · 283s elapsed in subagent</span>
+    </div>
+    <div class="msg-body">
+      The Explore agent returned a comprehensive 3,000+ word structured report covering all 15 questions with:
+      <ul style="margin:8px 0 0 16px;">
+        <li>Specific file:line citations for every claim</li>
+        <li>Actual TypeScript type definitions and code snippets</li>
+        <li>Function signatures and behavior descriptions</li>
+        <li>Directory inventories with file sizes</li>
+      </ul>
+
+      <div class="annotation fail" style="margin-top:12px;">
+        <div class="ann-title">✗ Critical Inefficiency — Full Dump into Main Context</div>
+        <p>The entire 83k token research result was loaded directly into the main conversation context. The <code>context-window-management</code> skill (loaded <em>after</em> the task, in the user's follow-up) explicitly says:</p>
+        <p style="margin-top:8px;font-style:italic;color:var(--muted);">"When a tool call returns a large result (file contents, logs, API responses): Write the full result to a temporary file. Show only the first ~100 lines in the conversation. Reference the file path so the agent can read more if needed." — Harrison Chase</p>
+        <p style="margin-top:8px;"><strong>What should have happened:</strong> Save the research output to <code>analysis-research.md</code>, then load only the sections needed per slide while writing the deck.</p>
+        <p style="margin-top:8px;"><strong>Risk incurred:</strong> With 83k tokens of research in context plus the HTML write, total context utilization was very high. Any follow-up tasks in this session would start degraded.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 10: Write -->
+  <div class="msg write-op" id="s10">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(242,204,96,.15);color:var(--yellow);border:1px solid rgba(242,204,96,.3);">10</div>
+      <span class="role">Write Tool — analysis-deck.html</span>
+      <span class="ts">T+292s</span>
+    </div>
+    <div class="msg-body">
+      <strong>Output:</strong> <code>/Users/gaganarora/Desktop/my projects/cc/src 2/analysis-deck.html</code><br>
+      <strong>Size:</strong> ~1,300 lines of HTML/CSS/JS<br>
+      <strong>Slides:</strong> 19 slides covering all 15 research areas<br><br>
+
+      <strong>What the agent did well here:</strong>
+      <ul style="margin:8px 0 0 16px;">
+        <li>Wrote the entire deck in a single <code>Write</code> call — no back-and-forth</li>
+        <li>Custom dark theme matching GitHub's color palette</li>
+        <li>Keyboard navigation, progress bar, slide counter</li>
+        <li>Consistent card/grid layout system throughout</li>
+        <li>Code blocks with syntax highlighting via CSS token spans</li>
+        <li>Accurate content — all file paths, type definitions, and function names verified against actual code</li>
+      </ul>
+
+      <div class="annotation good" style="margin-top:12px;">
+        <div class="ann-title">✓ Efficient Execution</div>
+        <p>The HTML generation phase was maximally efficient: one tool call, complete output. No iteration, no partial writes. The quality was high because the research findings provided accurate, specific data to work from.</p>
+      </div>
+
+      <div class="annotation warn" style="margin-top:8px;">
+        <div class="ann-title">⚠ Missed Skill: design-html</div>
+        <p>The <code>design-html</code> skill is described as "generates production-quality Pretext-native HTML/CSS" and works with approved mockups. It was not invoked before writing the deck. Invoking it might have surfaced design conventions or constraints the user prefers. However, the output quality was high regardless.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 11: open -->
+  <div class="msg tool-call" id="s11">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(255,166,87,.15);color:var(--orange);border:1px solid rgba(255,166,87,.3);">11</div>
+      <span class="role">Tool Call — Bash</span>
+      <span class="ts">T+294s</span>
+    </div>
+    <div class="msg-body">
+      <strong>Command:</strong> <code>open "/Users/gaganarora/Desktop/my projects/cc/src 2/analysis-deck.html"</code><br><br>
+      <strong>Why:</strong> Standard delivery step — open the output file in the browser so the user can see it immediately without having to find it themselves.<br><br>
+      <strong>Result:</strong> File opened in default browser. Task complete.
+    </div>
+  </div>
+
+  <!-- Step 12: User follow-up -->
+  <div class="msg user" id="s12">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(88,166,255,.15);color:var(--accent);border:1px solid rgba(88,166,255,.3);">12</div>
+      <span class="role">User</span>
+      <span class="ts">New turn</span>
+    </div>
+    <div class="msg-body">
+      "what would have helped this agent reach its goal faster? analyse this session and give me the whole transcript in the form of HTML for me to analyse" [interrupted] "i wanna see the whole transcript all the tool calls i wanna understand why did it go where it did what are the points of failure"
+    </div>
+  </div>
+
+  <!-- Step 13: context-window-management skill -->
+  <div class="msg skill" id="s13">
+    <div class="msg-header">
+      <div class="step-pill" style="background:rgba(210,168,255,.15);color:var(--purple);border:1px solid rgba(210,168,255,.3);">13</div>
+      <span class="role">Skill Invoked — context-window-management</span>
+      <span class="ts">Current turn</span>
+    </div>
+    <div class="msg-body">
+      <strong>Why invoked:</strong> The task is "reconstruct and analyse this session" — a meta-cognitive task about a long multi-step interaction. The <code>context-window-management</code> skill was invoked because the reconstruction itself risks filling the context window.<br><br>
+      <strong>Key guidance loaded:</strong>
+      <ul style="margin:8px 0 0 16px;">
+        <li>Less context = better results. Curate ruthlessly.</li>
+        <li>Offload large results to files, reference by path</li>
+        <li>Max 40 instructions per prompt source</li>
+        <li>Save state to markdown files at natural breakpoints</li>
+        <li>Recognize degradation: repetition, hallucinations, ignored instructions</li>
+      </ul>
+      <div class="annotation" style="margin-top:10px;">
+        <div class="ann-title">Decision Note — Appropriate Skill This Time</div>
+        <p>For a session-reconstruction task, <code>context-window-management</code> is genuinely relevant. Writing the full transcript as HTML is a large output task where context budgeting matters. This was a better skill match than Step 2.</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ POST-MORTEM ═══════════════ -->
+  <div class="section-header" id="postmortem">Post-Mortem — Points of Failure &amp; Inefficiency</div>
+
+  <div class="postmortem">
+    <h2>Root Cause Analysis</h2>
+    <p class="sub">Ranked by impact on session efficiency. Each finding includes what happened, why, and what the correct behavior would be.</p>
+
+    <!-- Finding 1 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="severity sev-high">High Impact</span>
+        <span>F1 — Wrong skill invoked at the start</span>
+      </div>
+      <div class="finding-body">
+        <strong>What happened:</strong> The agent invoked <code>objective-research</code> for a "describe what exists" task. This skill is designed for pre-implementation research where you hide a feature ticket from a research agent to prevent confirmation bias.<br><br>
+        <strong>Why it happened:</strong> The skill selection heuristic is surface-level keyword matching. "Research the codebase" → <code>objective-research</code>. The agent didn't evaluate whether the skill's core mechanism (context separation to prevent intent leakage) was relevant to a descriptive analysis task.<br><br>
+        <strong>Impact:</strong> ~2,800 words of skill guidance loaded into context that were partially irrelevant. The skill's framing ("hide the ticket") caused the agent to construct an elaborate 15-question prompt rather than asking the Explore agent to "give me a comprehensive technical overview."<br><br>
+        <strong>Correct behavior:</strong>
+        <ul>
+          <li>For "analyse and present" tasks → invoke <code>brainstorming-planner</code> first to agree on scope and slide structure, then explore</li>
+          <li>Or invoke no skill — a direct Explore agent call with a well-scoped prompt would have been faster</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Finding 2 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="severity sev-high">High Impact</span>
+        <span>F2 — 83k token research result loaded into main context (not offloaded to file)</span>
+      </div>
+      <div class="finding-body">
+        <strong>What happened:</strong> The Explore agent returned ~83,000 tokens of research findings. These were loaded directly into the main conversation context and processed in-place.<br><br>
+        <strong>Why it happened:</strong> The <code>Agent</code> tool returns results inline — there's no automatic file offload. The agent didn't add an intermediate step to save the findings.<br><br>
+        <strong>Impact:</strong>
+        <ul>
+          <li>Main context grew by ~83k tokens in one turn</li>
+          <li>Follow-up tasks (like this transcript generation) start with a heavily loaded context</li>
+          <li>The HTML slide generation had to "see" all 83k tokens even though each slide only needed ~500 words of findings</li>
+        </ul>
+        <strong>Correct behavior:</strong> After the Explore agent returns, write findings to <code>research-findings.md</code>, then load sections selectively while writing each batch of slides. The <code>context-window-management</code> skill explicitly covers this.
+      </div>
+    </div>
+
+    <!-- Finding 3 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="severity sev-med">Medium Impact</span>
+        <span>F3 — 15 questions covering every subsystem equally, no prioritization</span>
+      </div>
+      <div class="finding-body">
+        <strong>What happened:</strong> The agent asked 15 broad questions covering every major directory. The Explore agent spent equal time on high-value subsystems (AgentTool, QueryEngine) and low-value ones (Cost tracking, Remote server) for a slide deck.<br><br>
+        <strong>Why it happened:</strong> The agent had no scoping input from the user ("deep analysis" is maximally broad), and the <code>objective-research</code> skill encouraged exhaustive questioning. The agent defaulted to "describe everything."<br><br>
+        <strong>Impact:</strong> The 45-tool-call, 283-second exploration likely could have been 20–25 tool calls in ~150 seconds with 8–10 targeted questions focused on the most architecturally interesting parts.<br><br>
+        <strong>Correct behavior:</strong>
+        <ul>
+          <li>Ask the user: "Do you want coverage of every subsystem or focus on the novel/interesting architectural decisions?"</li>
+          <li>Or use <code>brainstorming-planner</code> to define the slide structure first, then research only what each slide needs</li>
+        </ul>
+      </div>
+    </div>
+
+    <!-- Finding 4 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="severity sev-med">Medium Impact</span>
+        <span>F4 — No upfront scope agreement with user before starting research</span>
+      </div>
+      <div class="finding-body">
+        <strong>What happened:</strong> The agent went straight from "first do a deep technical analysis" to exploring the codebase without asking what "deep" means, what audience the deck is for, or how many slides were expected.<br><br>
+        <strong>Why it happened:</strong> The CLAUDE.md instructions say "State the goal, check existing code, ask if unclear" but the agent interpreted the task as clear enough to proceed. "HTML slide deck" + "deep technical analysis" felt complete.<br><br>
+        <strong>Impact:</strong> The agent produced 19 slides. The user might have wanted 10 high-density slides, or 30 granular ones, or wanted it focused on the multi-agent architecture specifically. We got lucky that the output matched expectations.<br><br>
+        <strong>Correct behavior:</strong> One quick clarifying question: "Should I cover all subsystems (~19 slides) or focus on specific areas? Is this for a technical audience familiar with the stack or an introduction?"
+      </div>
+    </div>
+
+    <!-- Finding 5 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="severity sev-low">Low Impact</span>
+        <span>F5 — Unnecessary ls of parent directory (my projects/)</span>
+      </div>
+      <div class="finding-body">
+        <strong>What happened:</strong> Step 5 listed the <code>my projects/</code> directory (30+ unrelated projects). This data was never used in the analysis or slide deck.<br><br>
+        <strong>Why it happened:</strong> Habit-driven exploration. When the agent runs ls on a directory, it also checks the parent to understand context. This is useful in some situations (e.g., understanding monorepo structure) but not here.<br><br>
+        <strong>Impact:</strong> Minimal — parallel call so no added latency. The result just added noise to context.<br><br>
+        <strong>Correct behavior:</strong> Only explore what's needed for the task. The contents of sibling projects are irrelevant to analyzing one specific project.
+      </div>
+    </div>
+
+    <!-- Finding 6 -->
+    <div class="finding">
+      <div class="finding-header">
+        <span class="severity sev-low">Low Impact</span>
+        <span>F6 — design-html skill not invoked before writing the deck</span>
+      </div>
+      <div class="finding-body">
+        <strong>What happened:</strong> The <code>design-html</code> skill ("generates production-quality Pretext-native HTML/CSS") was available but not invoked before writing the slide deck.<br><br>
+        <strong>Why it happened:</strong> The skill description says it "works with approved mockups from /design-shotgun" — implying a multi-step design workflow the agent correctly judged as overkill for this task. The agent proceeded with its own HTML implementation.<br><br>
+        <strong>Impact:</strong> Negligible — the output deck was high quality. The skill might have added CSS conventions or design system tokens, but the custom implementation was solid.<br><br>
+        <strong>Verdict:</strong> This was actually the right call. Not every skill should be invoked.
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══════════════ DECISION MAP ═══════════════ -->
+  <div class="section-header" id="decision-tree">Decision Flow Map — Why Did It Go Where It Did?</div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;">
+    <p style="font-size:13px;color:var(--muted);margin-bottom:20px;">Each decision node shows the trigger, the choice made, the alternative, and the downstream effect.</p>
+
+    <table class="compare">
+      <thead>
+        <tr>
+          <th>Decision Point</th>
+          <th>What Happened</th>
+          <th>Why</th>
+          <th>Better Alternative</th>
+          <th>Time Saved</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1. Skill selection</td>
+          <td class="actual"><code>objective-research</code></td>
+          <td>Keyword match: "research codebase"</td>
+          <td class="better"><code>brainstorming-planner</code> to scope slides first; or no skill</td>
+          <td class="saving">~10s + cleaner framing</td>
+        </tr>
+        <tr>
+          <td>2. Pre-exploration</td>
+          <td class="actual">ls + package.json + find (3 calls)</td>
+          <td>Need project identity to write questions</td>
+          <td class="better">Just package.json (1 call). find is redundant — agent would discover dirs during exploration</td>
+          <td class="saving">~2s + context</td>
+        </tr>
+        <tr>
+          <td>3. Research scope</td>
+          <td class="actual">15 questions, all subsystems</td>
+          <td>"deep analysis" = exhaustive; no user constraint</td>
+          <td class="better">8 questions on novel/interesting parts; skip Cost tracking, Remote, Voice</td>
+          <td class="saving">~120–150s</td>
+        </tr>
+        <tr>
+          <td>4. Research delivery</td>
+          <td class="actual">Full 83k tokens into context</td>
+          <td>Agent tool returns inline — no auto-file step</td>
+          <td class="better">Write findings to research.md, reference file during HTML writing</td>
+          <td class="saving">Large context savings for follow-up</td>
+        </tr>
+        <tr>
+          <td>5. HTML generation</td>
+          <td class="actual">Single Write call, 19 slides, 1300 lines</td>
+          <td>All research in context; write everything at once</td>
+          <td class="better">Same — this was optimal</td>
+          <td class="saving">Nothing — this was correct</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ═══════════════ FASTER PATH ═══════════════ -->
+  <div class="section-header" id="faster">The Faster Path — How to Do This in ~2 Minutes Instead of 6</div>
+
+  <div style="background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:24px;margin-bottom:24px;">
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-bottom:20px;">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--red);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Actual Path (~6 min)</div>
+        <div class="timeline" style="padding-left:24px;">
+          <div class="tl-item" style="margin-bottom:14px;">
+            <div class="tl-dot red"></div>
+            <div class="tl-time" style="font-size:10px;">0s</div>
+            <div class="tl-label" style="font-size:12px;">Skill: objective-research (wrong skill, 2.8k words loaded)</div>
+          </div>
+          <div class="tl-item" style="margin-bottom:14px;">
+            <div class="tl-dot red"></div>
+            <div class="tl-time" style="font-size:10px;">3s</div>
+            <div class="tl-label" style="font-size:12px;">3x Bash calls (ls ×2 + find)</div>
+          </div>
+          <div class="tl-item" style="margin-bottom:14px;">
+            <div class="tl-dot red"></div>
+            <div class="tl-time" style="font-size:10px;">8s</div>
+            <div class="tl-label" style="font-size:12px;">Explore agent: 15 questions, 45 tool calls</div>
+          </div>
+          <div class="tl-item" style="margin-bottom:14px;">
+            <div class="tl-dot red"></div>
+            <div class="tl-time" style="font-size:10px;">291s</div>
+            <div class="tl-label" style="font-size:12px;">83k tokens dumped into main context</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot red"></div>
+            <div class="tl-time" style="font-size:10px;">292s</div>
+            <div class="tl-label" style="font-size:12px;">Write deck → done</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--green);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px;">Optimal Path (~2 min)</div>
+        <div class="timeline" style="padding-left:24px;">
+          <div class="tl-item" style="margin-bottom:14px;">
+            <div class="tl-dot green"></div>
+            <div class="tl-time" style="font-size:10px;">0s</div>
+            <div class="tl-label" style="font-size:12px;">Read package.json only — identify project</div>
+          </div>
+          <div class="tl-item" style="margin-bottom:14px;">
+            <div class="tl-dot green"></div>
+            <div class="tl-time" style="font-size:10px;">2s</div>
+            <div class="tl-label" style="font-size:12px;">Explore agent: 8 focused questions, ~20 tool calls</div>
+          </div>
+          <div class="tl-item" style="margin-bottom:14px;">
+            <div class="tl-dot green"></div>
+            <div class="tl-time" style="font-size:10px;">~120s</div>
+            <div class="tl-label" style="font-size:12px;">Save findings to research.md</div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot green"></div>
+            <div class="tl-time" style="font-size:10px;">~125s</div>
+            <div class="tl-label" style="font-size:12px;">Write deck referencing research.md → done</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <hr class="divider">
+
+    <strong style="font-size:14px;">The 8 questions that would have been enough:</strong>
+    <ol style="margin:12px 0 0 20px;font-size:13px;color:var(--muted);line-height:1.9;">
+      <li>What is the entry point and what fast-paths does it branch through before starting the main loop?</li>
+      <li>What is the <code>Tool&lt;I,O,P&gt;</code> interface and how does <code>ToolUseContext</code> act as a DI container?</li>
+      <li>How does <code>AgentTool</code> spawn subagents — what is the forking and isolation model?</li>
+      <li>What are all Task types, how are IDs generated, and how is output persisted to disk?</li>
+      <li>How does <code>query.ts</code> orchestrate the main LLM loop — what happens between API call and tool execution?</li>
+      <li>What is the Employee system — <code>EmployeeConfig</code>, recurring duties, Engineering Lead agent?</li>
+      <li>How does MCP integration work — transport types, tool wrapping, OAuth?</li>
+      <li>What are the 5 most important architectural patterns (DI, feature gates, context isolation, hook system, result budgeting)?</li>
+    </ol>
+
+    <div style="margin-top:16px;background:var(--surface2);border-radius:8px;padding:14px 16px;border:1px solid var(--border);">
+      <div style="font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;margin-bottom:8px;">Prompt template for optimal research agent</div>
+      <pre class="transcript" style="font-size:11.5px;">You are doing a technical architecture analysis. Answer each question by reading
+the codebase at /path/to/project. For each answer: cite file:line, show relevant
+code snippets, describe current behavior only.
+
+[8 targeted questions]
+
+Format: structured markdown with headers, file citations, and code blocks.
+Save the complete output to /path/to/research-findings.md before returning.</pre>
+    </div>
+  </div>
+
+  <!-- Final takeaways -->
+  <div class="section-header">Key Takeaways</div>
+  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:48px;">
+    <div class="finding">
+      <div class="finding-header" style="background:rgba(255,123,114,.06);border-color:rgba(255,123,114,.3);">
+        <span style="color:var(--red);">What hurt performance</span>
+      </div>
+      <div class="finding-body">
+        <ul>
+          <li>Skill invocation adds latency and context load even when the skill is wrong — the check is mandatory but the <strong>selection logic is shallow</strong></li>
+          <li>No scoping conversation with user → defaulted to maximum coverage</li>
+          <li>83k tokens of research findings inline in main context = <strong>expensive follow-up turns</strong></li>
+          <li>15 questions = 283s. 8 questions = ~130s. <strong>Scope is the biggest lever</strong></li>
+        </ul>
+      </div>
+    </div>
+    <div class="finding">
+      <div class="finding-header" style="background:rgba(63,185,80,.06);border-color:rgba(63,185,80,.3);">
+        <span style="color:var(--green);">What worked well</span>
+      </div>
+      <div class="finding-body">
+        <ul>
+          <li>Reading <code>package.json</code> first was high signal / low cost — correctly identified the project type</li>
+          <li>Using a separate Explore agent kept research noise out of main context</li>
+          <li>Parallel Bash calls (steps 4–7) were correctly batched</li>
+          <li>Single-shot HTML write with 19 accurate slides — no iteration needed</li>
+          <li>The research agent's output was genuinely accurate with correct file:line citations</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+</main>
+</div>
+</body>
+</html>

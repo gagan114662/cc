@@ -1,0 +1,101 @@
+{
+  "version": "2026-04-15-seed",
+  "cases": [
+    {
+      "id": "repo-root-orientation",
+      "tier": "gold",
+      "sourceSessionId": "session-review-seed",
+      "transcriptPath": "./session-transcript.html",
+      "prompt": "Do a technical deep dive across the codebase and present the findings in an HTML slide deck.",
+      "expectedOutcome": "The agent orients to the flat repo root quickly, uses repo bootstrap/facts before noisy discovery, and writes a valid HTML deck at the repo root.",
+      "mustPass": true,
+      "rubric": [
+        "Treat the repo root as the analysis root immediately.",
+        "Prefer repo bootstrap and repo facts before broad file discovery.",
+        "Validate the HTML artifact instead of trusting narrative claims."
+      ],
+      "objectiveSignals": [
+        "No wrong-root discovery loop",
+        "No screenshot-first HTML verification",
+        "Repo-root artifact created and validated"
+      ],
+      "canonicalFailureTags": [
+        "wrong_root_orientation",
+        "noisy_repo_discovery",
+        "artifact_claim_without_validation"
+      ],
+      "fingerprint": "session:repo-root-orientation",
+      "redacted": true,
+      "replayCount": 3,
+      "stabilityScore": 1,
+      "discriminatesChallengeSet": true,
+      "fixtureComplete": true,
+      "createdAt": "2026-04-15T00:00:00.000Z",
+      "provenance": "seed"
+    },
+    {
+      "id": "grounded-session-review",
+      "tier": "gold",
+      "sourceSessionId": "session-toolcall-review-seed",
+      "transcriptPath": "./session-review.html",
+      "prompt": "Review the entire session transcript, including all tool calls, identify wrong turns, and recommend repo changes. Format the report in HTML.",
+      "expectedOutcome": "The agent only makes evidence-backed claims, ties findings to transcript/tool-call evidence, and avoids assuming what happened without checking the full session.",
+      "mustPass": true,
+      "rubric": [
+        "Use full transcript/tool-call evidence.",
+        "Differentiate verified findings from assumptions.",
+        "Produce a valid HTML report artifact."
+      ],
+      "objectiveSignals": [
+        "Unsupported claim rate is zero",
+        "Evidence-backed wrong-turn inventory",
+        "Artifact passes report validation"
+      ],
+      "canonicalFailureTags": [
+        "unsupported_claims",
+        "tool_call_review_without_evidence",
+        "artifact_claim_without_validation"
+      ],
+      "fingerprint": "session:grounded-session-review",
+      "redacted": true,
+      "replayCount": 2,
+      "stabilityScore": 0.96,
+      "discriminatesChallengeSet": true,
+      "fixtureComplete": true,
+      "createdAt": "2026-04-15T00:00:00.000Z",
+      "provenance": "seed"
+    },
+    {
+      "id": "hidden-teacher-quality",
+      "tier": "hidden",
+      "sourceSessionId": "teacher-quality-seed",
+      "transcriptPath": "./session-retrospective.html",
+      "prompt": "Compare what the agent learned from the earlier review with what it still got wrong later, and determine whether the new mistakes are actually new.",
+      "expectedOutcome": "The agent distinguishes repeated root-cause patterns from surface-level new mistakes and does not over-credit learning without evidence.",
+      "mustPass": true,
+      "rubric": [
+        "Identify repeated root causes, not just surface errors.",
+        "Avoid claiming learning unless comparison evidence supports it.",
+        "Treat regression analysis as evidence-backed, not vibes-based."
+      ],
+      "objectiveSignals": [
+        "Comparison grounded in both prior and current report artifacts",
+        "No unverified claim of improvement",
+        "Clear distinction between repeated and genuinely new failure modes"
+      ],
+      "canonicalFailureTags": [
+        "false_learning_claim",
+        "root_cause_misattribution",
+        "ungrounded_regression_analysis"
+      ],
+      "fingerprint": "session:hidden-teacher-quality",
+      "redacted": true,
+      "replayCount": 2,
+      "stabilityScore": 0.95,
+      "discriminatesChallengeSet": true,
+      "fixtureComplete": true,
+      "createdAt": "2026-04-15T00:00:00.000Z",
+      "provenance": "seed"
+    }
+  ]
+}

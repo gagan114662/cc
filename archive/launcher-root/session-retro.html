@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Session Retro — What Slowed the Agent Down</title>
+<style>
+  :root {
+    --bg: #0d1117;
+    --surface: #161b22;
+    --surface2: #1c2128;
+    --border: #30363d;
+    --text: #e6edf3;
+    --muted: #8b949e;
+    --green: #3fb950;
+    --green-dim: #0d2016;
+    --blue: #58a6ff;
+    --blue-dim: #0d1a2e;
+    --purple: #bc8cff;
+    --purple-dim: #1e1232;
+    --orange: #ffa657;
+    --orange-dim: #2a1500;
+    --red: #f85149;
+    --red-dim: #2a0a09;
+    --yellow: #e3b341;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+    padding: 48px 0 80px;
+    line-height: 1.6;
+  }
+
+  .page {
+    max-width: 860px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 32px;
+    margin-bottom: 48px;
+  }
+  .eyebrow {
+    font-size: 11px;
+    font-family: 'SF Mono', monospace;
+    color: var(--green);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 12px;
+  }
+  h1 {
+    font-size: 40px;
+    font-weight: 700;
+    letter-spacing: -1.2px;
+    margin-bottom: 12px;
+  }
+  .subtitle {
+    font-size: 16px;
+    color: var(--muted);
+    max-width: 600px;
+  }
+
+  /* ── SECTION ── */
+  .section { margin-bottom: 56px; }
+  .section-label {
+    font-size: 11px;
+    font-family: 'SF Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+  }
+
+  /* ── INCIDENT CARD ── */
+  .incident {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    margin-bottom: 20px;
+    overflow: hidden;
+  }
+  .incident-header {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+  }
+  .incident-num {
+    font-size: 11px;
+    font-family: 'SF Mono', monospace;
+    color: var(--muted);
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 3px 8px;
+    flex-shrink: 0;
+  }
+  .incident-title {
+    font-size: 15px;
+    font-weight: 600;
+    flex: 1;
+  }
+  .severity {
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'SF Mono', monospace;
+    padding: 3px 10px;
+    border-radius: 12px;
+    border: 1px solid;
+    flex-shrink: 0;
+  }
+  .sev-high   { background: var(--red-dim);    color: var(--red);    border-color: var(--red); }
+  .sev-medium { background: var(--orange-dim); color: var(--orange); border-color: var(--orange); }
+  .sev-low    { background: var(--blue-dim);   color: var(--blue);   border-color: var(--blue); }
+
+  .incident-body { padding: 20px 24px; display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .incident-body.single { grid-template-columns: 1fr; }
+
+  .block-label {
+    font-size: 10px;
+    font-family: 'SF Mono', monospace;
+    color: var(--muted);
+    letter-spacing: 1.5px;
+    text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .block-content {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.55;
+  }
+  .block-content strong { color: var(--text); }
+
+  .highlight-red    { border-left: 3px solid var(--red);    background: var(--red-dim);    padding: 10px 14px; border-radius: 0 6px 6px 0; }
+  .highlight-green  { border-left: 3px solid var(--green);  background: var(--green-dim);  padding: 10px 14px; border-radius: 0 6px 6px 0; }
+  .highlight-orange { border-left: 3px solid var(--orange); background: var(--orange-dim); padding: 10px 14px; border-radius: 0 6px 6px 0; }
+
+  /* ── TIMELINE ── */
+  .timeline {
+    position: relative;
+    padding-left: 28px;
+  }
+  .timeline::before {
+    content: '';
+    position: absolute;
+    left: 8px; top: 0; bottom: 0;
+    width: 1px;
+    background: var(--border);
+  }
+  .tl-item {
+    position: relative;
+    margin-bottom: 20px;
+  }
+  .tl-item::before {
+    content: '';
+    position: absolute;
+    left: -24px; top: 6px;
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    border: 1px solid var(--border);
+    background: var(--surface);
+  }
+  .tl-item.wrong::before { background: var(--red);    border-color: var(--red); }
+  .tl-item.right::before { background: var(--green);  border-color: var(--green); }
+  .tl-item.ok::before    { background: var(--muted);  border-color: var(--muted); }
+
+  .tl-label {
+    font-size: 11px;
+    font-family: 'SF Mono', monospace;
+    color: var(--muted);
+    margin-bottom: 3px;
+  }
+  .tl-text { font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .tl-text strong { color: var(--text); }
+  .tl-text .cost { color: var(--red); font-family: 'SF Mono', monospace; font-size: 11px; margin-left: 6px; }
+  .tl-text .saved { color: var(--green); font-family: 'SF Mono', monospace; font-size: 11px; margin-left: 6px; }
+
+  /* ── RECOMMENDATION CARDS ── */
+  .rec-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .rec {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 20px;
+  }
+  .rec-icon { font-size: 20px; margin-bottom: 10px; }
+  .rec-title { font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+  .rec-desc { font-size: 13px; color: var(--muted); line-height: 1.5; margin-bottom: 12px; }
+  .rec-file {
+    font-family: 'SF Mono', monospace;
+    font-size: 11px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    padding: 6px 10px;
+    color: var(--orange);
+  }
+
+  .code-block {
+    background: #010409;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', 'Fira Code', monospace;
+    font-size: 12px;
+    line-height: 1.65;
+    overflow-x: auto;
+    margin-top: 10px;
+  }
+  .kw  { color: #ff7b72; }
+  .str { color: #a5d6ff; }
+  .cm  { color: #8b949e; font-style: italic; }
+  .prop{ color: #7ee787; }
+
+  /* ── SUMMARY TABLE ── */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    font-size: 11px; letter-spacing: 1px; text-transform: uppercase;
+    color: var(--muted); padding: 8px 12px; text-align: left;
+    border-bottom: 1px solid var(--border); font-weight: 600;
+  }
+  td {
+    padding: 10px 12px; font-size: 13px; color: var(--muted);
+    border-bottom: 1px solid #21262d; vertical-align: top;
+  }
+  td strong { color: var(--text); }
+  tr:hover td { background: var(--surface); }
+
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 11px; font-weight: 600; font-family: 'SF Mono', monospace;
+  }
+  .pill-red    { background: var(--red-dim);    color: var(--red); }
+  .pill-orange { background: var(--orange-dim); color: var(--orange); }
+  .pill-green  { background: var(--green-dim);  color: var(--green); }
+  .pill-blue   { background: var(--blue-dim);   color: var(--blue); }
+
+  /* ── FOOTER ── */
+  .footer {
+    margin-top: 64px;
+    padding-top: 24px;
+    border-top: 1px solid var(--border);
+    font-size: 12px;
+    color: var(--muted);
+    font-family: 'SF Mono', monospace;
+  }
+</style>
+</head>
+<body>
+<div class="page">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="eyebrow">Session Retrospective · 2026-04-14</div>
+    <h1>What Slowed the Agent Down</h1>
+    <p class="subtitle">A full read of the session transcript — every wrong turn, unnecessary round-trip, and wasted tool call — with concrete repo fixes.</p>
+  </div>
+
+  <!-- SECTION 1: SESSION TIMELINE -->
+  <div class="section">
+    <div class="section-label">Session Timeline</div>
+    <div class="timeline">
+
+      <div class="tl-item ok">
+        <div class="tl-label">Turn 1</div>
+        <div class="tl-text">User: <strong>"do a technical deep dive present your work as a single html slide deck"</strong></div>
+      </div>
+
+      <div class="tl-item wrong">
+        <div class="tl-label">Turn 2 — WRONG DIRECTION</div>
+        <div class="tl-text">Agent asks: <strong>"What would you like the deep dive to cover? Topic not specified."</strong>
+          <span class="cost">+1 round-trip</span><br>
+          This was technically correct by the CLAUDE.md rule, but a project description in the repo would have made the topic obvious.
+        </div>
+      </div>
+
+      <div class="tl-item ok">
+        <div class="tl-label">Turn 3</div>
+        <div class="tl-text">User: <strong>"do a technical deep dive of my codebase and present your work as a single slide deck"</strong></div>
+      </div>
+
+      <div class="tl-item wrong">
+        <div class="tl-label">Turn 4 — UNNECESSARY ROUND-TRIP</div>
+        <div class="tl-text">Agent runs a <strong>quick scan</strong>, then presents a 10-slide outline and asks: <em>"Want me to adjust scope or focus on specific areas?"</em>
+          <span class="cost">+1 round-trip</span><br>
+          This scope-confirm gate per CLAUDE.md is good practice, but the quick scan added a whole Explore agent call (57s, 37K tokens) just to produce a list of bullet points the user didn't need to see.
+        </div>
+      </div>
+
+      <div class="tl-item ok">
+        <div class="tl-label">Turn 5</div>
+        <div class="tl-text">User: <strong>"comprehensive HTML overview"</strong></div>
+      </div>
+
+      <div class="tl-item wrong">
+        <div class="tl-label">Turn 6 — CONTEXT WINDOW VIOLATION</div>
+        <div class="tl-text">Agent launches deep Explore agent. The Explore agent says: <strong>"Since I cannot write files, I'll provide the findings directly."</strong>
+          <span class="cost">~80K tokens dumped inline</span><br>
+          The Explore subagent type has no Write tool. All 80K tokens of analysis landed directly in the main context window — exactly what CLAUDE.md says never to do. The right tool was the <strong>general-purpose agent</strong>, which has Write access and could have saved findings to a temp file.
+        </div>
+      </div>
+
+      <div class="tl-item wrong">
+        <div class="tl-label">Turn 7 — NOISY GLOB</div>
+        <div class="tl-text">Agent runs <strong>Glob("*.html")</strong> to check for existing HTML files before writing.<br>
+          Returns 100+ results from <code>node_modules/</code> — pure noise. The correct scope was <code>*.html</code> at the root level only, or a <code>.globignore</code> excluding node_modules.
+          <span class="cost">wasted scan</span>
+        </div>
+      </div>
+
+      <div class="tl-item right">
+        <div class="tl-label">Turn 8 — CORRECT</div>
+        <div class="tl-text">Agent writes the HTML file directly and opens it. <span class="saved">Done.</span></div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 2: INCIDENTS -->
+  <div class="section">
+    <div class="section-label">Incidents in Detail</div>
+
+    <!-- INCIDENT 1 -->
+    <div class="incident">
+      <div class="incident-header">
+        <span class="incident-num">#1</span>
+        <span class="incident-title">Topic Ambiguity — Unnecessary Clarification Round-Trip</span>
+        <span class="severity sev-medium">MEDIUM</span>
+      </div>
+      <div class="incident-body">
+        <div>
+          <div class="block-label">What happened</div>
+          <div class="block-content highlight-red">
+            User asked for a "technical deep dive" without naming the subject. Agent correctly asked for clarification — adding one full round-trip before any work could start.
+          </div>
+        </div>
+        <div>
+          <div class="block-label">Root cause in repo</div>
+          <div class="block-content">
+            No <strong>CLAUDE.md</strong> at the project root, no <strong>README.md</strong>, no <strong>package.json</strong> <code>description</code> field visible at top level. The agent had no signal that <em>"this codebase = claude-code-rebuilt"</em>.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INCIDENT 2 -->
+    <div class="incident">
+      <div class="incident-header">
+        <span class="incident-num">#2</span>
+        <span class="incident-title">Two-Phase Explore — Wasted Quick Scan</span>
+        <span class="severity sev-medium">MEDIUM</span>
+      </div>
+      <div class="incident-body">
+        <div>
+          <div class="block-label">What happened</div>
+          <div class="block-content highlight-red">
+            Agent ran a <strong>quick Explore pass (57s, 37K tokens)</strong> to produce a slide outline for scope confirmation. The user responded "comprehensive HTML overview" — meaning the quick scan output was used only to generate a list the user largely ignored.
+          </div>
+        </div>
+        <div>
+          <div class="block-label">What should have happened</div>
+          <div class="block-content highlight-green">
+            A single deep Explore pass with file output, then write the HTML. The quick-scan + confirm gate added ~90 seconds and a wasted agent invocation. An <strong>ARCHITECTURE.md at root</strong> would have let the agent skip the orientation scan entirely.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INCIDENT 3 -->
+    <div class="incident">
+      <div class="incident-header">
+        <span class="incident-num">#3</span>
+        <span class="incident-title">Explore Agent Can't Write — 80K Tokens Dumped Into Context</span>
+        <span class="severity sev-high">HIGH</span>
+      </div>
+      <div class="incident-body single">
+        <div>
+          <div class="block-label">What happened</div>
+          <div class="block-content highlight-red" style="margin-bottom:12px">
+            The <strong>Explore subagent type</strong> has no Write tool. When asked to save findings to a file, it said <em>"Since I cannot write files, I'll provide the findings directly"</em> — dumping ~80K tokens of analysis inline into the main conversation context. This directly violates the CLAUDE.md rule: <em>"When any tool or agent call returns &gt;5,000 tokens → write to a temp .md file, show only a summary."</em>
+          </div>
+          <div class="block-label" style="margin-top:16px">Root cause</div>
+          <div class="block-content">
+            Wrong agent type selected. <strong>Explore</strong> is read-only by design. For research tasks that need file output, the correct choice is the <strong>general-purpose agent</strong>, which has Read + Write + Bash access.
+          </div>
+          <div class="block-label" style="margin-top:16px">Impact</div>
+          <div class="block-content">
+            Every subsequent turn in the session runs with a bloated context window, degrading response quality and increasing latency. The HTML slide generation itself had to work from a noisy inline dump rather than a clean structured file.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- INCIDENT 4 -->
+    <div class="incident">
+      <div class="incident-header">
+        <span class="incident-num">#4</span>
+        <span class="incident-title">Glob Search Returned node_modules Noise</span>
+        <span class="severity sev-low">LOW</span>
+      </div>
+      <div class="incident-body">
+        <div>
+          <div class="block-label">What happened</div>
+          <div class="block-content highlight-orange">
+            <code>Glob("*.html")</code> ran against the repo root and returned 100+ HTML files from <code>node_modules/</code> subdirectories. The agent had to mentally filter noise to confirm no existing output file.
+          </div>
+        </div>
+        <div>
+          <div class="block-label">Fix</div>
+          <div class="block-content">
+            A <strong>.gitignore / .agentignore</strong> scoping file, or a more specific Glob path (<code>path: "/Users/.../cc"</code> with no recursive descent into node_modules). A <strong>.claudeignore</strong> would have blocked the noise entirely.
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- SECTION 3: COST SUMMARY -->
+  <div class="section">
+    <div class="section-label">Cost Summary</div>
+    <table>
+      <thead>
+        <tr>
+          <th>Incident</th>
+          <th>Extra Time</th>
+          <th>Extra Tokens</th>
+          <th>Severity</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><strong>#1</strong> Topic ambiguity → clarification</td>
+          <td>+1 user round-trip</td>
+          <td>~500</td>
+          <td><span class="pill pill-orange">MEDIUM</span></td>
+        </tr>
+        <tr>
+          <td><strong>#2</strong> Quick scan + scope confirm</td>
+          <td>~90s, +1 round-trip</td>
+          <td>~37,000</td>
+          <td><span class="pill pill-orange">MEDIUM</span></td>
+        </tr>
+        <tr>
+          <td><strong>#3</strong> Explore dumps 80K tokens inline</td>
+          <td>~275s (agent run)</td>
+          <td>~80,000 in context</td>
+          <td><span class="pill pill-red">HIGH</span></td>
+        </tr>
+        <tr>
+          <td><strong>#4</strong> Noisy Glob returning node_modules</td>
+          <td>negligible</td>
+          <td>~2,000</td>
+          <td><span class="pill pill-blue">LOW</span></td>
+        </tr>
+        <tr style="font-weight:600">
+          <td><strong>Total overhead vs. optimal path</strong></td>
+          <td><strong>~7 minutes</strong></td>
+          <td><strong>~120K tokens wasted</strong></td>
+          <td>—</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- SECTION 4: RECOMMENDATIONS -->
+  <div class="section">
+    <div class="section-label">Repo Fixes — What to Add</div>
+    <div class="rec-grid">
+
+      <div class="rec">
+        <div class="rec-icon">📋</div>
+        <div class="rec-title">Project-root CLAUDE.md</div>
+        <div class="rec-desc">One file the agent reads on every session start. Eliminates topic ambiguity and orientation scanning entirely. Include: what this project is, key directories, build commands, and any agent-specific instructions.</div>
+        <div class="rec-file">📄 /CLAUDE.md</div>
+        <div class="code-block">
+<span class="cm"># Claude Code Rebuilt</span>
+
+<span class="prop">Project:</span> Rebuilt Claude Code CLI
+<span class="prop">Stack:</span> TypeScript · Bun 1.2 · React 18 (custom Ink)
+<span class="prop">Entry:</span> entrypoints/cli.tsx → main.tsx
+<span class="prop">Build:</span> bun run build → dist/cli.js
+<span class="prop">Source:</span> src 2/ (778 TS files)
+
+<span class="cm">## Key directories</span>
+tools/      40 tool implementations
+commands/   60+ slash commands
+components/ React/Ink UI (347 files)
+coordinator/ Multi-agent orchestration
+services/   Background services (MCP, OAuth, etc.)
+        </div>
+      </div>
+
+      <div class="rec">
+        <div class="rec-icon">🗺️</div>
+        <div class="rec-title">ARCHITECTURE.md at root</div>
+        <div class="rec-desc">A single document mapping the system's layers, data flow, and key files. Lets the agent skip the orientation Explore pass and jump straight to deep research. Saves one full agent invocation per session.</div>
+        <div class="rec-file">📄 /ARCHITECTURE.md</div>
+        <div class="code-block">
+<span class="cm"># Architecture</span>
+
+<span class="cm">## Layers</span>
+1. Entry/CLI       entrypoints/
+2. AI Loop         QueryEngine.ts, query.ts
+3. Tools           tools/ (Tool.ts interface)
+4. Commands        commands/
+5. UI              ink/ (custom renderer)
+6. State           state/
+7. Services        services/
+
+<span class="cm">## Data flow</span>
+User input → commands/ → QueryEngine
+→ tools/ → Claude API → ink/ renderer
+        </div>
+      </div>
+
+      <div class="rec">
+        <div class="rec-icon">🚫</div>
+        <div class="rec-title">.claudeignore file</div>
+        <div class="rec-desc">Tells the agent's file search tools (Glob, Grep) to skip irrelevant directories. Prevents node_modules, dist/, and coverage/ from polluting search results. Equivalent to .gitignore but for agent tool calls.</div>
+        <div class="rec-file">📄 /.claudeignore</div>
+        <div class="code-block">
+<span class="cm"># Exclude from agent file searches</span>
+node_modules/
+dist/
+coverage/
+*.lock
+*.map
+<span class="cm"># Focus on source only</span>
+<span class="cm"># src 2/ is the active source tree</span>
+        </div>
+      </div>
+
+      <div class="rec">
+        <div class="rec-icon">📁</div>
+        <div class="rec-title">docs/ directory with module docs</div>
+        <div class="rec-desc">One markdown file per major subsystem (tools.md, ink.md, coordinator.md, mcp.md). Agents can read a single file for deep context on a subsystem instead of exploring 30+ source files. Directly eliminates the 275s deep-scan agent call.</div>
+        <div class="rec-file">📁 /docs/*.md</div>
+        <div class="code-block">
+docs/
+  tools.md         <span class="cm"># Tool interface + registry</span>
+  ink-renderer.md  <span class="cm"># Custom renderer pipeline</span>
+  coordinator.md   <span class="cm"># Multi-agent patterns</span>
+  mcp.md           <span class="cm"># Transport + config</span>
+  state.md         <span class="cm"># State shape + patterns</span>
+  services.md      <span class="cm"># Background services</span>
+        </div>
+      </div>
+
+      <div class="rec">
+        <div class="rec-icon">🏷️</div>
+        <div class="rec-title">package.json description + keywords</div>
+        <div class="rec-desc">The most-read file in any JS project. Adding a description, keywords, and a <code>main</code> field pointing to the source entry gives the agent immediate project identity with zero extra tool calls.</div>
+        <div class="rec-file">📄 /src 2/package.json</div>
+        <div class="code-block">
+{
+  <span class="prop">"name"</span>: <span class="str">"claude-code-rebuilt"</span>,
+  <span class="prop">"description"</span>: <span class="str">"Anthropic Claude Code CLI — rebuilt. AI-powered terminal interface with 40+ tools, MCP, multi-agent coordination."</span>,
+  <span class="prop">"keywords"</span>: [
+    <span class="str">"claude"</span>, <span class="str">"ai-cli"</span>,
+    <span class="str">"mcp"</span>, <span class="str">"anthropic"</span>
+  ]
+}
+        </div>
+      </div>
+
+      <div class="rec">
+        <div class="rec-icon">⚡</div>
+        <div class="rec-title">agent-research-brief.md</div>
+        <div class="rec-desc">A single "quick orientation" file that gives an agent everything it needs for a presentation or analysis task in under 500 tokens. Think of it as a TL;DR for the whole codebase — a cheat sheet the agent reads before anything else.</div>
+        <div class="rec-file">📄 /agent-research-brief.md</div>
+        <div class="code-block">
+<span class="cm"># Quick orientation (agents: read this first)</span>
+
+<span class="prop">What:</span> Claude Code CLI rebuilt in TypeScript/Bun
+<span class="prop">Size:</span> 26K+ TS files, 778 in src 2/
+<span class="prop">UI:</span>   Custom React→terminal renderer (NOT Ink)
+<span class="prop">Tools:</span> 40 implementations, uniform Tool interface
+<span class="prop">Multi-agent:</span> Coordinator/worker via AgentTool
+<span class="prop">MCP:</span> 6 transport layers, enterprise-grade
+<span class="prop">Build:</span> Single ESM bundle via bun build
+<span class="prop">Flags:</span> feature('FLAG') resolved at build time
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- SECTION 5: OPTIMAL PATH -->
+  <div class="section">
+    <div class="section-label">What the Optimal Session Would Have Looked Like</div>
+    <div class="timeline">
+      <div class="tl-item right">
+        <div class="tl-label">Turn 1</div>
+        <div class="tl-text">User: <strong>"do a technical deep dive present your work as a single html slide deck"</strong></div>
+      </div>
+      <div class="tl-item right">
+        <div class="tl-label">Immediate — Agent reads CLAUDE.md + agent-research-brief.md</div>
+        <div class="tl-text">Knows: project = claude-code-rebuilt, 26K TS files, key dirs. <span class="saved">0 round-trips, ~500 tokens</span></div>
+      </div>
+      <div class="tl-item right">
+        <div class="tl-label">Single general-purpose agent</div>
+        <div class="tl-text">Runs deep research, writes findings to <code>research.md</code>, returns a 200-token summary. <span class="saved">~80K tokens stay out of main context</span></div>
+      </div>
+      <div class="tl-item right">
+        <div class="tl-label">Write HTML</div>
+        <div class="tl-text">Agent reads sections from <code>research.md</code> as needed. Writes <code>deep-dive.html</code>. Opens it. <span class="saved">Done in ~4 minutes, no wasted round-trips</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="footer">
+    Generated by Claude Code · Session 2026-04-14 · /Users/gaganarora/Desktop/my projects/cc
+  </div>
+
+</div>
+</body>
+</html>

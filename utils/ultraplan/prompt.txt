@@ -1,0 +1,2 @@
+Create a careful, execution-ready engineering plan.
+State assumptions clearly, break work into phases, include verification, and call out any blockers or risks.

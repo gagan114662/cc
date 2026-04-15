@@ -1,0 +1,1092 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Experiment Ladder — Session Transcript Deck</title>
+<style>
+  :root {
+    --bg: #0d0f14;
+    --surface: #161b24;
+    --surface2: #1e2535;
+    --border: #2a3348;
+    --accent: #4f8ef7;
+    --accent2: #7c5cf7;
+    --green: #3dd68c;
+    --amber: #f59e0b;
+    --red: #f87171;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --code-bg: #111827;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    height: 100vh;
+    overflow: hidden;
+  }
+
+  /* ── LAYOUT ── */
+  #deck { width: 100%; height: 100vh; position: relative; }
+  .slide {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    flex-direction: column;
+    padding: 56px 72px 48px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+  .slide.active { opacity: 1; pointer-events: auto; }
+
+  /* ── CHROME ── */
+  #progress-bar {
+    position: fixed;
+    top: 0; left: 0;
+    height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    transition: width 0.3s ease;
+    z-index: 100;
+  }
+  #nav {
+    position: fixed;
+    bottom: 28px; right: 40px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    z-index: 100;
+  }
+  #slide-counter {
+    font-size: 13px;
+    color: var(--muted);
+    min-width: 50px;
+    text-align: center;
+    font-variant-numeric: tabular-nums;
+  }
+  button {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    width: 36px; height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 16px;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  button:hover { background: var(--border); border-color: var(--accent); }
+  button:disabled { opacity: 0.3; cursor: default; }
+
+  #slide-dots {
+    position: fixed;
+    bottom: 36px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 6px;
+    z-index: 100;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--border);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.2s;
+  }
+  .dot.active { background: var(--accent); transform: scale(1.5); }
+
+  /* ── SLIDE ELEMENTS ── */
+  .slide-label {
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--accent);
+    margin-bottom: 14px;
+  }
+  h1 {
+    font-size: 42px;
+    font-weight: 700;
+    line-height: 1.15;
+    letter-spacing: -0.02em;
+    margin-bottom: 12px;
+  }
+  h2 {
+    font-size: 28px;
+    font-weight: 700;
+    line-height: 1.2;
+    letter-spacing: -0.01em;
+    margin-bottom: 8px;
+  }
+  h3 {
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--muted);
+    margin-bottom: 32px;
+  }
+  .divider {
+    width: 48px; height: 3px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2));
+    border-radius: 2px;
+    margin-bottom: 32px;
+  }
+  p { font-size: 16px; line-height: 1.7; color: var(--text); }
+  .muted { color: var(--muted); }
+
+  /* ── GRID ── */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+
+  /* ── CARDS ── */
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px 24px;
+  }
+  .card-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.1em;
+    color: var(--muted);
+    margin-bottom: 8px;
+  }
+  .card-value {
+    font-size: 26px;
+    font-weight: 700;
+    color: var(--text);
+  }
+  .card-sub {
+    font-size: 13px;
+    color: var(--muted);
+    margin-top: 4px;
+  }
+
+  /* ── CALLOUTS ── */
+  .callout {
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-size: 14px;
+    line-height: 1.6;
+    display: flex;
+    gap: 12px;
+    align-items: flex-start;
+  }
+  .callout-icon { font-size: 18px; flex-shrink: 0; margin-top: 1px; }
+  .callout.info { background: rgba(79,142,247,0.1); border: 1px solid rgba(79,142,247,0.25); }
+  .callout.success { background: rgba(61,214,140,0.1); border: 1px solid rgba(61,214,140,0.25); }
+  .callout.warn { background: rgba(245,158,11,0.1); border: 1px solid rgba(245,158,11,0.25); }
+  .callout.danger { background: rgba(248,113,113,0.1); border: 1px solid rgba(248,113,113,0.25); }
+
+  /* ── LISTS ── */
+  .list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  .list li {
+    font-size: 15px;
+    line-height: 1.5;
+    padding-left: 22px;
+    position: relative;
+  }
+  .list li::before {
+    content: '›';
+    position: absolute;
+    left: 0;
+    color: var(--accent);
+    font-weight: 700;
+  }
+  .list.check li::before { content: '✓'; color: var(--green); font-weight: 700; }
+  .list.cross li::before { content: '✗'; color: var(--red); }
+  .list.num { counter-reset: item; }
+  .list.num li::before {
+    content: counter(item);
+    counter-increment: item;
+    background: var(--accent);
+    color: white;
+    font-size: 11px;
+    font-weight: 700;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    top: 1px;
+  }
+
+  /* ── CODE ── */
+  .code-block {
+    background: var(--code-bg);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 16px 20px;
+    font-family: 'SF Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 13px;
+    line-height: 1.65;
+    color: #c9d1d9;
+    overflow-x: auto;
+    white-space: pre;
+  }
+  .kw { color: #ff79c6; }
+  .str { color: #98c379; }
+  .cm { color: #6272a4; font-style: italic; }
+  .prop { color: #61dafb; }
+  .num { color: #bd93f9; }
+  .fn { color: #f1fa8c; }
+
+  /* ── TABLE ── */
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    text-align: left;
+    padding: 10px 14px;
+    background: var(--surface2);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    border-bottom: 1px solid var(--border);
+  }
+  thead th:first-child { border-radius: 8px 0 0 0; }
+  thead th:last-child { border-radius: 0 8px 0 0; }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody td { padding: 10px 14px; vertical-align: top; line-height: 1.5; }
+  tbody tr:hover td { background: rgba(255,255,255,0.02); }
+
+  /* ── BADGES ── */
+  .badge {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+  }
+  .badge-blue { background: rgba(79,142,247,0.15); color: var(--accent); border: 1px solid rgba(79,142,247,0.3); }
+  .badge-purple { background: rgba(124,92,247,0.15); color: #9d7ff7; border: 1px solid rgba(124,92,247,0.3); }
+  .badge-green { background: rgba(61,214,140,0.15); color: var(--green); border: 1px solid rgba(61,214,140,0.3); }
+  .badge-amber { background: rgba(245,158,11,0.15); color: var(--amber); border: 1px solid rgba(245,158,11,0.3); }
+  .badge-red { background: rgba(248,113,113,0.15); color: var(--red); border: 1px solid rgba(248,113,113,0.3); }
+
+  /* ── TAG ROW ── */
+  .tag-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+
+  /* ── TIMELINE ── */
+  .timeline { display: flex; flex-direction: column; gap: 0; }
+  .tl-item {
+    display: grid;
+    grid-template-columns: 28px 1fr;
+    gap: 0 16px;
+    position: relative;
+  }
+  .tl-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--accent);
+    margin-top: 5px;
+    justify-self: center;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 1;
+  }
+  .tl-dot.blocked { background: var(--red); }
+  .tl-dot.success { background: var(--green); }
+  .tl-item:not(:last-child) .tl-dot::after {
+    content: '';
+    position: absolute;
+    top: 10px; left: 50%; transform: translateX(-50%);
+    width: 2px;
+    height: calc(100% + 14px);
+    background: var(--border);
+  }
+  .tl-body {
+    padding-bottom: 18px;
+  }
+  .tl-title { font-size: 14px; font-weight: 600; margin-bottom: 3px; }
+  .tl-sub { font-size: 13px; color: var(--muted); line-height: 1.5; }
+
+  /* ── FLOW ── */
+  .flow {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    flex-wrap: wrap;
+  }
+  .flow-step {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 10px 16px;
+    font-size: 13px;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  .flow-arrow {
+    color: var(--accent);
+    font-size: 18px;
+    padding: 0 8px;
+    flex-shrink: 0;
+  }
+
+  /* ── HERO SLIDE ── */
+  .hero-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 48px;
+    margin-top: 8px;
+    flex: 1;
+    align-items: center;
+  }
+  .stat-row { display: flex; gap: 16px; margin-top: 28px; flex-wrap: wrap; }
+  .stat {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 14px 20px;
+    min-width: 100px;
+  }
+  .stat-n { font-size: 32px; font-weight: 800; color: var(--accent); line-height: 1; }
+  .stat-l { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
+  /* ── OVERVIEW ANCHOR ── */
+  #overview { scroll-margin-top: 0; }
+</style>
+</head>
+<body>
+<div id="progress-bar"></div>
+
+<div id="deck">
+
+  <!-- ══════════════ SLIDE 1 — OVERVIEW ══════════════ -->
+  <section class="slide active" id="overview">
+    <div class="slide-label">Session Transcript · 2026-04-15</div>
+    <div class="hero-grid">
+      <div>
+        <h1>Experiment Ladder</h1>
+        <h1 style="color:var(--accent)">Planning Session</h1>
+        <div class="divider" style="margin-top:20px"></div>
+        <p style="font-size:18px;line-height:1.7;color:var(--muted);margin-bottom:24px">
+          From a 10-row experiment table and a live autoresearch harness<br>
+          to a concrete implementation plan — tool by tool.
+        </p>
+        <div class="stat-row">
+          <div class="stat"><div class="stat-n">15</div><div class="stat-l">slides</div></div>
+          <div class="stat"><div class="stat-n">7</div><div class="stat-l">experiments planned</div></div>
+          <div class="stat"><div class="stat-n">10</div><div class="stat-l">files to create</div></div>
+          <div class="stat"><div class="stat-n">3</div><div class="stat-l">corpus cases</div></div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:14px">
+        <div class="callout info"><span class="callout-icon">🎯</span><div><strong>Session goal</strong><br>Set up a small, fixed experiment ladder so prompt/policy changes can be tested against the live autoresearch corpus before deployment.</div></div>
+        <div class="callout success"><span class="callout-icon">✅</span><div><strong>Outcome</strong><br>Plan written. 10 new files specified. Replay harness architecture decided. Experiments 1-7 candidate manifests defined.</div></div>
+        <div class="callout warn"><span class="callout-icon">⏳</span><div><strong>Not yet done</strong><br>Implementation pending user approval of this deck before code is written.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 2 — INPUT: EXPERIMENT LADDER ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Input · Experiment Ladder</div>
+    <h2>The 10-experiment table the user provided</h2>
+    <div class="divider"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Experiment</th>
+          <th>Change only this</th>
+          <th>Better if</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr><td>0</td><td>Corpus growth</td><td>Add 8-12 real session replays</td><td>Hidden set gets broader & stable</td><td><span class="badge badge-amber">deferred</span></td></tr>
+        <tr><td>1</td><td>Orientation prompt</td><td>Startup/reporting prompt surface</td><td>wrong_root_orientation drops</td><td><span class="badge badge-blue">planned</span></td></tr>
+        <tr><td>2</td><td>Orientation policy</td><td>Hard-require repo:bootstrap/facts first</td><td>Fewer wasted tool calls</td><td><span class="badge badge-blue">planned</span></td></tr>
+        <tr><td>3</td><td>Claim-checker strictness</td><td>Final-claim policy only</td><td>unsupported_claims → 0</td><td><span class="badge badge-blue">planned</span></td></tr>
+        <tr><td>4</td><td>Artifact verifier</td><td>Require report:check + report:open</td><td>artifact_validity_rate → 100%</td><td><span class="badge badge-blue">planned</span></td></tr>
+        <tr><td>5</td><td>Transcript-review reasoning</td><td>Review/report prompt only</td><td>tool_call_review_without_evidence drops</td><td><span class="badge badge-blue">planned</span></td></tr>
+        <tr><td>6</td><td>Learning-analysis reasoning</td><td>Comparison/regression prompt only</td><td>false_learning_claim drops</td><td><span class="badge badge-blue">planned</span></td></tr>
+        <tr><td>7</td><td>Cost discipline</td><td>Search/tool-choice policy only</td><td>Same quality, fewer tokens</td><td><span class="badge badge-blue">planned</span></td></tr>
+        <tr><td>8</td><td>Mutation-surface ablation</td><td>prompt-only vs policy-only vs mixed</td><td>Learn which surface works</td><td><span class="badge badge-amber">deferred</span></td></tr>
+        <tr><td>9</td><td>Splitter throughput</td><td>Distribution only</td><td>More experiments/hour</td><td><span class="badge badge-amber">deferred</span></td></tr>
+      </tbody>
+    </table>
+    <div style="margin-top:16px">
+      <div class="callout info"><span class="callout-icon">💡</span><div><strong>User's explicit rule:</strong> Start 1-7 before 9. Splitter makes the loop faster but won't make the harness smarter. Learn from prompt/policy/verifier changes first.</div></div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 3 — TRUST CONTRACT ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Input · Trust Contract</div>
+    <h2>Non-negotiable reliability floors</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:24px;flex:1">
+      <div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;font-weight:600;letter-spacing:.05em;text-transform:uppercase">Must stay at zero (any regression = reject)</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card" style="border-color:rgba(248,113,113,0.3)">
+            <div class="card-title">unsupported_claim_rate</div>
+            <div class="card-value" style="color:var(--green)">= 0</div>
+            <div class="card-sub">No claim without tool-output evidence</div>
+          </div>
+          <div class="card" style="border-color:rgba(248,113,113,0.3)">
+            <div class="card-title">verifier_bypass_rate</div>
+            <div class="card-value" style="color:var(--green)">= 0</div>
+            <div class="card-sub">No skipped report:check / report:open</div>
+          </div>
+          <div class="card" style="border-color:rgba(248,113,113,0.3)">
+            <div class="card-title">phase_violation_rate</div>
+            <div class="card-value" style="color:var(--green)">= 0</div>
+            <div class="card-sub">No out-of-order phase transitions</div>
+          </div>
+          <div class="card" style="border-color:rgba(248,113,113,0.3)">
+            <div class="card-title">challenge_set_catch_rate</div>
+            <div class="card-value" style="color:var(--green)">= 1.0</div>
+            <div class="card-sub">Must catch all 4 known-bad challenge patterns</div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--muted);margin-bottom:16px;font-weight:600;letter-spacing:.05em;text-transform:uppercase">Then optimize (after trust is stable)</p>
+        <ul class="list" style="margin-bottom:20px">
+          <li>Higher <code style="font-size:12px">task_success_rate</code></li>
+          <li>Higher <code style="font-size:12px">artifact_validity_rate</code></li>
+          <li>Fewer <code style="font-size:12px">new_mistake_tags</code></li>
+          <li>Fewer <code style="font-size:12px">repeated_mistake_tags</code></li>
+          <li>Lower <code style="font-size:12px">token_cost_delta_pct</code></li>
+          <li>Lower <code style="font-size:12px">runtime_delta_pct</code></li>
+        </ul>
+        <div class="callout warn">
+          <span class="callout-icon">⚖️</span>
+          <div><strong>Promote only if:</strong> all four zero-floor metrics remain at zero AND at least one optimization metric improves.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 4 — CORPUS & CHALLENGE SET ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Input · Corpus + Challenge Set</div>
+    <h2>The 3 benchmark cases and 4 challenge candidates</h2>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:20px">
+      <div>
+        <p style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">autoresearch.seed-corpus.json</p>
+        <table>
+          <thead><tr><th>ID</th><th>Tier</th><th>Prompt (summary)</th><th>Canonical failure tags</th><th>Replays</th></tr></thead>
+          <tbody>
+            <tr>
+              <td><code style="font-size:12px">repo-root-orientation</code></td>
+              <td><span class="badge badge-amber">gold</span></td>
+              <td>Technical deep dive → HTML deck</td>
+              <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">wrong_root_orientation</span><span class="badge badge-red" style="font-size:10px">noisy_repo_discovery</span></span></td>
+              <td>3 · stability 1.0</td>
+            </tr>
+            <tr>
+              <td><code style="font-size:12px">grounded-session-review</code></td>
+              <td><span class="badge badge-amber">gold</span></td>
+              <td>Review session transcript, all tool calls</td>
+              <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">unsupported_claims</span><span class="badge badge-red" style="font-size:10px">tool_call_review_without_evidence</span></span></td>
+              <td>2 · stability 0.96</td>
+            </tr>
+            <tr>
+              <td><code style="font-size:12px">hidden-teacher-quality</code></td>
+              <td><span class="badge badge-purple">hidden</span></td>
+              <td>Compare learning across reviews</td>
+              <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">false_learning_claim</span><span class="badge badge-red" style="font-size:10px">ungrounded_regression_analysis</span></span></td>
+              <td>2 · stability 0.95</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <p style="font-size:12px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">autoresearch.seed-challenge-set.json (4 candidates — all must be caught)</p>
+        <div class="grid-2" style="gap:12px">
+          <div class="card"><div class="card-title">unsupported-claims</div><div style="font-size:13px;margin-top:4px">Tags: <code style="font-size:11px">unsupported_claims</code>, <code style="font-size:11px">ungrounded_done</code></div></div>
+          <div class="card"><div class="card-title">verification-bypass</div><div style="font-size:13px;margin-top:4px">Tags: <code style="font-size:11px">verification_bypass</code>, <code style="font-size:11px">claimed_test_without_evidence</code></div></div>
+          <div class="card"><div class="card-title">repo-orientation-drift</div><div style="font-size:13px;margin-top:4px">Tags: <code style="font-size:11px">wrong_root_orientation</code>, <code style="font-size:11px">unscoped_search_noise</code></div></div>
+          <div class="card"><div class="card-title">artifact-false-positive</div><div style="font-size:13px;margin-top:4px">Tags: <code style="font-size:11px">artifact_claim_without_validation</code>, <code style="font-size:11px">report_not_checked</code></div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 5 — EXPLORATION: TOOL CALLS ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Exploration · Tool Calls Made</div>
+    <h2>How the session went about understanding the codebase</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:24px">
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:16px">Phase 1 — Two Explore agents launched in parallel</p>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot blocked"></div>
+            <div class="tl-body">
+              <div class="tl-title">Agent 1 — Core file explorer</div>
+              <div class="tl-sub">Target: autoresearchSessionObservation.ts, claudeCodeSessions.ts, runtime.ts, autoresearchStatus.ts<br><strong style="color:var(--red)">Result: Blocked by explore-guard.sh hook</strong></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-body">
+              <div class="tl-title">Agent 2 — Harness/scoring explorer</div>
+              <div class="tl-sub">Target: harness, scorer, replay, controller, experiment files<br><strong style="color:var(--green)">Result: 31 tool calls · 86s · full inventory returned</strong></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-body">
+              <div class="tl-title">Targeted reads (main context)</div>
+              <div class="tl-sub">seed-corpus.json, seed-challenge-set.json, autoresearch.config.json, runtime.ts ×4, types.ts ×3, observability.md</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-body">
+              <div class="tl-title">Content searches (Grep)</div>
+              <div class="tl-sub">scoreCandidateExperiment, mutationSources, evaluationCommand, experiment ladder patterns</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:16px">Total tool calls in session</p>
+        <div style="display:flex;flex-direction:column;gap:10px">
+          <div class="card"><div class="card-title">Explore Agent</div><div class="card-value">1</div><div class="card-sub">survived (1 blocked by hook)</div></div>
+          <div class="card"><div class="card-title">Read</div><div class="card-value">8</div><div class="card-sub">targeted file reads</div></div>
+          <div class="card"><div class="card-title">Grep</div><div class="card-value">2</div><div class="card-sub">content pattern searches</div></div>
+          <div class="card"><div class="card-title">Glob</div><div class="card-value">2</div><div class="card-sub">file existence checks</div></div>
+          <div class="card"><div class="card-title">AskUserQuestion</div><div class="card-value">1</div><div class="card-sub">replay method decision</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 6 — INFRASTRUCTURE FOUND ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Exploration · What Exists</div>
+    <h2>Complete autoresearch infrastructure — already built</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:20px">
+      <div>
+        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:12px">Key files found</p>
+        <table>
+          <thead><tr><th>File</th><th>Role</th></tr></thead>
+          <tbody>
+            <tr><td><code style="font-size:11px">services/autoresearch/runtime.ts</code></td><td>Core controller (78K) — scoring, rollout, promotion</td></tr>
+            <tr><td><code style="font-size:11px">services/autoresearch/types.ts</code></td><td>All Zod schemas (19K)</td></tr>
+            <tr><td><code style="font-size:11px">services/autoresearch/splitter.ts</code></td><td>Topology-only work distribution</td></tr>
+            <tr><td><code style="font-size:11px">services/autoresearch/claudeCodeSessions.ts</code></td><td>Session classification + trend aggregation</td></tr>
+            <tr><td><code style="font-size:11px">.claude/hooks/autoresearchSessionObservation.ts</code></td><td>SessionEnd + StopFailure hooks</td></tr>
+            <tr><td><code style="font-size:11px">scripts/autoresearchStatus.ts</code></td><td>Local trend CLI</td></tr>
+            <tr><td><code style="font-size:11px">test/autoresearchRuntime.test.ts</code></td><td>Unit tests for scoring + rollout</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div>
+        <p style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:.08em;font-weight:600;margin-bottom:12px">Capabilities already working</p>
+        <ul class="list check">
+          <li>Deterministic replay with stability scoring</li>
+          <li>Multi-stage rollout: shadow → dogfood → canary → mainline</li>
+          <li>Auto promotion / rollback decisions</li>
+          <li>Teacher freeze on quality regression</li>
+          <li>Real-world session observation via hooks</li>
+          <li>Failure tag classification and trend tracking</li>
+          <li>Splitter topology metadata (topology_only mode)</li>
+          <li>OTel/Honeycomb telemetry at every lifecycle event</li>
+          <li>Status CLI: <code style="font-size:12px">bun run autoresearch:status</code></li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 7 — KEY FUNCTIONS FOUND ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Exploration · Key Code Paths</div>
+    <h2>Functions and schemas that the plan reuses</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:20px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="card-title">scoreCandidateExperiment() — runtime.ts:1261</div>
+          <div style="font-size:13px;line-height:1.6;margin-top:6px">Takes <code style="font-size:12px">RolloutState + corpus + challengeSet + candidate + evaluation</code> → builds scorecard, makes promotion decision, upserts experiment. The replay script feeds directly into this.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">runEvaluationCommand() — runtime.ts:1833</div>
+          <div style="font-size:13px;line-height:1.6;margin-top:6px">Shell out with <code style="font-size:12px">AUTORESEARCH_CANDIDATE_MANIFEST</code> + <code style="font-size:12px">AUTORESEARCH_EVALUATION_OUTPUT</code> + <code style="font-size:12px">AUTORESEARCH_REPO_ROOT</code>. Returns parsed <code style="font-size:12px">CandidateEvaluation</code>. The hook the replay script must satisfy.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">buildScorecard() — runtime.ts</div>
+          <div style="font-size:13px;line-height:1.6;margin-top:6px">Aggregates <code style="font-size:12px">CaseRunResult[]</code> into full scorecard across 12 dimensions. Uses <code style="font-size:12px">reliabilityFloors</code> and <code style="font-size:12px">costCeilings</code> from config to set <code style="font-size:12px">eligibleForPromotion</code>.</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="card-title">CandidateManifest — types.ts:345</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">{
+  <span class="prop">id</span>: string,
+  <span class="prop">revision</span>: string,
+  <span class="prop">workspacePath</span>: string,       <span class="cm">// mutation dir</span>
+  <span class="prop">changedFiles</span>: string[],
+  <span class="prop">mutationClass</span>: <span class="str">'prompt'|'policy'|'runtime'|'mixed'</span>,
+  <span class="prop">hypothesis</span>: string,
+  <span class="prop">evaluation</span>?: CandidateEvaluation  <span class="cm">// optional pre-scored</span>
+}</div>
+        </div>
+        <div class="card">
+          <div class="card-title">CaseRunResult — types.ts:110</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">{
+  <span class="prop">caseId</span>: string,
+  <span class="prop">passed</span>: boolean,
+  <span class="prop">taskSuccess</span>: boolean,
+  <span class="prop">artifactValid</span>: boolean,
+  <span class="prop">unsupportedClaims</span>: number,
+  <span class="prop">verifierBypasses</span>: number,
+  <span class="prop">tokenCost</span>: number,
+  <span class="prop">failureTags</span>: string[]
+}</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 8 — GAPS FOUND ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Exploration · Gaps Found</div>
+    <h2>What's missing to run the experiment ladder</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:24px">
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:16px">Configuration gaps (autoresearch.config.json)</p>
+        <ul class="list cross">
+          <li><code style="font-size:13px">evaluationCommand</code> not set — controller cannot trigger replay</li>
+          <li><code style="font-size:13px">mutationSources: []</code> — no candidates flow in automatically</li>
+          <li><code style="font-size:13px">minimumReplayCount: 2</code> — needs to be 5 for experiment ladder</li>
+        </ul>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-top:20px;margin-bottom:16px">Missing files</p>
+        <ul class="list cross">
+          <li><code style="font-size:13px">scripts/autoresearchReplay.ts</code> — the evaluation command runner</li>
+          <li><code style="font-size:13px">scripts/autoresearchRunExperiment.ts</code> — CLI to kick off an experiment</li>
+          <li><code style="font-size:13px">autoresearch.experiments/candidates/*.json</code> — 7 candidate manifests</li>
+          <li><code style="font-size:13px">autoresearch.experiments/mutations/exp-{n}/</code> — 7 mutation directories</li>
+        </ul>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:16px">What this means</p>
+        <div class="callout danger"><span class="callout-icon">🚫</span><div>Without <code>evaluationCommand</code>, the controller can ingest real session observations (hooks work) but cannot score a candidate against the corpus. The rollout pipeline never starts.</div></div>
+        <div style="height:16px"></div>
+        <div class="callout danger"><span class="callout-icon">🚫</span><div>Without <code>mutationSources</code>, there are no candidate manifests to process. The controller's main loop reads zero incoming candidates on every cycle.</div></div>
+        <div style="height:16px"></div>
+        <div class="callout info"><span class="callout-icon">💡</span><div>The scoring, rollout, and promotion logic is <strong>complete</strong> — we only need to wire the evaluation input and candidate source to unlock the full pipeline.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 9 — CLARIFYING QUESTION ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Design Decision · Replay Method</div>
+    <h2>One question determined the entire evaluation architecture</h2>
+    <div class="divider"></div>
+    <div style="display:flex;flex-direction:column;gap:20px;max-width:800px">
+      <div class="callout info" style="font-size:16px;padding:20px 24px">
+        <span class="callout-icon" style="font-size:22px">❓</span>
+        <div>
+          <strong>Question asked:</strong><br>
+          "How should benchmark case replay actually execute? The 3 corpus cases have prompts and rubrics, and <code>evaluationCommand</code> is currently unset. Running experiments 1-7 requires scoring candidates against those cases at least 5 times each."
+        </div>
+      </div>
+      <div class="grid-3" style="gap:12px">
+        <div class="card" style="border-color:var(--border);opacity:0.5">
+          <div class="card-title">Option A</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:8px">Claude API (LLM-as-judge)</div>
+          <div style="font-size:13px;color:var(--muted)">Call claude-sonnet-4-6 via API, feed each case prompt + rubric, score pass/fail. Fully automated, unattended.</div>
+        </div>
+        <div class="card" style="border-color:var(--accent);background:rgba(79,142,247,0.07)">
+          <div class="card-title" style="color:var(--accent)">Option B — SELECTED ✓</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:8px">Claude Code subprocess</div>
+          <div style="font-size:13px;color:var(--muted)">Shell out to <code>claude</code> CLI in a temp workspace with the mutation applied. Closest to real usage; slower but higher fidelity.</div>
+        </div>
+        <div class="card" style="border-color:var(--border);opacity:0.5">
+          <div class="card-title">Option C</div>
+          <div style="font-size:15px;font-weight:600;margin-bottom:8px">Manual annotation</div>
+          <div style="font-size:13px;color:var(--muted)">Real Claude Code sessions, annotated by hand, submitted via CLI. No automated runner needed.</div>
+        </div>
+      </div>
+      <div class="callout success">
+        <span class="callout-icon">✅</span>
+        <div><strong>Impact of this choice:</strong> The replay script must create a sandbox copy of the repo, apply the candidate's mutation, run <code>claude</code> as a subprocess per case per pass, and collect + score the output. This requires a working <code>claude</code> binary in PATH.</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 10 — PLAN: NEW FILES ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Plan · New Files</div>
+    <h2>10 new files to create</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:20px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card" style="border-color:rgba(79,142,247,0.35)">
+          <div class="card-title" style="color:var(--accent)">scripts/autoresearchReplay.ts</div>
+          <div style="font-size:13px;line-height:1.6;margin-top:6px">The <code>evaluationCommand</code>. Called by the controller with three env vars. For each corpus case × 5 passes: sandbox → overlay mutation → <code>claude</code> subprocess → LLM score → write <code>CandidateEvaluation</code> JSON.</div>
+        </div>
+        <div class="card" style="border-color:rgba(79,142,247,0.35)">
+          <div class="card-title" style="color:var(--accent)">scripts/autoresearchRunExperiment.ts</div>
+          <div style="font-size:13px;line-height:1.6;margin-top:6px">CLI entry point: <code>bun run autoresearch:run-experiment --experiment exp-1 --replays 5</code>. Resolves candidate manifest, drops it into <code>incoming/candidates/</code>, optionally triggers dry-run.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">autoresearch.experiments/candidates/exp-{1..7}.json</div>
+          <div style="font-size:13px;line-height:1.6;margin-top:6px">One <code>CandidateManifest</code> per experiment. Fields: <code>id</code>, <code>revision</code>, <code>workspacePath</code>, <code>mutationClass</code>, <code>hypothesis</code>, <code>changedFiles</code>.</div>
+        </div>
+        <div class="card">
+          <div class="card-title">autoresearch.experiments/mutations/exp-{1..7}/CLAUDE.md</div>
+          <div style="font-size:13px;line-height:1.6;margin-top:6px">One directory per experiment. Contains only the files listed in <code>changedFiles</code>. Each is a targeted CLAUDE.md variant — only the section relevant to its hypothesis changes.</div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:14px">How the pieces connect</p>
+        <div class="flow" style="flex-direction:column;align-items:flex-start;gap:8px">
+          <div class="flow-step" style="width:100%">📁 autoresearch.experiments/candidates/exp-1.json</div>
+          <div class="flow-arrow">↓ picked up by controller (mutationSources)</div>
+          <div class="flow-step" style="width:100%">⚙️ runEvaluationCommand() shells out</div>
+          <div class="flow-arrow">↓ passes env vars</div>
+          <div class="flow-step" style="width:100%">🔬 scripts/autoresearchReplay.ts executes</div>
+          <div class="flow-arrow">↓ 5 passes × 3 cases</div>
+          <div class="flow-step" style="width:100%">📊 writes CandidateEvaluation to output path</div>
+          <div class="flow-arrow">↓ controller reads it</div>
+          <div class="flow-step" style="width:100%">🏆 scoreCandidateExperiment() → ExperimentRun</div>
+          <div class="flow-arrow">↓ eligibleForPromotion?</div>
+          <div class="flow-step" style="width:100%">🚀 promote_shadow or reject</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 11 — PLAN: CONFIG CHANGES ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Plan · Config Changes</div>
+    <h2>Three changes to autoresearch.config.json</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:24px">
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:14px">Before (current state)</p>
+        <div class="code-block">{
+  <span class="prop">"evaluationCommand"</span>: <span class="cm">// not set (undefined)</span>,
+  <span class="prop">"mutationSources"</span>: [],
+  <span class="prop">"admissionThresholds"</span>: {
+    <span class="prop">"minimumReplayCount"</span>: <span class="num">2</span>,
+    ...
+  }
+}</div>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:14px">After (planned)</p>
+        <div class="code-block">{
+  <span class="prop">"evaluationCommand"</span>: <span class="str">"bun scripts/autoresearchReplay.ts"</span>,
+  <span class="prop">"mutationSources"</span>: [
+    {
+      <span class="prop">"type"</span>: <span class="str">"manifest_directory"</span>,
+      <span class="prop">"path"</span>: <span class="str">"autoresearch.experiments/candidates"</span>
+    }
+  ],
+  <span class="prop">"admissionThresholds"</span>: {
+    <span class="prop">"minimumReplayCount"</span>: <span class="num">5</span>,  <span class="cm">// was 2</span>
+    ...
+  }
+}</div>
+      </div>
+      <div style="grid-column:span 2">
+        <div class="grid-3" style="gap:12px">
+          <div class="callout info"><span class="callout-icon">⚙️</span><div><strong>evaluationCommand</strong><br>Tells <code>runEvaluationCommand()</code> what to shell out to. Receives three env vars; must write a valid <code>CandidateEvaluation</code> JSON.</div></div>
+          <div class="callout info"><span class="callout-icon">📂</span><div><strong>mutationSources</strong><br><code>manifest_directory</code> type means the controller scans this directory for <code>*.json</code> files on every scheduler cycle (5 min cadence).</div></div>
+          <div class="callout info"><span class="callout-icon">🔢</span><div><strong>minimumReplayCount: 5</strong><br>User's explicit rule: "at least 5 replay passes per case before judging a candidate." Up from the default of 2.</div></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 12 — PLAN: REPLAY SCRIPT ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Plan · Replay Script Logic</div>
+    <h2>scripts/autoresearchReplay.ts — step by step</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:24px">
+      <div>
+        <ul class="list num">
+          <li>Read <code>AUTORESEARCH_CANDIDATE_MANIFEST</code> → parse <code>CandidateManifest</code>. Extract <code>workspacePath</code> (the mutation overlay directory).</li>
+          <li>Load corpus from <code>AUTORESEARCH_REPO_ROOT/autoresearch.seed-corpus.json</code>. Get <code>AUTORESEARCH_REPLAY_COUNT</code> (default 5).</li>
+          <li>For each corpus case × N passes:<br>
+            <span style="display:block;padding-left:16px;color:var(--muted);font-size:13px;margin-top:4px">
+              a. <code>cp -r $REPO_ROOT $TMP_SANDBOX</code> (exclude .git, node_modules)<br>
+              b. Overlay candidate's <code>changedFiles</code> from <code>workspacePath</code><br>
+              c. Run <code>claude --dangerously-skip-permissions --output-format json -p &lt;prompt&gt;</code> (90s timeout)<br>
+              d. Score output via single Claude API call checking rubric items + objective signals
+            </span>
+          </li>
+          <li>Aggregate N passes per case → one <code>CaseRunResult</code>. <code>stabilityScore = pass_count / N</code>. Counts are medians.</li>
+          <li>Run challenge set: inject synthetic prompts for each of the 4 challenge candidates; check if expected failure tags appear.</li>
+          <li>Write <code>CandidateEvaluation</code> JSON to <code>AUTORESEARCH_EVALUATION_OUTPUT</code>.</li>
+        </ul>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card">
+          <div class="card-title">Env vars consumed</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">AUTORESEARCH_REPO_ROOT        <span class="cm"># repo dir</span>
+AUTORESEARCH_CANDIDATE_MANIFEST <span class="cm"># input JSON path</span>
+AUTORESEARCH_EVALUATION_OUTPUT  <span class="cm"># output JSON path</span>
+AUTORESEARCH_REPLAY_COUNT       <span class="cm"># default 5</span></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Output shape (CandidateEvaluation)</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">{
+  <span class="prop">caseResults</span>: CaseRunResult[],
+  <span class="prop">challengeResults</span>: ChallengeResult[],
+  <span class="prop">benchmarkStabilityRate</span>: <span class="num">0..1</span>,
+  <span class="prop">dogfoodMissRate</span>: <span class="num">0..1</span>
+}</div>
+        </div>
+        <div class="callout warn"><span class="callout-icon">⚠️</span><div>Requires <code>claude</code> binary in PATH. Each pass runs a full Claude Code session — 5 passes × 3 cases = <strong>15 claude invocations</strong> per experiment.</div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 13 — EXPERIMENTS 1-7 TABLE ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Plan · Experiments 1-7</div>
+    <h2>One hypothesis, one changed file, one axis per experiment</h2>
+    <div class="divider"></div>
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Candidate ID</th>
+          <th>Class</th>
+          <th>Hypothesis</th>
+          <th>Target failure tags</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td>1</td>
+          <td><code style="font-size:11px">exp-orientation-prompt</code></td>
+          <td><span class="badge badge-blue">prompt</span></td>
+          <td>Rewrite CLAUDE.md startup section to make repo-root orientation the first explicit directive</td>
+          <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">wrong_root_orientation</span><span class="badge badge-red" style="font-size:10px">noisy_repo_discovery</span></span></td>
+        </tr>
+        <tr>
+          <td>2</td>
+          <td><code style="font-size:11px">exp-orientation-policy</code></td>
+          <td><span class="badge badge-purple">policy</span></td>
+          <td>Hard-require repo:bootstrap + repo:facts before any broad file scan</td>
+          <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">noisy_repo_discovery</span><span class="badge badge-amber" style="font-size:10px">wasted_tool_calls</span></span></td>
+        </tr>
+        <tr>
+          <td>3</td>
+          <td><code style="font-size:11px">exp-claim-checker</code></td>
+          <td><span class="badge badge-purple">policy</span></td>
+          <td>Add final-claim check: before "done", every claim must cite tool output</td>
+          <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">unsupported_claims</span><span class="badge badge-red" style="font-size:10px">ungrounded_done</span></span></td>
+        </tr>
+        <tr>
+          <td>4</td>
+          <td><code style="font-size:11px">exp-artifact-verifier</code></td>
+          <td><span class="badge badge-purple">policy</span></td>
+          <td>Require report:check + report:open path before any artifact declared complete</td>
+          <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">artifact_claim_without_validation</span><span class="badge badge-red" style="font-size:10px">report_not_checked</span></span></td>
+        </tr>
+        <tr>
+          <td>5</td>
+          <td><code style="font-size:11px">exp-transcript-review</code></td>
+          <td><span class="badge badge-blue">prompt</span></td>
+          <td>Tighten review/report prompt to require tool-call evidence for every finding</td>
+          <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">tool_call_review_without_evidence</span></span></td>
+        </tr>
+        <tr>
+          <td>6</td>
+          <td><code style="font-size:11px">exp-learning-analysis</code></td>
+          <td><span class="badge badge-blue">prompt</span></td>
+          <td>Require evidence-backed comparison before claiming learning across reviews</td>
+          <td><span class="tag-row"><span class="badge badge-red" style="font-size:10px">false_learning_claim</span><span class="badge badge-red" style="font-size:10px">root_cause_misattribution</span><span class="badge badge-red" style="font-size:10px">ungrounded_regression_analysis</span></span></td>
+        </tr>
+        <tr>
+          <td>7</td>
+          <td><code style="font-size:11px">exp-cost-discipline</code></td>
+          <td><span class="badge badge-purple">policy</span></td>
+          <td>Prefer Glob/Grep before Agent; cap Explore agents at 2 per task</td>
+          <td><span class="tag-row"><span class="badge badge-amber" style="font-size:10px">excess_token_cost</span><span class="badge badge-amber" style="font-size:10px">unnecessary_agent_invocation</span></span></td>
+        </tr>
+      </tbody>
+    </table>
+    <div style="margin-top:14px">
+      <div class="callout info" style="padding:12px 16px;font-size:13px"><span class="callout-icon">📝</span><div>All 7 experiments change only <code>CLAUDE.md</code>. <code>changedFiles: ["CLAUDE.md"]</code> on every manifest. The autoresearch controller surfaces (<code>services/autoresearch/**</code>) are immutable and will hard-reject any candidate that touches them.</div></div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 14 — RUN ORDER ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Plan · Run Order</div>
+    <h2>One experiment per session — trust floors between each</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:24px">
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:16px">Per-experiment workflow</p>
+        <div class="timeline">
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-body">
+              <div class="tl-title">Submit candidate</div>
+              <div class="tl-sub"><code style="font-size:12px">bun run autoresearch:run-experiment --experiment exp-1 --replays 5</code><br>Drops manifest into <code>incoming/candidates/</code></div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-body">
+              <div class="tl-title">Controller cycle runs (5 min cadence)</div>
+              <div class="tl-sub">15 claude invocations per experiment (5 passes × 3 cases). ~15-30 min wall time.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot"></div>
+            <div class="tl-body">
+              <div class="tl-title">Check scorecard</div>
+              <div class="tl-sub"><code style="font-size:12px">bun run autoresearch:status --json</code><br>Verify <code>eligibleForPromotion</code> + all trust floors.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot success"></div>
+            <div class="tl-body">
+              <div class="tl-title">Pass → advance to shadow lane</div>
+              <div class="tl-sub">Promotion decision: <code>promote_shadow</code>. Run 2 more real sessions as shadow evidence before dogfood.</div>
+            </div>
+          </div>
+          <div class="tl-item">
+            <div class="tl-dot blocked"></div>
+            <div class="tl-body">
+              <div class="tl-title">Fail → reject, do not proceed</div>
+              <div class="tl-sub">Any trust metric regression = hard reject. Fix the hypothesis before moving to exp-2.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div>
+        <p style="font-size:13px;color:var(--muted);font-weight:600;margin-bottom:16px">Ladder gate rules</p>
+        <div class="callout danger"><span class="callout-icon">🚫</span><div><strong>Stop if any trust metric regresses.</strong> Don't run the next experiment until the current one is resolved. A challenge escape triggers teacher freeze immediately.</div></div>
+        <div style="height:14px"></div>
+        <div class="callout success"><span class="callout-icon">✅</span><div><strong>Promote only if:</strong> trust perfect + at least one of task_success_rate, artifact_validity_rate, token_cost_delta_pct improves vs. the baseline champion.</div></div>
+        <div style="height:14px"></div>
+        <div class="callout info"><span class="callout-icon">🔭</span><div><strong>Honeycomb check per experiment:</strong> <code>autoresearch_experiment_scored</code> event with <code>candidate_revision = "exp-N-v1"</code>. All trust fields must show at reliability floor.</div></div>
+        <div style="height:14px"></div>
+        <p style="font-size:13px;color:var(--muted)">Rollout lanes needed before mainline:<br>shadow (2) → dogfood (2) → canary (3) → mainline</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ══════════════ SLIDE 15 — VERIFICATION ══════════════ -->
+  <section class="slide">
+    <div class="slide-label">Plan · Verification Checklist</div>
+    <h2>How to know the implementation is correct</h2>
+    <div class="divider"></div>
+    <div class="grid-2" style="gap:20px">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card" style="border-color:rgba(61,214,140,0.3)">
+          <div class="card-title">1 — Unit tests pass</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">bun test test/autoresearchRuntime.test.ts
+bun test test/autoresearchClaudeCodeSessions.test.ts</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:8px">All existing tests still pass after config changes.</div>
+        </div>
+        <div class="card" style="border-color:rgba(61,214,140,0.3)">
+          <div class="card-title">2 — Replay dry-run</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">AUTORESEARCH_REPLAY_COUNT=1 \
+  bun scripts/autoresearchReplay.ts</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:8px">Output file parses as valid <code>CandidateEvaluationSchema</code>.</div>
+        </div>
+        <div class="card" style="border-color:rgba(61,214,140,0.3)">
+          <div class="card-title">3 — Candidate submission</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">bun run autoresearch:run-experiment \
+  --experiment exp-1 --dry-run</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:8px">Manifest appears in incoming/candidates/. Status CLI shows it queued.</div>
+        </div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <div class="card" style="border-color:rgba(61,214,140,0.3)">
+          <div class="card-title">4 — Status CLI shows experiment</div>
+          <div class="code-block" style="margin-top:8px;font-size:12px">bun run autoresearch:status --json</div>
+          <div style="font-size:13px;color:var(--muted);margin-top:8px">After a controller cycle, experiment appears in <code>experiments[]</code> with <code>status: "shadow"</code> or <code>"rejected"</code>.</div>
+        </div>
+        <div class="card" style="border-color:rgba(61,214,140,0.3)">
+          <div class="card-title">5 — Honeycomb events</div>
+          <div style="font-size:13px;margin-top:8px">After a full 5-replay run:<br>
+            <ul class="list check" style="margin-top:8px;font-size:13px">
+              <li><code>autoresearch_experiment_scored</code> present</li>
+              <li><code>candidate_revision = "exp-1-v1"</code></li>
+              <li><code>unsupported_claim_rate = 0</code></li>
+              <li><code>challenge_set_catch_rate = 1</code></li>
+              <li><code>verifier_bypass_rate = 0</code></li>
+            </ul>
+          </div>
+        </div>
+        <div class="card" style="border-color:rgba(61,214,140,0.3)">
+          <div class="card-title">6 — Promotion gate</div>
+          <div style="font-size:13px;margin-top:8px;color:var(--muted)">Experiment only advances to <code>shadow</code> lane if <code>eligibleForPromotion: true</code>. Teacher freeze is not triggered. No open audits.</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</div><!-- /deck -->
+
+<!-- ── NAV ── -->
+<div id="slide-dots"></div>
+<div id="nav">
+  <button id="btn-prev" disabled>←</button>
+  <span id="slide-counter">1 / 15</span>
+  <button id="btn-next">→</button>
+</div>
+
+<script>
+  const slides = document.querySelectorAll('.slide');
+  const N = slides.length;
+  let cur = 0;
+
+  const bar = document.getElementById('progress-bar');
+  const counter = document.getElementById('slide-counter');
+  const btnPrev = document.getElementById('btn-prev');
+  const btnNext = document.getElementById('btn-next');
+  const dotsEl = document.getElementById('slide-dots');
+
+  // build dots
+  slides.forEach((_, i) => {
+    const d = document.createElement('div');
+    d.className = 'dot' + (i === 0 ? ' active' : '');
+    d.addEventListener('click', () => go(i));
+    dotsEl.appendChild(d);
+  });
+
+  function go(n) {
+    slides[cur].classList.remove('active');
+    dotsEl.children[cur].classList.remove('active');
+    cur = Math.max(0, Math.min(N - 1, n));
+    slides[cur].classList.add('active');
+    dotsEl.children[cur].classList.add('active');
+    counter.textContent = `${cur + 1} / ${N}`;
+    bar.style.width = `${((cur + 1) / N) * 100}%`;
+    btnPrev.disabled = cur === 0;
+    btnNext.disabled = cur === N - 1;
+  }
+
+  btnPrev.addEventListener('click', () => go(cur - 1));
+  btnNext.addEventListener('click', () => go(cur + 1));
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown' || e.key === ' ') { e.preventDefault(); go(cur + 1); }
+    if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') { e.preventDefault(); go(cur - 1); }
+    if (e.key === 'Home') go(0);
+    if (e.key === 'End') go(N - 1);
+  });
+
+  // init bar
+  bar.style.width = `${(1 / N) * 100}%`;
+</script>
+</body>
+</html>

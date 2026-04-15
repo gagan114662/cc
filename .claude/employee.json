@@ -1,0 +1,21 @@
+{
+  "role": "engineering-lead",
+  "goals": [
+    "Keep CI healthy",
+    "Close engineering follow-ups"
+  ],
+  "defaultAutonomy": "full-operator",
+  "delegationMode": "team",
+  "verificationRequired": true,
+  "recurringDuties": [
+    {
+      "id": "morning-ci",
+      "title": "Morning CI sweep",
+      "prompt": "Review CI failures and summarize blockers.",
+      "cron": "0 9 * * 1-5",
+      "enabled": true,
+      "autoCommit": false,
+      "cronTaskId": "3e151e6a"
+    }
+  ]
+}
