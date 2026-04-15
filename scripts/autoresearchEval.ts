@@ -21,12 +21,47 @@
  *   3. Live session replay (future)       — actually run CC on corpus cases, score outputs
  */
 
-import { readFile, writeFile } from 'node:fs/promises'
+import { readFile, writeFile, readdir } from 'node:fs/promises'
 import path from 'node:path'
 
 // ---------------------------------------------------------------------------
-// Env validation
+// Observation metrics — exported for testing
 // ---------------------------------------------------------------------------
+
+type ObservationMetrics = {
+  tokenCost?: number
+  runtimeMs?: number
+  toolCallCount?: number
+}
+
+export function median(values: number[]): number {
+  if (values.length === 0) return 0
+  const sorted = [...values].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  return sorted.length % 2 === 0
+    ? (sorted[mid - 1]! + sorted[mid]!) / 2
+    : sorted[mid]!
+}
+
+export function aggregateObservationMetrics(
+  observations: ObservationMetrics[],
+): { tokenCost: number; runtimeMs: number; toolCallCount: number } {
+  const costs = observations.map(o => o.tokenCost).filter((v): v is number => v != null && v > 0)
+  const runtimes = observations.map(o => o.runtimeMs).filter((v): v is number => v != null && v > 0)
+  const toolCalls = observations.map(o => o.toolCallCount).filter((v): v is number => v != null && v > 0)
+
+  return {
+    tokenCost: median(costs),
+    runtimeMs: median(runtimes),
+    toolCallCount: median(toolCalls),
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Env validation — guard: only run when invoked as the eval subprocess
+// ---------------------------------------------------------------------------
+
+if (process.env.AUTORESEARCH_CANDIDATE_MANIFEST) {
 
 const required = [
   'AUTORESEARCH_CANDIDATE_MANIFEST',
@@ -204,11 +239,51 @@ const caseScorers: Record<string, (changedFiles: string[]) => Promise<CaseScore>
 }
 
 // ---------------------------------------------------------------------------
+// Observation metrics — reads cost data from session observation files
+// ---------------------------------------------------------------------------
+
+async function loadObservationMetrics(): Promise<{ tokenCost: number; runtimeMs: number; toolCallCount: number }> {
+  const stateDir = process.env.AUTORESEARCH_STATE_DIR
+  if (!stateDir) {
+    process.stderr.write('[autoresearchEval] AUTORESEARCH_STATE_DIR not set — cost metrics will be zero\n')
+    return { tokenCost: 0, runtimeMs: 0, toolCallCount: 0 }
+  }
+
+  const obsDir = path.join(stateDir, 'incoming', 'claude-code-sessions')
+  let files: string[]
+  try {
+    files = await readdir(obsDir)
+  } catch {
+    process.stderr.write(`[autoresearchEval] observation dir not found: ${obsDir} — cost metrics will be zero\n`)
+    return { tokenCost: 0, runtimeMs: 0, toolCallCount: 0 }
+  }
+
+  const observations: ObservationMetrics[] = []
+  for (const file of files) {
+    if (!file.endsWith('.json')) continue
+    try {
+      const obs = JSON.parse(await readFile(path.join(obsDir, file), 'utf8'))
+      observations.push({
+        tokenCost: obs.tokenCost,
+        runtimeMs: obs.runtimeMs,
+        toolCallCount: obs.toolCallCount,
+      })
+    } catch {
+      // skip malformed files
+    }
+  }
+
+  return aggregateObservationMetrics(observations)
+}
+
+// ---------------------------------------------------------------------------
 // Score the candidate
 // ---------------------------------------------------------------------------
 
 const changedFiles: string[] = manifest.changedFiles ?? []
 const isBaseline = changedFiles.length === 0
+
+const observedMetrics = await loadObservationMetrics()
 
 const caseResults = await Promise.all(
   (corpus.cases ?? []).map(async (c: any) => {
@@ -241,9 +316,9 @@ const caseResults = await Promise.all(
       verifierBypasses: 0,
       phaseViolations: 0,
       missingEvidenceCompletions: 0,
-      tokenCost: 0,
-      runtimeMs: 0,
-      toolCallCount: 0,
+      tokenCost: observedMetrics.tokenCost,
+      runtimeMs: observedMetrics.runtimeMs,
+      toolCallCount: observedMetrics.toolCallCount,
       predictedRegression: false,
       failureTags,
     }
@@ -281,3 +356,5 @@ process.stdout.write(
     `cases=${caseResults.length} passed=${passedCount} challenges=${challengeResults.length} ` +
     `baseline=${isBaseline}\n`,
 )
+
+} // end env guard

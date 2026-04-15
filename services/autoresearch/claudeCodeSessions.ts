@@ -23,6 +23,9 @@ type ClaudeCodeSessionObservationInput = {
   lastAssistantMessage?: string
   errorDetails?: string
   recordedAt?: string
+  tokenCost?: number
+  runtimeMs?: number
+  toolCallCount?: number
 }
 
 type ConsolidatedClaudeCodeSession = {
@@ -168,6 +171,9 @@ export function classifyClaudeCodeSessionObservation(
         ? 'claude_code_session_end_hook'
         : 'claude_code_stop_failure_hook',
     recordedAt,
+    tokenCost: input.tokenCost,
+    runtimeMs: input.runtimeMs,
+    toolCallCount: input.toolCallCount,
   })
 }
 
