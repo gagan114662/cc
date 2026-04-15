@@ -1,5 +1,9 @@
 import { plugin } from 'bun'
 
+// Provide a dummy API key so tests that trigger auth checks (e.g. getSystemPrompt → getCommands
+// → login command) don't throw in CI where no real credentials exist.
+process.env.ANTHROPIC_API_KEY ??= 'sk-ant-test-dummy-key-for-ci'
+
 // These packages are --external in the production build (see package.json "build" script).
 // They are not installed in dev/test and must be stubbed for tests to import source files.
 
