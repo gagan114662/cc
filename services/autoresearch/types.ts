@@ -424,6 +424,9 @@ export const ClaudeCodeSessionObservationSchema = lazySchema(() =>
       failureTags: z.array(z.string()).default([]),
       source: z.string(),
       recordedAt: z.string(),
+      tokenCost: z.number().nonnegative().optional(),
+      runtimeMs: z.number().nonnegative().optional(),
+      toolCallCount: z.number().nonnegative().optional(),
     })
     .strict(),
 )

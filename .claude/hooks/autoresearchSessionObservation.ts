@@ -63,6 +63,51 @@ async function readJsonFile<T>(filePath: string): Promise<T | null> {
   }
 }
 
+async function readProjectConfigCosts(
+  sessionId: string,
+): Promise<{ tokenCost?: number; runtimeMs?: number }> {
+  const claudeConfigDir = getClaudeConfigHomeDir()
+  const globalConfigPath = path.join(claudeConfigDir, 'config.json')
+
+  try {
+    const raw = await readFile(globalConfigPath, 'utf8')
+    const config = JSON.parse(raw)
+    if (!config.projects) return {}
+
+    for (const projectConfig of Object.values(config.projects) as any[]) {
+      if (projectConfig?.lastSessionId === sessionId) {
+        return {
+          tokenCost: projectConfig.lastCost ?? undefined,
+          runtimeMs: projectConfig.lastDuration ?? undefined,
+        }
+      }
+    }
+  } catch {
+    // Config not readable — cost data unavailable
+  }
+  return {}
+}
+
+async function countToolCallsFromTranscript(
+  transcriptPath: string,
+): Promise<number> {
+  try {
+    const raw = await readFile(transcriptPath, 'utf8')
+    const transcript = JSON.parse(raw)
+    let count = 0
+    for (const msg of transcript) {
+      if (msg.role === 'assistant' && Array.isArray(msg.content)) {
+        for (const block of msg.content) {
+          if (block.type === 'tool_use') count++
+        }
+      }
+    }
+    return count
+  } catch {
+    return 0
+  }
+}
+
 function getClaudeConfigHomeDir(): string {
   return (process.env.CLAUDE_CONFIG_DIR ?? path.join(homedir(), '.claude')).normalize(
     'NFC',
@@ -140,6 +185,8 @@ async function handleSessionEnd(
     input.transcript_path,
     input.session_id,
   )
+  const costs = await readProjectConfigCosts(input.session_id)
+  const toolCallCount = await countToolCallsFromTranscript(input.transcript_path)
   const observation = classifyClaudeCodeSessionObservation({
     sessionId: input.session_id,
     eventType: 'session_end',
@@ -151,6 +198,9 @@ async function handleSessionEnd(
     messageCount: indexEntry?.messageCount,
     projectPath: indexEntry?.projectPath,
     recordedAt: nowIso(),
+    tokenCost: costs.tokenCost,
+    runtimeMs: costs.runtimeMs,
+    toolCallCount,
   })
   await writeObservationFile(statePath, observation)
 }
