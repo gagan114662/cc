@@ -192,7 +192,7 @@
       </nav>
       <div class="proof-content">
       <section id="overview">
-        <p class="meta">Generated 2026-04-16T00:54:29.145Z</p>
+        <p class="meta">Generated 2026-04-16T00:50:55.432Z</p>
         <h1>Build Trust Proof</h1>
         <p><strong>trusted</strong></p>
         <div class="grid">
@@ -452,7 +452,7 @@
         <article class="panel passed">
           <h3>typecheck</h3>
           <p><strong>PASSED</strong> bun run typecheck</p>
-          <p>Exit code: 0 · Duration: 703ms</p>
+          <p>Exit code: 0 · Duration: 1064ms</p>
           
           <pre><code>$ tsc --noEmit --allowJs false --skipLibCheck ./types/employee.ts</code></pre>
         </article>
@@ -460,7 +460,7 @@
         <article class="panel passed">
           <h3>lint</h3>
           <p><strong>PASSED</strong> bun run lint</p>
-          <p>Exit code: 0 · Duration: 1418ms</p>
+          <p>Exit code: 0 · Duration: 1586ms</p>
           
           <pre><code>$ eslint ./types/employee.ts ./utils/employeeConfig.ts ./tools/AgentTool/builtInAgents.ts ./tools/AgentTool/built-in/engineeringLeadAgent.ts ./commands/employee/index.ts ./commands/employee/employee.tsx ./scripts/employeeSmoke.ts ./entrypoints/cli.tsx --cache --no-error-on-unmatched-pattern</code></pre>
         </article>
@@ -468,8 +468,8 @@
         <article class="panel passed">
           <h3>build</h3>
           <p><strong>PASSED</strong> bun run build</p>
-          <p>Exit code: 0 · Duration: 865ms</p>
-          <pre><code>Bundled 5961 modules in 825ms
+          <p>Exit code: 0 · Duration: 1055ms</p>
+          <pre><code>Bundled 5961 modules in 1013ms
 
   cli.js  24.96 MB  (entry point)</code></pre>
           <pre><code>$ bun build ./entrypoints/cli.tsx --outfile ./dist/cli.js --target bun --format esm --define MACRO='{&quot;VERSION&quot;:&quot;0.0.0-rebuilt&quot;,&quot;BUILD_TIME&quot;:&quot;2026-03-31T00:00:00.000Z&quot;,&quot;FEEDBACK_CHANNEL&quot;:&quot;#claude-code&quot;,&quot;ISSUES_EXPLAINER&quot;:&quot;open an issue&quot;,&quot;PACKAGE_URL&quot;:&quot;@anthropic-ai/claude-code&quot;,&quot;NATIVE_PACKAGE_URL&quot;:&quot;@anthropic-ai/claude-code-native&quot;,&quot;VERSION_CHANGELOG&quot;:&quot;&quot;}' --external @ant/computer-use-mcp --external @ant/computer-use-mcp/types --external @ant/computer-use-mcp/sentinelApps --external @ant/claude-for-chrome-mcp --external @ant/computer-use-swift --external @ant/computer-use-input --external @anthropic-ai/mcpb --external @anthropic-ai/sandbox-runtime --external audio-capture-napi --external color-diff-napi --external image-processor-napi --external url-handler-napi</code></pre>
@@ -486,21 +486,21 @@
         <article class="panel passed">
           <h3>bun-test-seed-101</h3>
           <p><strong>PASSED</strong> bun test ./test --randomize --seed 101 --rerun-each 2 --retry 0 --reporter=junit --reporter-outfile /Users/gaganarora/conductor/workspaces/cc/damascus/coverage/build-trust-local/junit/seed-101.xml --coverage --coverage-reporter=text --coverage-reporter=lcov --coverage-dir coverage/build-trust-local</p>
-          <p>Exit code: 0 · Duration: 4334ms</p>
+          <p>Exit code: 0 · Duration: 4626ms</p>
           <pre><code>bun test v1.3.11 (af24e281)</code></pre>
           <pre><code>test/autoresearchClaudeCodeSessions.test.ts: (run #1)
-(pass) autoresearch Claude Code session analytics &gt; summarizes new and repeated mistake tags across session windows [10.47ms]
-(pass) autoresearch Claude Code session analytics &gt; classifies explicit incomplete sessions as regressions [0.27ms]
-(pass) autoresearch Claude Code session analytics &gt; controller ingests Claude Code session observations into state [16.66ms]
+(pass) autoresearch Claude Code session analytics &gt; summarizes new and repeated mistake tags across session windows [18.16ms]
+(pass) autoresearch Claude Code session analytics &gt; classifies explicit incomplete sessions as regressions [0.33ms]
+(pass) autoresearch Claude Code session analytics &gt; controller ingests Claude Code session observations into state [19.03ms]
 
 test/autoresearchClaudeCodeSessions.test.ts: (run #2)
-(pass) autoresearch Claude Code session analytics &gt; classifies explicit incomplete sessions as regressions [0.34ms]
-(pass) autoresearch Claude Code session analytics &gt; controller ingests Claude Code session observations into state [5.06ms]
-(pass) autoresearch Claude Code session analytics &gt; summarizes new and repeated mistake tags across session windows [0.15ms]
+(pass) autoresearch Claude Code session analytics &gt; classifies explicit incomplete sessions as regressions [0.15ms]
+(pass) autoresearch Claude Code session analytics &gt; controller ingests Claude Code session observations into state [6.42ms]
+(pass) autoresearch Claude Code session analytics &gt; summarizes new and repeated mistake tags across session windows [0.20ms]
 
 test/buildTrustCoverage.test.ts: (run #1)
-(pass) buildTrustCoverage &gt; passes when changed-line coverage meets thresholds [0.46ms]
-(pass) buildTrustCoverage &gt; fails with exact uncovered ranges [0.03ms]
+(pass) buildTrustCoverage &gt; passes when changed-line coverage meets thresholds [0.36ms]
+(pass) buildTrustCoverage &gt; fails with exact uncovered ranges [0.13ms]
 (pass) buildTrustCoverage &gt; treats non-executable changed lines separately
 (pass) buildTrustCoverage &gt; ignores DA records before the first source file header</code></pre>
         </article>
@@ -516,7 +516,7 @@ test/buildTrustCoverage.test.ts: (run #1)
         <article class="panel passed">
           <h3>smoke:bundle</h3>
           <p><strong>PASSED</strong> bun run smoke:bundle</p>
-          <p>Exit code: 0 · Duration: 350ms</p>
+          <p>Exit code: 0 · Duration: 371ms</p>
           <pre><code>0.0.0-rebuilt (Claude Code)</code></pre>
           <pre><code>$ bun ./dist/cli.js --version</code></pre>
         </article>
@@ -524,47 +524,47 @@ test/buildTrustCoverage.test.ts: (run #1)
         <article class="panel passed">
           <h3>test:deterministic-harness</h3>
           <p><strong>PASSED</strong> bun run test:deterministic-harness</p>
-          <p>Exit code: 0 · Duration: 236ms</p>
+          <p>Exit code: 0 · Duration: 205ms</p>
           <pre><code>bun test v1.3.11 (af24e281)</code></pre>
           <pre><code>$ bun test ./test/deterministicHarnessRuntime.test.ts
 
 test/deterministicHarnessRuntime.test.ts:
-(pass) deterministic harness runtime &gt; derives a high-risk task spec for release-style work [2.60ms]
-(pass) deterministic harness runtime &gt; blocks broad shell discovery before bootstrap completes [0.33ms]
-(pass) deterministic harness runtime &gt; requires explicit excludes for shell ripgrep after bootstrap [0.09ms]
-(pass) deterministic harness runtime &gt; allows approved bootstrap commands in discover phase [0.03ms]
-(pass) deterministic harness runtime &gt; blocks verified claims that are missing evidence references [1.02ms]
-(pass) deterministic harness runtime &gt; requires a human gate between plan and implement [0.23ms]
-(pass) deterministic harness runtime &gt; blocks completion without a passing release verifier [0.08ms]
-(pass) deterministic harness runtime &gt; accepts build trust verifier names for release transitions [0.08ms]
+(pass) deterministic harness runtime &gt; derives a high-risk task spec for release-style work [1.05ms]
+(pass) deterministic harness runtime &gt; blocks broad shell discovery before bootstrap completes [0.22ms]
+(pass) deterministic harness runtime &gt; requires explicit excludes for shell ripgrep after bootstrap [0.03ms]
+(pass) deterministic harness runtime &gt; allows approved bootstrap commands in discover phase [0.01ms]
+(pass) deterministic harness runtime &gt; blocks verified claims that are missing evidence references [5.14ms]
+(pass) deterministic harness runtime &gt; requires a human gate between plan and implement [0.39ms]
+(pass) deterministic harness runtime &gt; blocks completion without a passing release verifier [0.09ms]
+(pass) deterministic harness runtime &gt; accepts build trust verifier names for release transitions [0.13ms]
 
  8 pass
  0 fail
  15 expect() calls
-Ran 8 tests across 1 file. [219.00ms]</code></pre>
+Ran 8 tests across 1 file. [187.00ms]</code></pre>
         </article>
 
         <article class="panel passed">
           <h3>test:autoresearch</h3>
           <p><strong>PASSED</strong> bun run test:autoresearch</p>
-          <p>Exit code: 0 · Duration: 207ms</p>
+          <p>Exit code: 0 · Duration: 268ms</p>
           <pre><code>bun test v1.3.11 (af24e281)</code></pre>
           <pre><code>$ bun test ./test/autoresearchRuntime.test.ts ./test/autoresearchClaudeCodeSessions.test.ts
 
 test/autoresearchRuntime.test.ts:
-(pass) autoresearch runtime &gt; admits a strong benchmark proposal to gold [0.11ms]
-(pass) autoresearch runtime &gt; keeps unstable proposals in quarantine [0.03ms]
-(pass) autoresearch runtime &gt; promotes an eligible candidate into shadow [9.10ms]
-(pass) autoresearch runtime &gt; computes cost deltas against the current champion [0.56ms]
-(pass) autoresearch runtime &gt; tracks new and fixed mistake tags relative to the champion [0.99ms]
-(pass) autoresearch runtime &gt; rejects candidates that touch immutable controller surfaces [0.21ms]
-(pass) autoresearch runtime &gt; freezes the teacher when a known-bad challenge escapes [0.29ms]
-(pass) autoresearch runtime &gt; resumes the teacher after a later candidate catches the challenge set [0.37ms]
-(pass) autoresearch runtime &gt; advances rollout lanes and freezes on unpredicted dogfood misses [0.83ms]
-(pass) autoresearch runtime &gt; builds stable splitter telemetry context for candidate-case work [0.38ms]
+(pass) autoresearch runtime &gt; admits a strong benchmark proposal to gold [0.12ms]
+(pass) autoresearch runtime &gt; keeps unstable proposals in quarantine [0.06ms]
+(pass) autoresearch runtime &gt; promotes an eligible candidate into shadow [10.69ms]
+(pass) autoresearch runtime &gt; computes cost deltas against the current champion [0.86ms]
+(pass) autoresearch runtime &gt; tracks new and fixed mistake tags relative to the champion [1.03ms]
+(pass) autoresearch runtime &gt; rejects candidates that touch immutable controller surfaces [0.27ms]
+(pass) autoresearch runtime &gt; freezes the teacher when a known-bad challenge escapes [0.23ms]
+(pass) autoresearch runtime &gt; resumes the teacher after a later candidate catches the challenge set [0.38ms]
+(pass) autoresearch runtime &gt; advances rollout lanes and freezes on unpredicted dogfood misses [0.59ms]
+(pass) autoresearch runtime &gt; builds stable splitter telemetry context for candidate-case work [0.36ms]
 
 test/autoresearchClaudeCodeSessions.test.ts:
-(pass) autoresearch Claude Code session analytics &gt; classifies explicit incomplete sessi</code></pre>
+(pass) autoresearch Claude Code session analytics &gt; classifies explicit incomplete sess</code></pre>
         </article>
 
         <article class="panel passed">

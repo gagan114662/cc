@@ -1,0 +1,74 @@
+{
+  "version": "1",
+  "baseRefResolution": [
+    "origin/main",
+    "main"
+  ],
+  "criticalGlobs": [
+    "services/deterministicHarness/**",
+    "services/autoresearch/**",
+    ".claude/**",
+    "scripts/testQualityCheck.ts",
+    "deterministic-harness.adapter.json",
+    "CLAUDE.md"
+  ],
+  "profiles": {
+    "local": {
+      "rerunEach": 2,
+      "randomSeeds": [
+        101
+      ],
+      "runCoverage": true,
+      "runSmokeEmployee": false,
+      "requireProofArtifact": true
+    },
+    "ci": {
+      "rerunEach": 3,
+      "randomSeeds": [
+        101,
+        202,
+        303
+      ],
+      "runCoverage": true,
+      "runSmokeEmployee": false,
+      "requireProofArtifact": true
+    },
+    "release": {
+      "rerunEach": 3,
+      "randomSeeds": [
+        101,
+        202,
+        303
+      ],
+      "runCoverage": true,
+      "runSmokeEmployee": true,
+      "requireProofArtifact": true
+    }
+  },
+  "thresholds": {
+    "minChangedLineCoveragePct": 90,
+    "minCriticalChangedLineCoveragePct": 95,
+    "maxFlakyFiles": 0,
+    "maxUnexplainedSuppressions": 0,
+    "maxQualityWarningsInCi": 0,
+    "maxSurvivingMutations": 0
+  },
+  "qualityRules": {
+    "computedExpectedSeverity": {
+      "local": "error",
+      "ci": "error",
+      "release": "error"
+    },
+    "requireIntentTraceForChangedTests": true,
+    "requireSpecTraceForChangedTests": true,
+    "requireNegativeCaseForChangedTests": true,
+    "forbidSnapshotOnlyAssertions": true,
+    "forbidAnswerLeakage": true,
+    "requireSuppressionReason": true
+  },
+  "mutationRules": {
+    "enabled": true,
+    "maxTrialsPerRun": 6,
+    "testCommand": "bun test ./test"
+  }
+}

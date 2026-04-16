@@ -27,15 +27,10 @@
     "bun run repo:facts"
   ],
   "implementationVerificationCommands": [
-    "bun run typecheck",
-    "bun run lint",
-    "bun run build",
-    "bun test",
-    "bun run test:test-quality"
+    "bun run verify:local"
   ],
   "releaseVerificationCommands": [
-    "bun run pipeline",
-    "bun run test:test-quality"
+    "bun run verify:release"
   ],
   "artifactRules": [
     {
@@ -70,26 +65,23 @@
       "cat ",
       "rg -n ",
       "rg --files ",
-      "bun run typecheck",
-      "bun run lint",
-      "bun run build",
-      "bun test",
-      "bun run test:test-quality"
+      "bun run verify:local",
+      "bun run verify:deps",
+      "bun test"
     ],
     "verify": [
-      "bun run typecheck",
-      "bun run lint",
-      "bun run build",
+      "bun run verify:local",
+      "bun run verify:ci",
+      "bun run verify:release",
+      "bun run verify:deps",
       "bun test",
-      "bun run test:test-quality",
-      "bun run pipeline",
       "bun run smoke:cli",
       "bun run smoke:bundle",
       "bun run smoke:employee",
       "bun run report:check"
     ],
     "release": [
-      "bun run pipeline",
+      "bun run verify:release",
       "bun run report:check",
       "bun run report:open"
     ]

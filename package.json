@@ -3,12 +3,13 @@
   "version": "0.0.0-rebuilt",
   "private": true,
   "type": "module",
-  "packageManager": "bun@1.2.23",
+  "packageManager": "bun@1.3.11",
   "bin": {
     "claude": "./entrypoints/cli.tsx"
   },
   "scripts": {
     "dev": "bun ./entrypoints/cli.tsx",
+    "prepare": "bun ./scripts/setupGitHooks.ts",
     "repo:bootstrap": "bun ./scripts/repoBootstrap.ts",
     "repo:facts": "bun ./scripts/repoFacts.ts",
     "report:check": "bun ./scripts/reportCheck.ts",
@@ -30,13 +31,18 @@
     "smoke:honeycomb": "bun run build:honeycomb-smoke && bun ./dist/honeycomb-smoke.js",
     "honeycomb:verify": "bun ./scripts/honeycombVerify.ts --json",
     "honeycomb:proof": "bun ./scripts/honeycombVerify.ts --html ./honeycomb-autoresearch-proof.html",
+    "verify:deps": "bun ./scripts/buildTrustPreflight.ts",
+    "verify:local": "bun ./scripts/buildTrustRunner.ts --profile local --html ./build-trust-proof.html",
+    "verify:ci": "bun ./scripts/buildTrustRunner.ts --profile ci --html ./build-trust-proof.html",
+    "verify:release": "bun ./scripts/buildTrustRunner.ts --profile release --html ./build-trust-proof.html",
+    "verify:browser-proof": "bun ./scripts/browserVerifyProof.ts --target ./build-trust-proof.html --html ./build-trust-browser-verification.html --feature-name 'Build trust review console'",
     "test": "bun test ./test",
     "test:repo": "bun run test && bun run test:test-quality",
     "test:test-quality": "bun ./scripts/testQualityCheck.ts --root .",
-    "test:quality:proof": "bun ./scripts/testQualityCheck.ts --root . --html ./test-quality-proof.html",
+    "test:quality:proof": "bun ./scripts/buildTrustRunner.ts --profile local --html ./test-quality-proof.html",
     "test:deterministic-harness": "bun test ./test/deterministicHarnessRuntime.test.ts",
     "test:autoresearch": "bun test ./test/autoresearchRuntime.test.ts ./test/autoresearchClaudeCodeSessions.test.ts",
-    "pipeline": "bun run typecheck && bun run lint && bun run test:repo && bun run build && bun run build:employee-smoke && bun run smoke:cli && bun run smoke:bundle && bun run smoke:employee"
+    "pipeline": "bun run verify:ci"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.1.3",
@@ -110,6 +116,7 @@
     "qrcode": "^1.5.4",
     "react": "^19.2.0",
     "react-reconciler": "^0.33.0",
+    "playwright": "^1.56.1",
     "semver": "^7.7.3",
     "sharp": "^0.34.4",
     "shell-quote": "^1.8.3",
@@ -145,7 +152,7 @@
     "@typescript-eslint/eslint-plugin": "^8.44.1",
     "@typescript-eslint/parser": "^8.44.1",
     "biome": "^0.3.3",
-    "bun-types": "^1.2.23",
+    "bun-types": "^1.3.11",
     "eslint": "^9.37.0",
     "eslint-plugin-n": "^17.23.1",
     "eslint-plugin-react": "^7.37.5",
