@@ -15,7 +15,7 @@
       "cron": "0 9 * * 1-5",
       "enabled": true,
       "autoCommit": false,
-      "cronTaskId": "3e151e6a"
+      "cronTaskId": "a2835b29"
     }
   ]
 }

@@ -17,7 +17,7 @@ This repository is now flat: the repo root is the real code root.
 9. `bun run smoke:honeycomb` emits a real Honeycomb smoke event using local-only telemetry settings from `.claude/settings.local.json`.
 10. Real Claude Code session outcomes are recorded through `.claude/hooks/autoresearchSessionObservation.ts`, and `bun run autoresearch:status` summarizes whether mistake tags are shrinking across recent sessions.
 11. `bun run honeycomb:verify` checks Honeycomb with a configuration key, and `bun run honeycomb:proof` writes `honeycomb-autoresearch-proof.html` as a front-end proof report.
-12. `bun run test:repo` turns tests into agent bumpers, `bun run test:quality:proof` writes `test-quality-proof.html`, and `bun run conductor:doctor` explains whether the repo is ready for Conductor workspaces.
+12. `bun run test:repo` keeps the fast bumper loop, `bun run verify:local`/`verify:ci`/`verify:release` enforce the build-trust harness, changed test files must carry file-level `// test-intent: ...` and `// test-spec: specs/feature.md#section-id` statements, changed source files must kill simple mutation trials, review media is written under `build-trust-artifacts/` as PNG screenshots plus a terminal replay `.cast`, `bun run test:quality:proof` remains as a compatibility alias, and `bun run conductor:doctor` explains whether the repo is ready for Conductor workspaces.
 
 ## Instruction Precedence
 

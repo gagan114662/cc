@@ -15,7 +15,7 @@
 ## Identity
 - **Project:** `claude-code-rebuilt` (v0.0.0-rebuilt)
 - **What it is:** Full source rebuild of the Anthropic Claude Code CLI
-- **Runtime:** Bun 1.2.23 · **Language:** TypeScript strict · **UI:** React 18 + custom Ink terminal renderer
+- **Runtime:** Bun 1.3.11 · **Language:** TypeScript strict · **UI:** React 18 + custom Ink terminal renderer
 - **Build:** `bun run build` → `dist/cli.js` (single ESM bundle, native bindings external)
 
 ## Key Dependencies (no need to read package.json)

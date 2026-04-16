@@ -197,6 +197,8 @@ type State = {
   mainThreadAgentType: string | undefined
   // Remote mode (--remote flag)
   isRemoteMode: boolean
+  // Remote-control REPL bridge availability.
+  replBridgeActive: boolean
   // Direct connect server URL (for display in header)
   directConnectServerUrl: string | undefined
   // System prompt section cache state
@@ -388,11 +390,7 @@ function getInitialState(): State {
     mainThreadAgentType: undefined,
     // Remote mode
     isRemoteMode: false,
-    ...(process.env.USER_TYPE === 'ant'
-      ? {
-          replBridgeActive: false,
-        }
-      : {}),
+    replBridgeActive: false,
     // Direct connect server URL
     directConnectServerUrl: undefined,
     // System prompt section cache state
@@ -1252,6 +1250,14 @@ export function getChromeFlagOverride(): boolean | undefined {
   return STATE.chromeFlagOverride
 }
 
+export function isReplBridgeActive(): boolean {
+  return STATE.replBridgeActive
+}
+
+export function setReplBridgeActive(value: boolean): void {
+  STATE.replBridgeActive = value
+}
+
 export function setUseCoworkPlugins(value: boolean): void {
   STATE.useCoworkPlugins = value
   resetSettingsCache()
@@ -1755,4 +1761,3 @@ export function getPromptId(): string | null {
 export function setPromptId(id: string | null): void {
   STATE.promptId = id
 }
-

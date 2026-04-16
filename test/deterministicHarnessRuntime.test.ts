@@ -1,3 +1,5 @@
+// test-intent: proves deterministic harness policy accepts the trust-gate commands and blocks completion without required evidence.
+// test-spec: specs/deterministic-harness-policy.md#verifier-commands
 import { describe, expect, test } from 'bun:test'
 import { RepoAdapterSchema } from 'src/services/deterministicHarness/types.js'
 import {
@@ -15,8 +17,8 @@ const adapter = RepoAdapterSchema().parse({
   searchExcludes: ['node_modules/'],
   bootstrapCommands: ['bun run repo:bootstrap'],
   analysisCommands: ['bun run repo:facts'],
-  implementationVerificationCommands: ['bun test'],
-  releaseVerificationCommands: ['bun run pipeline'],
+  implementationVerificationCommands: ['bun run verify:local'],
+  releaseVerificationCommands: ['bun run verify:release'],
   artifactRules: [
     {
       pattern: '*.html',
@@ -28,9 +30,9 @@ const adapter = RepoAdapterSchema().parse({
   approvedCommandPrefixes: {
     discover: ['bun run repo:bootstrap', 'bun run repo:facts', 'rg -n '],
     plan: ['bun run repo:facts'],
-    implement: ['bun test', 'rg -n '],
-    verify: ['bun test', 'bun run pipeline', 'bun run report:check'],
-    release: ['bun run pipeline', 'bun run report:check'],
+    implement: ['bun run verify:local', 'rg -n '],
+    verify: ['bun run verify:local', 'bun run verify:release', 'bun run report:check'],
+    release: ['bun run verify:release', 'bun run report:check'],
   },
 })
 
@@ -181,5 +183,39 @@ describe('deterministic harness runtime', () => {
 
     expect(result.kind).toBe('block')
     expect(result.reason).toContain('passing release verifier')
+  })
+
+  test('accepts build trust verifier names for release transitions', () => {
+    const state = withEvidence(createTestHarnessState('/repo'))
+    state.currentPhase = 'verify'
+    state.verifiers.push({
+      verifierName: 'bun run verify:local',
+      status: 'passed',
+      phase: 'verify',
+      artifactsChecked: [],
+      timestamp: new Date().toISOString(),
+    })
+
+    const result = validatePhaseResult(
+      state,
+      adapter,
+      JSON.stringify({
+        phase: 'verify',
+        summary: 'Local trust gate passed.',
+        proposedActions: ['Move to release'],
+        assumptions: [],
+        expectedEvidence: ['build-trust-proof.html'],
+        claims: [
+          {
+            text: 'Implementation verification passed.',
+            status: 'verified',
+            evidenceIds: ['ev-1'],
+          },
+        ],
+        nextPhase: 'release',
+      }),
+    )
+
+    expect(result.kind).toBe('require_human_gate')
   })
 })

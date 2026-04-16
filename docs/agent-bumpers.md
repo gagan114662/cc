@@ -6,10 +6,18 @@ This repo now treats tests as guardrails for AI changes, not as optional cleanup
 
 - `bun run test:repo`
   Runs the repo test suite plus the AI test-quality bumper.
+- `bun run verify:local`
+  Runs the local hard gate: dependency preflight, typecheck, lint, build, AST test-quality analysis, deterministic replay, changed-line coverage, mutation sensitivity on changed source files, and risk-triggered suites.
+- `bun run verify:ci`
+  Runs the CI hard gate and writes `build-trust-proof.html`.
+- `bun run verify:release`
+  Runs the strict release superset of the CI gate, including `smoke:employee`.
 - `bun run test:test-quality`
-  Fails on suspicious lazy-test patterns such as self-assertions, circular expected values, and fixture answer leakage.
+  Fails on suspicious lazy-test patterns such as aliased self-assertions, circular expected values, snapshot-only assertions, single-case overfitting, and fixture answer leakage.
 - `bun run test:quality:proof`
-  Writes `test-quality-proof.html` in the repo root so every experiment or PR can ship with a readable proof artifact.
+  Deprecated compatibility alias that now writes a full trust proof to `test-quality-proof.html`.
+- `build-trust-artifacts/*`
+  Generated review media from the trust gate: PNG screenshots for quick scanning plus a terminal replay `.cast` artifact.
 - `bun run conductor:doctor`
   Checks whether the repo is ready for Conductor. Conductor requires a real GitHub-backed `origin` remote.
 
@@ -18,8 +26,11 @@ This repo now treats tests as guardrails for AI changes, not as optional cleanup
 Good agent-written tests in this repo should follow these rules:
 
 - Prove behavior, not implementation details.
+- In every changed test file, add a file-level `// test-intent: ...` comment that states the user-visible rule the file is proving.
+- In every changed test file, add a file-level `// test-spec: specs/feature.md#section-id` comment that points at the feature spec the tests are protecting.
 - Add the smallest failing test that reproduces the bug before the fix.
 - Add one neighboring or negative case so the agent cannot overfit to a single example.
+- Changed feature logic should fail under simple adversarial edits; if a flipped boolean or boundary still passes, the trust gate blocks the build.
 - Never compute `expected` values by calling the same logic the test is supposed to validate.
 - Never copy the answer straight from fixtures, prompts, or inputs into the assertion.
 - Prefer invariants, round trips, and failure-before-success tests when possible.
@@ -31,10 +42,11 @@ Use GitHub as the coordination layer:
 1. Open or link an issue for each task.
 2. Give each agent a narrow issue or PR scope.
 3. Let CI run the bumpers:
-   - repo tests
-   - AI test-quality check
+   - dependency preflight
+   - build trust gate
    - HTML proof artifact upload
 4. Review the proof artifact before merging.
+   Also review the generated PNG screenshots and terminal replay when you want faster validation than reading raw logs.
 5. Keep PRs small enough that one agent can own the full verification loop.
 
 ## Conductor Workflow
@@ -62,7 +74,7 @@ This repo is already a fast local Bun CLI project, so Docker Compose and Tilt ar
 ```bash
 bun install
 bun run repo:bootstrap
-bun run test:repo
+bun run verify:local
 bun run dev
 ```
 

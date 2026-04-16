@@ -4,6 +4,7 @@
  * settings system, tool integration, and additional features.
  */
 
+import { createRequire } from 'node:module'
 import type {
   FsReadRestrictionConfig,
   FsWriteRestrictionConfig,
@@ -15,15 +16,11 @@ import type {
   SandboxRuntimeConfig,
   SandboxViolationEvent,
 } from '@anthropic-ai/sandbox-runtime'
-import {
-  SandboxManager as BaseSandboxManager,
-  SandboxRuntimeConfigSchema,
-  SandboxViolationStore,
-} from '@anthropic-ai/sandbox-runtime'
 import { rmSync, statSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { memoize } from 'lodash-es'
 import { join, resolve, sep } from 'path'
+import { z } from 'zod/v4'
 import {
   getAdditionalDirectoriesForClaudeMd,
   getCwdState,
@@ -57,6 +54,99 @@ import { errorMessage } from '../errors.js'
 import { getClaudeTempDir } from '../permissions/filesystem.js'
 import type { PermissionRuleValue } from '../permissions/PermissionRule.js'
 import { ripgrepCommand } from '../ripgrep.js'
+
+type SandboxRuntimeModule = {
+  SandboxManager: Record<string, (...args: any[]) => any>
+  SandboxRuntimeConfigSchema: {
+    parse: (value: unknown) => unknown
+  }
+  SandboxViolationStore: new (...args: unknown[]) => {
+    subscribe: (
+      callback: (violations: SandboxViolationEvent[]) => void,
+    ) => () => void
+    getTotalCount: () => number
+  }
+}
+
+class FallbackSandboxViolationStore {
+  private violations: SandboxViolationEvent[] = []
+  private subscribers = new Set<
+    (violations: SandboxViolationEvent[]) => void
+  >()
+
+  subscribe(
+    callback: (violations: SandboxViolationEvent[]) => void,
+  ): () => void {
+    this.subscribers.add(callback)
+    callback([...this.violations])
+    return () => {
+      this.subscribers.delete(callback)
+    }
+  }
+
+  getTotalCount(): number {
+    return this.violations.length
+  }
+}
+
+const fallbackViolationStore = new FallbackSandboxViolationStore()
+const fallbackSandboxRuntimeModule: SandboxRuntimeModule = {
+  SandboxManager: {
+    checkDependencies: () =>
+      ({
+        errors: ['sandbox runtime unavailable'],
+        warnings: [],
+      }) satisfies SandboxDependencyCheck,
+    isSupportedPlatform: () => false,
+    getSandboxViolationStore: () => fallbackViolationStore,
+    annotateStderrWithSandboxFailures: (_command: string, stderr: string) => stderr,
+    cleanupAfterCommand: () => undefined,
+    wrapWithSandbox: async (command: string) => command,
+    initialize: async () => undefined,
+    updateConfig: () => undefined,
+    reset: async () => undefined,
+    getFsReadConfig: () =>
+      ({
+        denyOnly: [],
+        allowWithinDeny: [],
+      }) satisfies FsReadRestrictionConfig,
+    getFsWriteConfig: () =>
+      ({
+        allowOnly: [],
+        denyWithinAllow: [],
+      }) satisfies FsWriteRestrictionConfig,
+    getNetworkRestrictionConfig: () =>
+      ({
+        allowedHosts: [],
+        deniedHosts: [],
+      }) satisfies NetworkRestrictionConfig,
+    getIgnoreViolations: () => undefined,
+    getAllowUnixSockets: () => undefined,
+    getAllowLocalBinding: () => undefined,
+    getEnableWeakerNestedSandbox: () => undefined,
+    getProxyPort: () => undefined,
+    getSocksProxyPort: () => undefined,
+    getLinuxHttpSocketPath: () => undefined,
+    getLinuxSocksSocketPath: () => undefined,
+    waitForNetworkInitialization: async () => false,
+  },
+  SandboxRuntimeConfigSchema: z.object({}).passthrough(),
+  SandboxViolationStore: FallbackSandboxViolationStore,
+}
+
+function loadSandboxRuntimeModule(): SandboxRuntimeModule {
+  const require = createRequire(import.meta.url)
+  try {
+    return require('@anthropic-ai/sandbox-runtime') as SandboxRuntimeModule
+  } catch {
+    return fallbackSandboxRuntimeModule
+  }
+}
+
+const sandboxRuntimeModule = loadSandboxRuntimeModule()
+const BaseSandboxManager = sandboxRuntimeModule.SandboxManager
+const SandboxRuntimeConfigSchema = sandboxRuntimeModule.SandboxRuntimeConfigSchema
+const SandboxViolationStore = sandboxRuntimeModule.SandboxViolationStore
 
 // Local copies to avoid circular dependency
 // (permissions.ts imports SandboxManager, bashPermissions.ts imports permissions.ts)

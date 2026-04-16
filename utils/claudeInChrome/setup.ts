@@ -1,4 +1,3 @@
-import { BROWSER_TOOLS } from '@ant/claude-for-chrome-mcp'
 import { chmod, mkdir, readFile, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -28,6 +27,11 @@ import {
   getAllWindowsRegistryKeys,
   openInChrome,
 } from './common.js'
+import {
+  createClaudeForChromeUnavailableError,
+  getBrowserTools,
+  isClaudeForChromeMcpAvailable,
+} from './optional.js'
 import { getChromeSystemPrompt } from './prompt.js'
 import { isChromeExtensionInstalledPortable } from './setupPortable.js'
 
@@ -74,6 +78,11 @@ export function shouldAutoEnableClaudeInChrome(): boolean {
     return shouldAutoEnable
   }
 
+  if (!isClaudeForChromeMcpAvailable()) {
+    shouldAutoEnable = false
+    return shouldAutoEnable
+  }
+
   shouldAutoEnable =
     getIsInteractive() &&
     isChromeExtensionInstalled_CACHED_MAY_BE_STALE() &&
@@ -93,8 +102,12 @@ export function setupClaudeInChrome(): {
   allowedTools: string[]
   systemPrompt: string
 } {
+  if (!isClaudeForChromeMcpAvailable()) {
+    throw createClaudeForChromeUnavailableError()
+  }
+
   const isNativeBuild = isInBundledMode()
-  const allowedTools = BROWSER_TOOLS.map(
+  const allowedTools = getBrowserTools().map(
     tool => `mcp__claude-in-chrome__${tool.name}`,
   )
 

@@ -1,7 +1,11 @@
 #!/usr/bin/env bun
 
 import { readFile, readdir, writeFile } from 'node:fs/promises'
+import { spawnSync } from 'node:child_process'
+import { existsSync } from 'node:fs'
 import path from 'node:path'
+import ts from 'typescript'
+import { loadBuildTrustPolicy } from 'src/services/buildTrust/policy.js'
 
 export type TestQualitySeverity = 'error' | 'warning'
 
@@ -14,6 +18,13 @@ export type TestQualityFinding = {
     | 'expected_aliases_actual'
     | 'fixture_answer_leakage'
     | 'computed_expected'
+    | 'snapshot_only_assertion'
+    | 'missing_negative_case'
+    | 'missing_intent_trace'
+    | 'missing_spec_trace'
+    | 'invalid_spec_trace'
+    | 'suppression_missing_reason'
+    | 'environment_failure'
   severity: TestQualitySeverity
   message: string
   snippet: string
@@ -27,8 +38,23 @@ export type TestQualityReport = {
   findings: TestQualityFinding[]
 }
 
+type AnalyzeOptions = {
+  changedTestFile?: boolean
+  requireIntentTraceForChangedTests?: boolean
+  requireSpecTraceForChangedTests?: boolean
+  repoRoot?: string
+}
+
+type TestCaseSummary = {
+  name: string
+  semanticExpectCount: number
+  snapshotNodes: ts.CallExpression[]
+}
+
 const TEST_FILE_RE = /\.(test|spec)\.[cm]?[jt]sx?$/
 const FILE_SUPPRESSION_MARKER = 'test-quality:ignore-file'
+const TEST_INTENT_MARKER = 'test-intent:'
+const TEST_SPEC_MARKER = 'test-spec:'
 const IGNORED_DIRS = new Set([
   '.git',
   'node_modules',
@@ -36,9 +62,27 @@ const IGNORED_DIRS = new Set([
   'coverage',
   'archive',
 ])
+const EQUALITY_MATCHERS = new Set([
+  'toBe',
+  'toEqual',
+  'toStrictEqual',
+  'toContain',
+  'toContainEqual',
+  'toMatch',
+])
+const SNAPSHOT_MATCHERS = new Set([
+  'toMatchSnapshot',
+  'toMatchInlineSnapshot',
+  'toThrowErrorMatchingSnapshot',
+  'toThrowErrorMatchingInlineSnapshot',
+])
+const NEGATIVE_TEST_NAME_RE =
+  /\b(error|fail|throws?|reject|invalid|missing|without|empty|bad|block|den(?:y|ied)|negative)\b/i
+const FIXTURE_NAME_RE = /(?:input|prompt|source|content|fixture)/i
+const UNRESOLVED_LITERAL = Symbol('unresolved')
 
-function lineNumberAt(source: string, index: number): number {
-  return source.slice(0, index).split('\n').length
+function lineNumberAt(sourceFile: ts.SourceFile, index: number): number {
+  return sourceFile.getLineAndCharacterOfPosition(index).line + 1
 }
 
 function escapeHtml(value: string): string {
@@ -49,128 +93,552 @@ function escapeHtml(value: string): string {
     .replaceAll('"', '&quot;')
 }
 
-function normalizeLiteral(literal: string): string {
-  return literal.replaceAll(/\s+/g, ' ').trim()
+function normalizeText(value: string): string {
+  return value.replaceAll(/\s+/g, ' ').trim()
+}
+
+function createDedupKey(finding: TestQualityFinding): string {
+  return `${finding.filePath}:${finding.line}:${finding.ruleId}:${finding.snippet}`
 }
 
 function addFinding(
   findings: TestQualityFinding[],
+  seen: Set<string>,
+  sourceFile: ts.SourceFile,
   filePath: string,
-  line: number,
+  node: ts.Node,
   ruleId: TestQualityFinding['ruleId'],
   severity: TestQualitySeverity,
   message: string,
-  snippet: string,
+  snippet?: string,
 ): void {
-  findings.push({
+  const finding: TestQualityFinding = {
     filePath,
-    line,
+    line: lineNumberAt(sourceFile, node.getStart(sourceFile)),
     ruleId,
     severity,
     message,
-    snippet: snippet.trim().slice(0, 180),
-  })
+    snippet: normalizeText(snippet ?? node.getText(sourceFile)).slice(0, 220),
+  }
+  const key = createDedupKey(finding)
+  if (seen.has(key)) {
+    return
+  }
+  seen.add(key)
+  findings.push(finding)
+}
+
+function findIntentTrace(source: string): string | null {
+  const lineCommentMatch = source.match(/^\s*\/\/\s*test-intent:\s*(.+)$/m)
+  if (lineCommentMatch?.[1]) {
+    return normalizeText(lineCommentMatch[1])
+  }
+
+  const blockCommentMatch = source.match(/\/\*\s*test-intent:\s*([\s\S]*?)\*\//m)
+  if (blockCommentMatch?.[1]) {
+    return normalizeText(blockCommentMatch[1])
+  }
+
+  return null
+}
+
+function findSpecTrace(source: string): string | null {
+  const lineCommentMatch = source.match(/^\s*\/\/\s*test-spec:\s*(.+)$/m)
+  if (lineCommentMatch?.[1]) {
+    return normalizeText(lineCommentMatch[1])
+  }
+
+  const blockCommentMatch = source.match(/\/\*\s*test-spec:\s*([\s\S]*?)\*\//m)
+  if (blockCommentMatch?.[1]) {
+    return normalizeText(blockCommentMatch[1])
+  }
+
+  return null
+}
+
+function resolveSpecTrace(
+  specTrace: string,
+): { targetPath: string; anchor: string } | null {
+  const hashIndex = specTrace.indexOf('#')
+  if (hashIndex <= 0 || hashIndex === specTrace.length - 1) {
+    return null
+  }
+  return {
+    targetPath: specTrace.slice(0, hashIndex).trim(),
+    anchor: specTrace.slice(hashIndex + 1).trim(),
+  }
+}
+
+function parseSourceFile(filePath: string, source: string): ts.SourceFile {
+  return ts.createSourceFile(
+    filePath,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    filePath.endsWith('x') ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  )
+}
+
+function resolveAliasExpression(
+  expression: ts.Expression,
+  env: Map<string, ts.Expression>,
+  depth: number = 0,
+): ts.Expression {
+  if (depth > 8) {
+    return expression
+  }
+  if (ts.isIdentifier(expression)) {
+    const next = env.get(expression.text)
+    if (next) {
+      return resolveAliasExpression(next, env, depth + 1)
+    }
+  }
+  return expression
+}
+
+function resolveExpressionText(
+  expression: ts.Expression,
+  env: Map<string, ts.Expression>,
+): string {
+  return normalizeText(resolveAliasExpression(expression, env).getText())
+}
+
+function resolveLiteralValue(
+  expression: ts.Expression,
+  env: Map<string, ts.Expression>,
+  depth: number = 0,
+): string | number | boolean | null | undefined | symbol {
+  if (depth > 8) {
+    return UNRESOLVED_LITERAL
+  }
+  const resolved = resolveAliasExpression(expression, env, depth)
+  if (
+    ts.isStringLiteralLike(resolved) ||
+    ts.isNoSubstitutionTemplateLiteral(resolved)
+  ) {
+    return resolved.text
+  }
+  if (ts.isNumericLiteral(resolved)) {
+    return Number(resolved.text)
+  }
+  if (resolved.kind === ts.SyntaxKind.TrueKeyword) {
+    return true
+  }
+  if (resolved.kind === ts.SyntaxKind.FalseKeyword) {
+    return false
+  }
+  if (resolved.kind === ts.SyntaxKind.NullKeyword) {
+    return null
+  }
+  if (
+    ts.isIdentifier(resolved) &&
+    resolved.text === 'undefined'
+  ) {
+    return undefined
+  }
+  if (ts.isTemplateExpression(resolved)) {
+    let value = resolved.head.text
+    for (const span of resolved.templateSpans) {
+      const spanValue = resolveLiteralValue(span.expression, env, depth + 1)
+      if (typeof spanValue !== 'string' && typeof spanValue !== 'number') {
+        return UNRESOLVED_LITERAL
+      }
+      value += String(spanValue)
+      value += span.literal.text
+    }
+    return value
+  }
+  return UNRESOLVED_LITERAL
+}
+
+function getCallIdentity(
+  expression: ts.Expression,
+  env: Map<string, ts.Expression>,
+): string | null {
+  const resolved = resolveAliasExpression(expression, env)
+  if (!ts.isCallExpression(resolved)) {
+    return null
+  }
+  return normalizeText(resolved.expression.getText())
+}
+
+function getExpectation(
+  node: ts.CallExpression,
+): {
+  actual: ts.Expression
+  matcher: string
+  arg: ts.Expression | undefined
+} | null {
+  if (!ts.isPropertyAccessExpression(node.expression)) {
+    return null
+  }
+  const matcher = node.expression.name.text
+  let cursor: ts.Expression = node.expression.expression
+  while (ts.isPropertyAccessExpression(cursor)) {
+    cursor = cursor.expression
+  }
+  if (
+    !ts.isCallExpression(cursor) ||
+    !ts.isIdentifier(cursor.expression) ||
+    cursor.expression.text !== 'expect'
+  ) {
+    return null
+  }
+  const actual = cursor.arguments[0]
+  if (!actual) {
+    return null
+  }
+  return {
+    actual,
+    matcher,
+    arg: node.arguments[0],
+  }
+}
+
+function getTestName(node: ts.CallExpression): string | null {
+  const callee = node.expression
+  let calleeName: string | null = null
+  if (ts.isIdentifier(callee)) {
+    calleeName = callee.text
+  } else if (ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.expression)) {
+    calleeName = callee.expression.text
+  }
+  if (calleeName !== 'test' && calleeName !== 'it') {
+    return null
+  }
+  const firstArg = node.arguments[0]
+  if (!firstArg || !ts.isStringLiteralLike(firstArg)) {
+    return null
+  }
+  return firstArg.text
+}
+
+function collectChangedTestFiles(repoRoot: string): Set<string> {
+  const candidates = ['origin/main', 'main']
+  let baseRef: string | null = null
+  for (const candidate of candidates) {
+    const result = spawnSync('git', ['rev-parse', '--verify', candidate], {
+      cwd: repoRoot,
+      encoding: 'utf8',
+    })
+    if (result.status === 0) {
+      baseRef = candidate
+      break
+    }
+  }
+
+  const baseDiffOutput =
+    baseRef !== null
+      ? spawnSync('git', ['diff', '--name-only', `${baseRef}...HEAD`], {
+          cwd: repoRoot,
+          encoding: 'utf8',
+        }).stdout
+      : ''
+  const statusOutput = spawnSync('git', ['status', '--short'], {
+    cwd: repoRoot,
+    encoding: 'utf8',
+  }).stdout
+
+  return new Set(
+    [...baseDiffOutput.split('\n'), ...statusOutput.split('\n')]
+      .map(line => line.trimEnd())
+      .filter(Boolean)
+      .map(line => {
+        const statusPath = line.replace(/^[A-Z?]+\s+/, '')
+        const normalized = statusPath.includes(' -> ')
+          ? statusPath.split(' -> ').at(-1) ?? statusPath
+          : statusPath
+        return normalized.trim()
+      })
+      .filter(line => TEST_FILE_RE.test(line)),
+  )
+}
+
+function analyzeTestBlock(
+  filePath: string,
+  sourceFile: ts.SourceFile,
+  callback: ts.FunctionLikeDeclaration,
+  findings: TestQualityFinding[],
+  seen: Set<string>,
+  testCase: TestCaseSummary,
+  inheritedEnv: Map<string, ts.Expression>,
+): void {
+  const env = new Map(inheritedEnv)
+  const fixtureValues = new Set<string>()
+
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+      env.set(node.name.text, node.initializer)
+      const literalValue = resolveLiteralValue(node.initializer, env)
+      if (
+        FIXTURE_NAME_RE.test(node.name.text) &&
+        typeof literalValue === 'string' &&
+        literalValue.length >= 6
+      ) {
+        fixtureValues.add(normalizeText(literalValue))
+      }
+    }
+
+    if (ts.isCallExpression(node)) {
+      const expectation = getExpectation(node)
+      if (expectation) {
+        const { actual, matcher, arg } = expectation
+        if (SNAPSHOT_MATCHERS.has(matcher)) {
+          testCase.snapshotNodes.push(node)
+        } else {
+          testCase.semanticExpectCount += 1
+        }
+
+        if (!arg) {
+          ts.forEachChild(node, visit)
+          return
+        }
+
+        const actualText = resolveExpressionText(actual, env)
+        const argText = resolveExpressionText(arg, env)
+        const actualLiteral = resolveLiteralValue(actual, env)
+        const argLiteral = resolveLiteralValue(arg, env)
+
+        if (EQUALITY_MATCHERS.has(matcher)) {
+          if (
+            actualLiteral !== UNRESOLVED_LITERAL &&
+            argLiteral !== UNRESOLVED_LITERAL &&
+            typeof actualLiteral !== 'symbol' &&
+            typeof argLiteral !== 'symbol' &&
+            actualLiteral === argLiteral
+          ) {
+            addFinding(
+              findings,
+              seen,
+              sourceFile,
+              filePath,
+              node,
+              'literal_tautology',
+              'error',
+              'The test asserts the same literal value on both sides, which proves nothing about behavior.',
+            )
+          } else if (actualText === argText) {
+            const argIsExpectedIdentifier =
+              ts.isIdentifier(arg) && arg.text === 'expected'
+            addFinding(
+              findings,
+              seen,
+              sourceFile,
+              filePath,
+              node,
+              argIsExpectedIdentifier
+                ? 'expected_aliases_actual'
+                : 'self_assertion',
+              'error',
+              argIsExpectedIdentifier
+                ? 'The expected value resolves to the produced value, so the assertion is circular.'
+                : 'The assertion compares a value to itself after alias resolution, so it cannot verify real behavior.',
+            )
+          }
+
+          const actualCallIdentity = getCallIdentity(actual, env)
+          const expectedCallIdentity = getCallIdentity(arg, env)
+          if (
+            actualCallIdentity &&
+            expectedCallIdentity &&
+            actualCallIdentity === expectedCallIdentity
+          ) {
+            addFinding(
+              findings,
+              seen,
+              sourceFile,
+              filePath,
+              node,
+              'computed_expected',
+              'error',
+              'The expected value is produced by the same callable as the actual value, which makes the oracle circular.',
+            )
+          }
+
+          if (
+            typeof argLiteral === 'string' &&
+            fixtureValues.has(normalizeText(argLiteral))
+          ) {
+            addFinding(
+              findings,
+              seen,
+              sourceFile,
+              filePath,
+              node,
+              'fixture_answer_leakage',
+              'error',
+              'The asserted answer is copied from arranged fixture/input content instead of being independently derived.',
+            )
+          }
+        }
+      }
+    }
+
+    ts.forEachChild(node, visit)
+  }
+
+  if (callback.body) {
+    ts.forEachChild(callback.body, visit)
+  }
 }
 
 export function analyzeTestSource(
   filePath: string,
   source: string,
+  options: AnalyzeOptions = {},
 ): TestQualityFinding[] {
-  if (source.includes(FILE_SUPPRESSION_MARKER)) {
-    return []
+  const suppressionMatch = source.match(
+    /test-quality:ignore-file(?:\s+reason=([^\n]+))?/,
+  )
+  if (suppressionMatch) {
+    if (suppressionMatch[1]?.trim()) {
+      return []
+    }
+    const sourceFile = parseSourceFile(filePath, source)
+    return [
+      {
+        filePath,
+        line: lineNumberAt(sourceFile, suppressionMatch.index ?? 0),
+        ruleId: 'suppression_missing_reason',
+        severity: 'error',
+        message:
+          'File-level test-quality suppressions must include a reason, for example: test-quality:ignore-file reason=fixture for checker self-test.',
+        snippet: FILE_SUPPRESSION_MARKER,
+      },
+    ]
   }
 
+  const sourceFile = parseSourceFile(filePath, source)
   const findings: TestQualityFinding[] = []
+  const seen = new Set<string>()
+  const fileEnv = new Map<string, ts.Expression>()
+  const tests: TestCaseSummary[] = []
 
-  const selfAssertionRe =
-    /expect\(\s*([A-Za-z_$][\w$.]*)\s*\)\.(?:toBe|toEqual|toStrictEqual|toContain)\(\s*\1\s*\)/g
-  for (const match of source.matchAll(selfAssertionRe)) {
+  const visit = (node: ts.Node): void => {
+    if (ts.isVariableDeclaration(node) && ts.isIdentifier(node.name) && node.initializer) {
+      fileEnv.set(node.name.text, node.initializer)
+    }
+
+    if (ts.isCallExpression(node)) {
+      const testName = getTestName(node)
+      const callback = node.arguments[1]
+      if (
+        testName &&
+        callback &&
+        (ts.isArrowFunction(callback) || ts.isFunctionExpression(callback))
+      ) {
+        const testCase: TestCaseSummary = {
+          name: testName,
+          semanticExpectCount: 0,
+          snapshotNodes: [],
+        }
+        analyzeTestBlock(
+          filePath,
+          sourceFile,
+          callback,
+          findings,
+          seen,
+          testCase,
+          fileEnv,
+        )
+        if (testCase.snapshotNodes.length > 0 && testCase.semanticExpectCount === 0) {
+          addFinding(
+            findings,
+            seen,
+            sourceFile,
+            filePath,
+            testCase.snapshotNodes[0]!,
+            'snapshot_only_assertion',
+            'error',
+            'Snapshot-only assertions are too easy to overfit. Add at least one semantic assertion for behavior.',
+          )
+        }
+        tests.push(testCase)
+      }
+    }
+    ts.forEachChild(node, visit)
+  }
+
+  visit(sourceFile)
+
+  if (
+    options.changedTestFile &&
+    options.requireIntentTraceForChangedTests !== false &&
+    tests.length > 0 &&
+    !findIntentTrace(source)
+  ) {
     addFinding(
       findings,
+      seen,
+      sourceFile,
       filePath,
-      lineNumberAt(source, match.index ?? 0),
-      'self_assertion',
+      sourceFile,
+      'missing_intent_trace',
       'error',
-      'The assertion compares a value to itself, so it cannot fail for the intended behavior.',
-      match[0],
+      'Changed test files must declare the behavior they prove with a file-level comment like: test-intent: proves <user-visible rule>.',
+      TEST_INTENT_MARKER,
     )
   }
 
-  const literalTautologyRe =
-    /expect\(\s*(true|false|null|undefined|\d+|(["'`])(?:\\.|(?!\2).){1,80}\2)\s*\)\.(?:toBe|toEqual|toStrictEqual)\(\s*\1\s*\)/g
-  for (const match of source.matchAll(literalTautologyRe)) {
+  if (
+    options.changedTestFile &&
+    options.requireSpecTraceForChangedTests !== false &&
+    tests.length > 0
+  ) {
+    const specTrace = findSpecTrace(source)
+    if (!specTrace) {
+      addFinding(
+        findings,
+        seen,
+        sourceFile,
+        filePath,
+        sourceFile,
+        'missing_spec_trace',
+        'error',
+        'Changed test files must reference a real feature spec with a file-level comment like: test-spec: specs/feature.md#section-id.',
+        TEST_SPEC_MARKER,
+      )
+    } else {
+      const resolvedTrace = resolveSpecTrace(specTrace)
+      const targetPath = resolvedTrace?.targetPath
+      const anchor = resolvedTrace?.anchor
+      const targetExists =
+        Boolean(targetPath) &&
+        Boolean(options.repoRoot) &&
+        existsSync(path.resolve(options.repoRoot!, targetPath))
+      if (!resolvedTrace || !targetPath || !anchor || !targetExists) {
+        addFinding(
+          findings,
+          seen,
+          sourceFile,
+          filePath,
+          sourceFile,
+          'invalid_spec_trace',
+          'error',
+          'Changed test files must reference an existing spec file and section, for example: test-spec: specs/feature.md#section-id.',
+          specTrace,
+        )
+      }
+    }
+  }
+
+  if (options.changedTestFile && tests.length === 1 && !NEGATIVE_TEST_NAME_RE.test(tests[0]!.name)) {
     addFinding(
       findings,
+      seen,
+      sourceFile,
       filePath,
-      lineNumberAt(source, match.index ?? 0),
-      'literal_tautology',
+      sourceFile,
+      'missing_negative_case',
       'error',
-      'The test asserts a literal against the same literal, which proves nothing about the code under test.',
-      match[0],
+      'Changed test files must include at least one neighboring or negative case so the assertions cannot overfit to a single happy-path example.',
+      tests[0]!.name,
     )
   }
 
-  const expectedAliasRe =
-    /(?:const|let)\s+expected\s*=\s*(actual|result|output|response)\b/g
-  const actualVsExpectedRe =
-    /expect\(\s*(actual|result|output|response)\s*\)\.(?:toBe|toEqual|toStrictEqual)\(\s*expected\s*\)/g
-  const hasExpectedAlias = expectedAliasRe.test(source)
-  const aliasAssertion = actualVsExpectedRe.exec(source)
-  if (hasExpectedAlias && aliasAssertion) {
-    addFinding(
-      findings,
-      filePath,
-      lineNumberAt(source, aliasAssertion.index ?? 0),
-      'expected_aliases_actual',
-      'error',
-      'The expected value is aliased from the produced result, which makes the assertion circular.',
-      aliasAssertion[0],
-    )
-  }
-
-  const computedExpectedRe =
-    /(?:const|let)\s+expected\s*=\s*([A-Za-z_$][\w$.]*)\(/g
-  const computedExpectationUsed =
-    /expect\(\s*(?:actual|result|output|response|value)\s*\)\.(?:toBe|toEqual|toStrictEqual)\(\s*expected\s*\)/.test(
-      source,
-    )
-  for (const match of source.matchAll(computedExpectedRe)) {
-    if (!computedExpectationUsed) continue
-    addFinding(
-      findings,
-      filePath,
-      lineNumberAt(source, match.index ?? 0),
-      'computed_expected',
-      'warning',
-      'The expected value is computed in the test. Double-check that it is not calling the same logic the test is supposed to verify.',
-      match[0],
-    )
-  }
-
-  const fixtureLiteralRe =
-    /(?:const|let)\s+(?:input|prompt|source|content|fixture)[A-Za-z0-9_]*\s*=\s*(["'])([^"'\\\n]{6,120})\1/g
-  for (const match of source.matchAll(fixtureLiteralRe)) {
-    const rawLiteral = normalizeLiteral(match[2] ?? '')
-    if (rawLiteral.length < 6) continue
-    const escapedLiteral = rawLiteral.replaceAll(/[.*+?^${}()|[\]\\]/g, '\\$&')
-    const expectationRe = new RegExp(
-      `expect\\([\\s\\S]{0,120}?\\)\\.(?:toBe|toEqual|toContain)\\(\\s*["']${escapedLiteral}["']\\s*\\)`,
-      'g',
-    )
-    const expectationMatch = expectationRe.exec(source)
-    if (!expectationMatch) continue
-    addFinding(
-      findings,
-      filePath,
-      lineNumberAt(source, expectationMatch.index ?? 0),
-      'fixture_answer_leakage',
-      'error',
-      'The asserted answer is copied directly from the arranged fixture/input, which often means the test is checking memorization instead of behavior.',
-      expectationMatch[0],
-    )
-  }
-
-  return findings
+  return findings.sort(
+    (left, right) => left.filePath.localeCompare(right.filePath) || left.line - right.line,
+  )
 }
 
 async function walkTestFiles(rootDir: string, dir: string): Promise<string[]> {
@@ -194,6 +662,8 @@ async function walkTestFiles(rootDir: string, dir: string): Promise<string[]> {
 export async function runTestQualityCheck(
   repoRoot: string,
 ): Promise<TestQualityReport> {
+  const policy = await loadBuildTrustPolicy(repoRoot).catch(() => null)
+  const changedTestFiles = collectChangedTestFiles(repoRoot)
   const testFiles = await walkTestFiles(repoRoot, path.join(repoRoot, 'test')).catch(
     () => [],
   )
@@ -211,7 +681,16 @@ export async function runTestQualityCheck(
   for (const relativePath of [...fileSet].sort()) {
     const absolutePath = path.join(repoRoot, relativePath)
     const source = await readFile(absolutePath, 'utf8')
-    findings.push(...analyzeTestSource(relativePath, source))
+    findings.push(
+      ...analyzeTestSource(relativePath, source, {
+        changedTestFile: changedTestFiles.has(relativePath),
+        requireIntentTraceForChangedTests:
+          policy?.qualityRules.requireIntentTraceForChangedTests ?? true,
+        requireSpecTraceForChangedTests:
+          policy?.qualityRules.requireSpecTraceForChangedTests ?? true,
+        repoRoot,
+      }),
+    )
   }
 
   const errorCount = findings.filter(f => f.severity === 'error').length
@@ -226,7 +705,7 @@ export async function runTestQualityCheck(
   }
 }
 
-function renderText(report: TestQualityReport): string {
+export function renderTestQualityText(report: TestQualityReport): string {
   const lines = [
     `Scanned ${report.scannedFileCount} test files`,
     `Errors: ${report.errorCount}`,
@@ -249,7 +728,7 @@ function renderText(report: TestQualityReport): string {
   return lines.join('\n')
 }
 
-function renderHtml(report: TestQualityReport): string {
+export function renderTestQualityHtml(report: TestQualityReport): string {
   const generatedAt = new Date().toISOString()
   const findingsMarkup =
     report.findings.length === 0
@@ -379,11 +858,15 @@ function renderHtml(report: TestQualityReport): string {
       <section>
         <h2>Rules</h2>
         <ul>
-          <li>Tests cannot compare a value to itself.</li>
+          <li>Tests cannot compare a value to itself, even through aliases.</li>
           <li>Tests cannot assert a literal against the same literal.</li>
           <li>Expected values cannot be aliases of actual results.</li>
+          <li>Expected values cannot be computed by the same callable under test.</li>
           <li>Fixture text cannot be copied straight into assertions as the answer.</li>
-          <li>Computed expected values are warnings and should be reviewed carefully.</li>
+          <li>Snapshot-only tests must include semantic assertions.</li>
+          <li>Changed test files must declare their user-visible intent with a <code>// test-intent:</code> comment.</li>
+          <li>Changed test files must reference a real feature spec with a <code>// test-spec:</code> comment.</li>
+          <li>Changed test files need a neighboring or negative case.</li>
         </ul>
       </section>
       <section>
@@ -395,7 +878,7 @@ function renderHtml(report: TestQualityReport): string {
 </html>`
 }
 
-function parseArgs(argv: string[]): {
+export function parseTestQualityArgs(argv: string[]): {
   htmlPath?: string
   json: boolean
   root: string
@@ -425,18 +908,18 @@ function parseArgs(argv: string[]): {
 }
 
 if (import.meta.main) {
-  const { htmlPath, json, root } = parseArgs(process.argv.slice(2))
+  const { htmlPath, json, root } = parseTestQualityArgs(process.argv.slice(2))
   const report = await runTestQualityCheck(root)
 
   if (htmlPath) {
     const outputPath = path.resolve(root, htmlPath)
-    await writeFile(outputPath, renderHtml(report), 'utf8')
+    await writeFile(outputPath, renderTestQualityHtml(report), 'utf8')
   }
 
   if (json) {
     process.stdout.write(`${JSON.stringify(report, null, 2)}\n`)
   } else {
-    process.stdout.write(`${renderText(report)}\n`)
+    process.stdout.write(`${renderTestQualityText(report)}\n`)
   }
 
   process.exit(report.errorCount > 0 ? 1 : 0)
