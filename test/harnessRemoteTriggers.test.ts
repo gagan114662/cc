@@ -130,7 +130,7 @@ describe('harness remote triggers', () => {
       }>
       source: string
     }
-    expect(createBody.title).toContain('Harness shadow:')
+    expect(createBody.title).toContain('Harness claude:')
     expect(createBody.environment_id).toBe('env-123')
     expect(createBody.source).toBe('remote-control')
     expect(createBody.session_context.model).toBe('claude-sonnet-4-6')
