@@ -7,3 +7,6 @@ tmp-*/
 autoresearch.experiments/
 *.log
 .claude/settings.local.json
+.claude/harness.control-plane.env
+.claude/harness.control-plane.shared.env
+.claude/harness.observability.env

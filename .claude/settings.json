@@ -50,7 +50,7 @@
           },
           {
             "type": "command",
-            "command": "bun \"$CLAUDE_PROJECT_DIR/dist/autoresearch-cycle.js\"",
+            "command": "cd \"$CLAUDE_PROJECT_DIR\" && bun run autoresearch:cycle",
             "timeout": 60,
             "statusMessage": "Running autoresearch cycle"
           }

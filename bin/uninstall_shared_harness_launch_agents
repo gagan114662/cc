@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SHARED_ENV_FILE="${ROOT}/.claude/harness.control-plane.shared.env"
+LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
+GUI_DOMAIN="gui/$(id -u)"
+
+if [[ ! -f "$SHARED_ENV_FILE" ]]; then
+  echo "Missing ${SHARED_ENV_FILE}. Nothing to uninstall." >&2
+  exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$SHARED_ENV_FILE"
+
+TENANT_ID="${CLAUDE_CODE_HARNESS_TENANT_ID:-shared}"
+SAFE_TENANT="$(printf '%s' "$TENANT_ID" | tr -cs 'A-Za-z0-9._-' '-')"
+RUNNER_IDS=()
+while IFS= read -r runner_id; do
+  [[ -n "$runner_id" ]] || continue
+  RUNNER_IDS+=("$runner_id")
+done < <(bun ./scripts/harnessRunnerManifest.ts list --ids)
+
+for runner_id in "${RUNNER_IDS[@]}"; do
+  SAFE_RUNNER="$(printf '%s' "$runner_id" | tr -cs 'A-Za-z0-9._-' '-')"
+  LABEL="com.gaganarora.cc.harness.${SAFE_TENANT}.${SAFE_RUNNER}"
+  PLIST_PATH="${LAUNCH_AGENTS_DIR}/${LABEL}.plist"
+  launchctl bootout "${GUI_DOMAIN}" "$PLIST_PATH" >/dev/null 2>&1 || true
+  rm -f "$PLIST_PATH"
+done
+
+LEGACY_WORKERS="${CLAUDE_CODE_HARNESS_WORKERS:-0}"
+for worker in $(seq 1 "$LEGACY_WORKERS"); do
+  LEGACY_LABEL="com.gaganarora.cc.harness.${SAFE_TENANT}.worker-${worker}"
+  LEGACY_PLIST_PATH="${LAUNCH_AGENTS_DIR}/${LEGACY_LABEL}.plist"
+  launchctl bootout "${GUI_DOMAIN}" "$LEGACY_PLIST_PATH" >/dev/null 2>&1 || true
+  rm -f "$LEGACY_PLIST_PATH"
+done
+
+echo "Removed shared harness launch agents for tenant ${TENANT_ID}."

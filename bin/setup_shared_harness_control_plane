@@ -1,0 +1,37 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SHARED_ENV_FILE="${ROOT}/.claude/harness.control-plane.shared.env"
+
+POSTGRES_URL="${CLAUDE_CODE_HARNESS_POSTGRES_URL:-}"
+REDIS_URL="${CLAUDE_CODE_HARNESS_REDIS_URL:-}"
+TENANT_ID="${CLAUDE_CODE_HARNESS_TENANT_ID:-$(basename "$ROOT")-shared}"
+WORKERS="${CLAUDE_CODE_HARNESS_WORKERS:-50}"
+
+if [[ -z "$POSTGRES_URL" || -z "$REDIS_URL" ]]; then
+  echo "Set CLAUDE_CODE_HARNESS_POSTGRES_URL and CLAUDE_CODE_HARNESS_REDIS_URL before running this script." >&2
+  echo "Tip: export the real shared control-plane URLs in your shell before running this script." >&2
+  exit 1
+fi
+
+mkdir -p "${ROOT}/.claude"
+
+cat >"$SHARED_ENV_FILE" <<EOF
+export CLAUDE_CODE_HARNESS_CONTROL_PLANE_BACKEND=postgres-redis
+export CLAUDE_CODE_HARNESS_POSTGRES_URL='${POSTGRES_URL}'
+export CLAUDE_CODE_HARNESS_REDIS_URL='${REDIS_URL}'
+export CLAUDE_CODE_HARNESS_TENANT_ID='${TENANT_ID}'
+export CLAUDE_CODE_HARNESS_WORKERS='${WORKERS}'
+export CLAUDE_CODE_HARNESS_WORKER_SLOTS='${WORKERS}'
+EOF
+
+echo "Wrote ${SHARED_ENV_FILE}"
+echo "Running control plane doctor..."
+bash -lc "source '${SHARED_ENV_FILE}' && cd '${ROOT}' && bun ./scripts/harnessControlPlaneDoctor.ts --json"
+
+echo
+echo "Shared harness env is ready."
+echo "Next on each runner:"
+echo "  source ${SHARED_ENV_FILE}"
+echo "  ./bin/start_shared_harness_daemon --runner <claude-primary|codex-primary>"

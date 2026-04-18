@@ -1283,6 +1283,10 @@ export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
     }
   }
 
+  return readStoredClaudeAIOAuthTokens()
+})
+
+function readStoredClaudeAIOAuthTokens(): OAuthTokens | null {
   try {
     const secureStorage = getSecureStorage()
     const storageData = secureStorage.read()
@@ -1297,7 +1301,111 @@ export const getClaudeAIOAuthTokens = memoize((): OAuthTokens | null => {
     logError(error)
     return null
   }
-})
+}
+
+async function readStoredClaudeAIOAuthTokensAsync(): Promise<OAuthTokens | null> {
+  try {
+    const secureStorage = getSecureStorage()
+    const storageData = await secureStorage.readAsync()
+    const oauthData = storageData?.claudeAiOauth
+    if (!oauthData?.accessToken) {
+      return null
+    }
+    return oauthData
+  } catch (error) {
+    logError(error)
+    return null
+  }
+}
+
+export function oauthTokensHaveScopes(
+  tokens: Pick<OAuthTokens, 'accessToken' | 'scopes'> | null | undefined,
+  requiredScopes: readonly string[],
+): boolean {
+  if (!tokens?.accessToken) {
+    return false
+  }
+  return requiredScopes.every(scope => tokens.scopes?.includes(scope) ?? false)
+}
+
+export function getClaudeAIOAuthTokensForScopesSync(
+  requiredScopes: readonly string[],
+  deps: {
+    getActiveTokens?: () => OAuthTokens | null
+    getStoredTokens?: () => OAuthTokens | null
+  } = {},
+): OAuthTokens | null {
+  const activeTokens = (deps.getActiveTokens ?? getClaudeAIOAuthTokens)()
+  if (oauthTokensHaveScopes(activeTokens, requiredScopes)) {
+    return activeTokens
+  }
+
+  const storedTokens = (deps.getStoredTokens ?? readStoredClaudeAIOAuthTokens)()
+  if (oauthTokensHaveScopes(storedTokens, requiredScopes)) {
+    return storedTokens
+  }
+
+  return activeTokens ?? storedTokens
+}
+
+type ScopedOAuthTokenResolverDeps = {
+  getActiveTokens?: () => OAuthTokens | null
+  getStoredTokens?: () => Promise<OAuthTokens | null>
+  isTokenExpired?: (expiresAt: string | null) => boolean
+  refreshToken?: typeof refreshOAuthToken
+  saveTokens?: typeof saveOAuthTokensIfNeeded
+}
+
+async function refreshStoredOAuthTokensIfNeeded(
+  tokens: OAuthTokens | null,
+  deps: ScopedOAuthTokenResolverDeps,
+): Promise<OAuthTokens | null> {
+  if (!tokens?.refreshToken) {
+    return tokens
+  }
+
+  const isTokenExpired = deps.isTokenExpired ?? isOAuthTokenExpired
+  if (!isTokenExpired(tokens.expiresAt)) {
+    return tokens
+  }
+
+  try {
+    const refreshedTokens = await (deps.refreshToken ?? refreshOAuthToken)(
+      tokens.refreshToken,
+      {
+        scopes: shouldUseClaudeAIAuth(tokens.scopes)
+          ? undefined
+          : tokens.scopes,
+      },
+    )
+    ;(deps.saveTokens ?? saveOAuthTokensIfNeeded)(refreshedTokens)
+    clearOAuthTokenCache()
+    return refreshedTokens
+  } catch (error) {
+    logError(error)
+    return tokens
+  }
+}
+
+export async function getClaudeAIOAuthTokensForScopes(
+  requiredScopes: readonly string[],
+  deps: ScopedOAuthTokenResolverDeps = {},
+): Promise<OAuthTokens | null> {
+  const activeTokens = (deps.getActiveTokens ?? getClaudeAIOAuthTokens)()
+  if (oauthTokensHaveScopes(activeTokens, requiredScopes)) {
+    return activeTokens
+  }
+
+  let storedTokens = await (
+    deps.getStoredTokens ?? readStoredClaudeAIOAuthTokensAsync
+  )()
+  storedTokens = await refreshStoredOAuthTokensIfNeeded(storedTokens, deps)
+  if (oauthTokensHaveScopes(storedTokens, requiredScopes)) {
+    return storedTokens
+  }
+
+  return activeTokens ?? storedTokens
+}
 
 /**
  * Clears all OAuth token caches. Call this on 401 errors to ensure
@@ -1407,18 +1515,7 @@ export async function getClaudeAIOAuthTokensAsync(): Promise<OAuthTokens | null>
     return getClaudeAIOAuthTokens()
   }
 
-  try {
-    const secureStorage = getSecureStorage()
-    const storageData = await secureStorage.readAsync()
-    const oauthData = storageData?.claudeAiOauth
-    if (!oauthData?.accessToken) {
-      return null
-    }
-    return oauthData
-  } catch (error) {
-    logError(error)
-    return null
-  }
+  return readStoredClaudeAIOAuthTokensAsync()
 }
 
 // In-flight promise for deduplicating concurrent calls

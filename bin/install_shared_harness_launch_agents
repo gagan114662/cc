@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SHARED_ENV_FILE="${ROOT}/.claude/harness.control-plane.shared.env"
+OBS_ENV_FILE="${ROOT}/.claude/harness.observability.env"
+LAUNCH_AGENTS_DIR="${HOME}/Library/LaunchAgents"
+LOG_DIR="${ROOT}/.claude/harness/launchd"
+BUN_BIN="$(command -v bun)"
+BUN_BIN_DIR="$(dirname "${BUN_BIN}")"
+GUI_DOMAIN="gui/$(id -u)"
+
+if [[ ! -f "$SHARED_ENV_FILE" ]]; then
+  echo "Missing ${SHARED_ENV_FILE}. Run ./bin/setup_shared_harness_control_plane first." >&2
+  exit 1
+fi
+
+# shellcheck disable=SC1090
+source "$SHARED_ENV_FILE"
+
+TENANT_ID="${CLAUDE_CODE_HARNESS_TENANT_ID:-shared}"
+SAFE_TENANT="$(printf '%s' "$TENANT_ID" | tr -cs 'A-Za-z0-9._-' '-')"
+LAUNCH_PATH="${BUN_BIN_DIR}:/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
+RUNNER_IDS=()
+while IFS= read -r runner_id; do
+  [[ -n "$runner_id" ]] || continue
+  RUNNER_IDS+=("$runner_id")
+done < <("${BUN_BIN}" ./scripts/harnessRunnerManifest.ts list --ids)
+
+mkdir -p "$LAUNCH_AGENTS_DIR" "$LOG_DIR"
+
+LEGACY_WORKERS="${CLAUDE_CODE_HARNESS_WORKERS:-0}"
+for worker in $(seq 1 "$LEGACY_WORKERS"); do
+  LEGACY_LABEL="com.gaganarora.cc.harness.${SAFE_TENANT}.worker-${worker}"
+  LEGACY_PLIST_PATH="${LAUNCH_AGENTS_DIR}/${LEGACY_LABEL}.plist"
+  launchctl bootout "${GUI_DOMAIN}" "$LEGACY_PLIST_PATH" >/dev/null 2>&1 || true
+  rm -f "$LEGACY_PLIST_PATH"
+done
+
+for runner_id in "${RUNNER_IDS[@]}"; do
+  SAFE_RUNNER="$(printf '%s' "$runner_id" | tr -cs 'A-Za-z0-9._-' '-')"
+  LABEL="com.gaganarora.cc.harness.${SAFE_TENANT}.${SAFE_RUNNER}"
+  PLIST_PATH="${LAUNCH_AGENTS_DIR}/${LABEL}.plist"
+  cat >"$PLIST_PATH" <<EOF
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>Label</key>
+  <string>${LABEL}</string>
+  <key>WorkingDirectory</key>
+  <string>${ROOT}</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>-lc</string>
+    <string>export PATH='${LAUNCH_PATH}'; source '${SHARED_ENV_FILE}'; if [[ -f '${OBS_ENV_FILE}' ]]; then source '${OBS_ENV_FILE}'; fi; exec '${ROOT}/bin/start_shared_harness_daemon' --runner '${runner_id}'</string>
+  </array>
+  <key>RunAtLoad</key>
+  <true/>
+  <key>KeepAlive</key>
+  <true/>
+  <key>ProcessType</key>
+  <string>Background</string>
+  <key>StandardOutPath</key>
+  <string>${LOG_DIR}/${SAFE_RUNNER}.out.log</string>
+  <key>StandardErrorPath</key>
+  <string>${LOG_DIR}/${SAFE_RUNNER}.err.log</string>
+</dict>
+</plist>
+EOF
+
+  launchctl bootout "${GUI_DOMAIN}" "$PLIST_PATH" >/dev/null 2>&1 || true
+  launchctl bootstrap "${GUI_DOMAIN}" "$PLIST_PATH"
+done
+
+echo "Installed ${#RUNNER_IDS[@]} shared harness launch agents for tenant ${TENANT_ID}."

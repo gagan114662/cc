@@ -1,9 +1,15 @@
 import axios, { type AxiosRequestConfig, type AxiosResponse } from 'axios'
 import { randomUUID } from 'crypto'
+import { CLAUDE_AI_PROFILE_SCOPE } from 'src/constants/oauth.js'
 import { getOauthConfig } from 'src/constants/oauth.js'
 import { getOrganizationUUID } from 'src/services/oauth/client.js'
+import { getOauthProfileFromOauthToken } from 'src/services/oauth/getOauthProfile.js'
 import z from 'zod/v4'
-import { getClaudeAIOAuthTokens } from '../auth.js'
+import {
+  getClaudeAIOAuthTokens,
+  getClaudeAIOAuthTokensForScopes,
+  oauthTokensHaveScopes,
+} from '../auth.js'
 import { logForDebugging } from '../debug.js'
 import { parseGitHubRepository } from '../detectRepository.js'
 import { errorMessage, toError } from '../errors.js'
@@ -17,6 +23,10 @@ const TELEPORT_RETRY_DELAYS = [2000, 4000, 8000, 16000] // 4 retries with expone
 const MAX_TELEPORT_RETRIES = TELEPORT_RETRY_DELAYS.length
 
 export const CCR_BYOC_BETA = 'ccr-byoc-2025-07-29'
+export const REMOTE_CLAUDE_CODE_REQUIRED_SCOPES = [
+  CLAUDE_AI_PROFILE_SCOPE,
+  'user:sessions:claude_code',
+] as const
 
 /**
  * Checks if an axios error is a transient network error that should be retried
@@ -178,18 +188,58 @@ export type CodeSession = z.infer<ReturnType<typeof CodeSessionSchema>>
  * Validates and prepares for API requests
  * @returns Object containing access token and organization UUID
  */
-export async function prepareApiRequest(): Promise<{
+export async function prepareApiRequest(options: {
+  requiredScopes?: readonly string[]
+  getTokensForScopes?: (
+    requiredScopes: readonly string[],
+  ) => Promise<ReturnType<typeof getClaudeAIOAuthTokens> | null>
+  getOrganizationUUID?: () => Promise<string | null>
+  getOauthProfileFromToken?: typeof getOauthProfileFromOauthToken
+} = {}): Promise<{
   accessToken: string
   orgUUID: string
 }> {
-  const accessToken = getClaudeAIOAuthTokens()?.accessToken
+  const tokens =
+    options.requiredScopes && options.requiredScopes.length > 0
+      ? await (
+          options.getTokensForScopes ?? getClaudeAIOAuthTokensForScopes
+        )(options.requiredScopes)
+      : getClaudeAIOAuthTokens()
+  const accessToken = tokens?.accessToken
   if (accessToken === undefined) {
     throw new Error(
       'Claude Code web sessions require authentication with a Claude.ai account. API key authentication is not sufficient. Please run /login to authenticate, or check your authentication status with /status.',
     )
   }
 
-  const orgUUID = await getOrganizationUUID()
+  if (
+    options.requiredScopes &&
+    options.requiredScopes.length > 0 &&
+    !oauthTokensHaveScopes(tokens, options.requiredScopes)
+  ) {
+    throw new Error(
+      'Remote Claude Code operations require a full Claude.ai login token with user:profile and user:sessions:claude_code scopes. Run `claude auth login --claudeai` or unset CLAUDE_CODE_OAUTH_TOKEN.',
+    )
+  }
+
+  let orgUUID: string | null = null
+  try {
+    orgUUID = await (options.getOrganizationUUID ?? getOrganizationUUID)()
+  } catch (error) {
+    logForDebugging(
+      `[prepareApiRequest] Failed to read cached organization UUID, falling back to profile lookup: ${errorMessage(error)}`,
+    )
+  }
+  if (
+    !orgUUID &&
+    tokens &&
+    oauthTokensHaveScopes(tokens, [CLAUDE_AI_PROFILE_SCOPE])
+  ) {
+    const profile = await (
+      options.getOauthProfileFromToken ?? getOauthProfileFromOauthToken
+    )(tokens.accessToken)
+    orgUUID = profile?.organization?.uuid ?? null
+  }
   if (!orgUUID) {
     throw new Error('Unable to get organization UUID')
   }
@@ -204,7 +254,9 @@ export async function prepareApiRequest(): Promise<{
 export async function fetchCodeSessionsFromSessionsAPI(): Promise<
   CodeSession[]
 > {
-  const { accessToken, orgUUID } = await prepareApiRequest()
+  const { accessToken, orgUUID } = await prepareApiRequest({
+    requiredScopes: REMOTE_CLAUDE_CODE_REQUIRED_SCOPES,
+  })
 
   const url = `${getOauthConfig().BASE_API_URL}/v1/sessions`
 
@@ -289,7 +341,9 @@ export function getOAuthHeaders(accessToken: string): Record<string, string> {
 export async function fetchSession(
   sessionId: string,
 ): Promise<SessionResource> {
-  const { accessToken, orgUUID } = await prepareApiRequest()
+  const { accessToken, orgUUID } = await prepareApiRequest({
+    requiredScopes: REMOTE_CLAUDE_CODE_REQUIRED_SCOPES,
+  })
 
   const url = `${getOauthConfig().BASE_API_URL}/v1/sessions/${sessionId}`
   const headers = {
@@ -364,7 +418,9 @@ export async function sendEventToRemoteSession(
   opts?: { uuid?: string },
 ): Promise<boolean> {
   try {
-    const { accessToken, orgUUID } = await prepareApiRequest()
+    const { accessToken, orgUUID } = await prepareApiRequest({
+      requiredScopes: REMOTE_CLAUDE_CODE_REQUIRED_SCOPES,
+    })
 
     const url = `${getOauthConfig().BASE_API_URL}/v1/sessions/${sessionId}/events`
     const headers = {
@@ -427,7 +483,9 @@ export async function updateSessionTitle(
   title: string,
 ): Promise<boolean> {
   try {
-    const { accessToken, orgUUID } = await prepareApiRequest()
+    const { accessToken, orgUUID } = await prepareApiRequest({
+      requiredScopes: REMOTE_CLAUDE_CODE_REQUIRED_SCOPES,
+    })
 
     const url = `${getOauthConfig().BASE_API_URL}/v1/sessions/${sessionId}`
     const headers = {

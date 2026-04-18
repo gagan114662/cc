@@ -200,7 +200,7 @@ import { filterExistingPaths, getKnownPathsForRepo } from './utils/githubRepoPat
 import { clearPluginCache, loadAllPluginsCacheOnly } from './utils/plugins/pluginLoader.js';
 import { migrateChangelogFromConfig } from './utils/releaseNotes.js';
 import { SandboxManager } from './utils/sandbox/sandbox-adapter.js';
-import { fetchSession, prepareApiRequest } from './utils/teleport/api.js';
+import { fetchSession, prepareApiRequest, REMOTE_CLAUDE_CODE_REQUIRED_SCOPES } from './utils/teleport/api.js';
 import { checkOutTeleportedSessionBranch, processMessagesForTeleportResume, teleportToRemoteWithErrorHandling, validateGitState, validateSessionRepository } from './utils/teleport.js';
 import { shouldEnableThinkingByDefault, type ThinkingConfig } from './utils/thinking.js';
 import { initUser, resetUserCache } from './utils/user.js';
@@ -3322,16 +3322,18 @@ async function run(): Promise<CommanderCommand> {
       // getAccessToken closure for the token so reconnects get fresh tokens.
       const {
         checkAndRefreshOAuthTokenIfNeeded,
-        getClaudeAIOAuthTokens
+        getClaudeAIOAuthTokensForScopesSync
       } = await import('./utils/auth.js');
       await checkAndRefreshOAuthTokenIfNeeded();
       let apiCreds;
       try {
-        apiCreds = await prepareApiRequest();
+        apiCreds = await prepareApiRequest({
+          requiredScopes: REMOTE_CLAUDE_CODE_REQUIRED_SCOPES
+        });
       } catch (e) {
         return await exitWithError(root, `Error: ${e instanceof Error ? e.message : 'Failed to authenticate'}`, () => gracefulShutdown(1));
       }
-      const getAccessToken = (): string => getClaudeAIOAuthTokens()?.accessToken ?? apiCreds.accessToken;
+      const getAccessToken = (): string => getClaudeAIOAuthTokensForScopesSync(REMOTE_CLAUDE_CODE_REQUIRED_SCOPES)?.accessToken ?? apiCreds.accessToken;
 
       // Brief mode activation: setKairosActive(true) satisfies BOTH opt-in
       // and entitlement for isBriefEnabled() (BriefTool.ts:124-132).
@@ -3465,7 +3467,9 @@ async function run(): Promise<CommanderCommand> {
           orgUUID: string;
         };
         try {
-          apiCreds = await prepareApiRequest();
+          apiCreds = await prepareApiRequest({
+            requiredScopes: REMOTE_CLAUDE_CODE_REQUIRED_SCOPES
+          });
         } catch (error) {
           logError(toError(error));
           return await exitWithError(root, `Error: ${errorMessage(error) || 'Failed to authenticate'}`, () => gracefulShutdown(1));
@@ -3473,9 +3477,9 @@ async function run(): Promise<CommanderCommand> {
 
         // Create remote session config for the REPL
         const {
-          getClaudeAIOAuthTokens: getTokensForRemote
+          getClaudeAIOAuthTokensForScopesSync
         } = await import('./utils/auth.js');
-        const getAccessTokenForRemote = (): string => getTokensForRemote()?.accessToken ?? apiCreds.accessToken;
+        const getAccessTokenForRemote = (): string => getClaudeAIOAuthTokensForScopesSync(REMOTE_CLAUDE_CODE_REQUIRED_SCOPES)?.accessToken ?? apiCreds.accessToken;
         const remoteSessionConfig = createRemoteSessionConfig(createdSession.id, getAccessTokenForRemote, apiCreds.orgUUID, hasInitialPrompt);
 
         // Add remote session info as initial system message

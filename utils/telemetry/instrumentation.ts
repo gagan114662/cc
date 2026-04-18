@@ -72,6 +72,12 @@ const DEFAULT_TRACES_EXPORT_INTERVAL_MS = 5000
 
 class TelemetryTimeoutError extends Error {}
 
+function getTelemetryServiceVersion(): string {
+  return typeof MACRO !== 'undefined' && typeof MACRO.VERSION === 'string'
+    ? MACRO.VERSION
+    : '0.0.0-dev'
+}
+
 function telemetryTimeout(ms: number, message: string): Promise<never> {
   return new Promise((_, reject) => {
     setTimeout(
@@ -334,16 +340,25 @@ function getBigQueryExportingReader() {
 }
 
 function isBigQueryMetricsEnabled() {
-  // BigQuery metrics are enabled for:
-  // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
-  // 2. Claude for Enterprise (C4E) users
-  // 3. Claude for Teams users
-  const subscriptionType = getSubscriptionType()
-  const isC4EOrTeamUser =
-    isClaudeAISubscriber() &&
-    (subscriptionType === 'enterprise' || subscriptionType === 'team')
+  try {
+    // BigQuery metrics are enabled for:
+    // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
+    // 2. Claude for Enterprise (C4E) users
+    // 3. Claude for Teams users
+    const subscriptionType = getSubscriptionType()
+    const isC4EOrTeamUser =
+      isClaudeAISubscriber() &&
+      (subscriptionType === 'enterprise' || subscriptionType === 'team')
 
-  return is1PApiCustomer() || isC4EOrTeamUser
+    return is1PApiCustomer() || isC4EOrTeamUser
+  } catch (error) {
+    logForDebugging(
+      `[telemetry] Skipping BigQuery metrics initialization without auth: ${String(
+        error,
+      )}`,
+    )
+    return false
+  }
 }
 
 /**
@@ -402,7 +417,7 @@ async function initializeBetaTracing(
   // Initialize event logger
   const eventLogger = logs.getLogger(
     'com.anthropic.claude_code.events',
-    MACRO.VERSION,
+    getTelemetryServiceVersion(),
   )
   setEventLogger(eventLogger)
 
@@ -470,9 +485,10 @@ export async function initializeTelemetry() {
 
   // Create base resource with service attributes
   const platform = getPlatform()
+  const serviceVersion = getTelemetryServiceVersion()
   const baseAttributes: Record<string, string> = {
     [ATTR_SERVICE_NAME]: 'claude-code',
-    [ATTR_SERVICE_VERSION]: MACRO.VERSION,
+    [ATTR_SERVICE_VERSION]: serviceVersion,
   }
 
   // Add WSL-specific attributes if running on WSL
@@ -560,7 +576,10 @@ export async function initializeTelemetry() {
     }
     registerCleanup(shutdownTelemetry)
 
-    return meterProvider.getMeter('com.anthropic.claude_code', MACRO.VERSION)
+    return meterProvider.getMeter(
+      'com.anthropic.claude_code',
+      getTelemetryServiceVersion(),
+    )
   }
 
   const meterProvider = new MeterProvider({
@@ -601,7 +620,7 @@ export async function initializeTelemetry() {
       // Initialize event logger
       const eventLogger = logs.getLogger(
         'com.anthropic.claude_code.events',
-        MACRO.VERSION,
+        getTelemetryServiceVersion(),
       )
       setEventLogger(eventLogger)
       logForDebugging('[3P telemetry] Event logger set successfully')
@@ -697,7 +716,10 @@ Current timeout: ${timeoutMs}ms
   // Always register shutdown (internal metrics are always enabled)
   registerCleanup(shutdownTelemetry)
 
-  return meterProvider.getMeter('com.anthropic.claude_code', MACRO.VERSION)
+  return meterProvider.getMeter(
+    'com.anthropic.claude_code',
+    getTelemetryServiceVersion(),
+  )
 }
 
 /**

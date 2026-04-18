@@ -1,0 +1,138 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+
+eval "$(
+ROOT="$ROOT" python3 <<'PY'
+import os
+import re
+import shlex
+import sqlite3
+import subprocess
+from hashlib import pbkdf2_hmac
+from pathlib import Path
+from urllib.request import Request, urlopen
+
+from cryptography.hazmat.backends import default_backend
+from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes
+
+
+COOKIE_NAMES = (
+    'hny',
+    '_gorilla_csrf',
+    'AWSALB',
+    'AWSALBCORS',
+    'last_data_scope',
+    '_zitok',
+    '__q_state_CTH6BWEB6yhi1K5W',
+)
+
+
+def get_safe_storage_key() -> bytes:
+    password = subprocess.check_output(
+        ['security', 'find-generic-password', '-w', '-s', 'Chrome Safe Storage']
+    ).decode('utf-8').strip()
+    return pbkdf2_hmac('sha1', password.encode('utf-8'), b'saltysalt', 1003, 16)
+
+
+def decrypt_cookie(raw: bytes, key: bytes) -> str:
+    encrypted = bytes(raw)
+    if not encrypted.startswith(b'v10'):
+        return encrypted.decode('utf-8', 'replace')
+
+    decryptor = Cipher(
+        algorithms.AES(key),
+        modes.CBC(b' ' * 16),
+        backend=default_backend(),
+    ).decryptor()
+    decrypted = decryptor.update(encrypted[3:]) + decryptor.finalize()
+    unpadded = decrypted[:-decrypted[-1]]
+    if len(unpadded) > 32:
+      tail = unpadded[32:]
+      if all(byte in (9, 10) or 32 <= byte <= 126 for byte in tail):
+          unpadded = tail
+    return unpadded.decode('utf-8', 'replace')
+
+
+def candidate_cookie_paths() -> list[tuple[str, Path]]:
+    chrome_root = Path.home() / 'Library' / 'Application Support' / 'Google' / 'Chrome'
+    names = ['Default', 'Profile 1', 'Profile 2', 'Profile 3', 'Profile 4']
+    return [(name, chrome_root / name / 'Cookies') for name in names if (chrome_root / name / 'Cookies').exists()]
+
+
+def parse_scope(raw_scope: str) -> tuple[str, str, str] | None:
+    match = re.search(r'([A-Za-z0-9._-]+):([A-Za-z0-9._-]+):([A-Za-z0-9._-]+)$', raw_scope)
+    if not match:
+        return None
+    return match.group(1), match.group(2), match.group(3)
+
+
+safe_storage_key = get_safe_storage_key()
+
+for profile_name, cookie_path in candidate_cookie_paths():
+    connection = sqlite3.connect(str(cookie_path))
+    try:
+        rows = connection.execute(
+            f"""
+            SELECT name, encrypted_value
+            FROM cookies
+            WHERE host_key LIKE '%honeycomb.io%'
+              AND name IN ({','.join('?' for _ in COOKIE_NAMES)})
+            """,
+            COOKIE_NAMES,
+        ).fetchall()
+    finally:
+        connection.close()
+
+    cookies = {
+        name: decrypt_cookie(encrypted_value, safe_storage_key)
+        for name, encrypted_value in rows
+    }
+    if 'hny' not in cookies or 'last_data_scope' not in cookies:
+        continue
+
+    scope = parse_scope(cookies['last_data_scope'])
+    if scope is None:
+        continue
+    team_slug, environment_slug, dataset = scope
+    cookie_header = '; '.join(f'{name}={value}' for name, value in cookies.items())
+    request = Request(
+        f'https://ui.honeycomb.io/{team_slug}/environments/{environment_slug}/send-data',
+        headers={
+            'Cookie': cookie_header,
+            'User-Agent': 'Mozilla/5.0',
+        },
+    )
+    with urlopen(request, timeout=20) as response:
+        html = response.read().decode('utf-8', 'replace')
+
+    page_data = re.search(
+        r'\.render\("send-data-container", \{"teamSlug":"([^"]+)","envSlug":"([^"]+)","environmentName":"[^"]+","writeKey":"([^"]+)","hasDatasets":(?:true|false)\}\)',
+        html,
+    )
+    dataset_match = re.search(r'selectedDatasetSlug: "([^"]+)"', html)
+    api_url_match = re.search(r'App\.APIURL = "([^"]+)"', html)
+    if not page_data or not dataset_match or not api_url_match:
+        continue
+
+    assignments = {
+        'HONEYCOMB_INGEST_KEY': page_data.group(3),
+        'HONEYCOMB_DATASET': dataset_match.group(1),
+        'HONEYCOMB_TEAM_SLUG': page_data.group(1),
+        'HONEYCOMB_ENVIRONMENT_SLUG': page_data.group(2),
+        'HONEYCOMB_API_BASE_URL': api_url_match.group(1),
+        'HONEYCOMB_SERVICE_NAME': os.environ.get('HONEYCOMB_SERVICE_NAME', dataset_match.group(1)),
+        'HONEYCOMB_CHROME_PROFILE': profile_name,
+    }
+
+    for key, value in assignments.items():
+        print(f'export {key}={shlex.quote(value)}')
+    break
+else:
+    raise SystemExit('Could not find a signed-in Honeycomb Chrome profile with a usable send-data page.')
+PY
+)"
+
+"${ROOT}/bin/setup_harness_observability"
+echo "Bootstrapped Honeycomb observability from Chrome profile ${HONEYCOMB_CHROME_PROFILE} for ${HONEYCOMB_TEAM_SLUG}/${HONEYCOMB_ENVIRONMENT_SLUG}/${HONEYCOMB_DATASET}."

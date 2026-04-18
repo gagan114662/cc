@@ -15,14 +15,10 @@ import type {
   SandboxRuntimeConfig,
   SandboxViolationEvent,
 } from '@anthropic-ai/sandbox-runtime'
-import {
-  SandboxManager as BaseSandboxManager,
-  SandboxRuntimeConfigSchema,
-  SandboxViolationStore,
-} from '@anthropic-ai/sandbox-runtime'
 import { rmSync, statSync } from 'fs'
 import { readFile } from 'fs/promises'
 import { memoize } from 'lodash-es'
+import { createRequire } from 'module'
 import { join, resolve, sep } from 'path'
 import {
   getAdditionalDirectoriesForClaudeMd,
@@ -57,6 +53,138 @@ import { errorMessage } from '../errors.js'
 import { getClaudeTempDir } from '../permissions/filesystem.js'
 import type { PermissionRuleValue } from '../permissions/PermissionRule.js'
 import { ripgrepCommand } from '../ripgrep.js'
+
+type SandboxViolationStoreLike = {
+  subscribe(listener: (violations: SandboxViolationEvent[]) => void): () => void
+  getTotalCount(): number
+}
+
+type SandboxViolationStoreCtor = new () => SandboxViolationStoreLike
+
+type SandboxRuntimeManagerLike = {
+  checkDependencies?: (options: {
+    command: string
+    args: string[]
+  }) => SandboxDependencyCheck
+  isSupportedPlatform?: () => boolean
+  initialize?: (
+    config: SandboxRuntimeConfig,
+    sandboxAskCallback?: SandboxAskCallback,
+  ) => Promise<void>
+  updateConfig?: (config: SandboxRuntimeConfig) => void
+  reset?: () => Promise<void>
+  wrapWithSandbox?: (
+    command: string,
+    binShell?: string,
+    customConfig?: Partial<SandboxRuntimeConfig>,
+    abortSignal?: AbortSignal,
+  ) => Promise<string>
+  getFsReadConfig?: () => FsReadRestrictionConfig
+  getFsWriteConfig?: () => FsWriteRestrictionConfig
+  getNetworkRestrictionConfig?: () => NetworkRestrictionConfig
+  getAllowUnixSockets?: () => string[] | undefined
+  getAllowLocalBinding?: () => boolean | undefined
+  getIgnoreViolations?: () => IgnoreViolationsConfig | undefined
+  getEnableWeakerNestedSandbox?: () => boolean | undefined
+  getProxyPort?: () => number | undefined
+  getSocksProxyPort?: () => number | undefined
+  getLinuxHttpSocketPath?: () => string | undefined
+  getLinuxSocksSocketPath?: () => string | undefined
+  waitForNetworkInitialization?: () => Promise<boolean>
+  getSandboxViolationStore?: () => SandboxViolationStoreLike
+  annotateStderrWithSandboxFailures?: (
+    command: string,
+    stderr: string,
+  ) => string
+  cleanupAfterCommand?: () => void
+}
+
+type SandboxRuntimeModule = {
+  SandboxManager: SandboxRuntimeManagerLike
+  SandboxRuntimeConfigSchema: {
+    parse(value: unknown): unknown
+  }
+  SandboxViolationStore: SandboxViolationStoreCtor
+}
+
+class FallbackSandboxViolationStore implements SandboxViolationStoreLike {
+  #listeners = new Set<(violations: SandboxViolationEvent[]) => void>()
+  #violations: SandboxViolationEvent[] = []
+
+  subscribe(listener: (violations: SandboxViolationEvent[]) => void): () => void {
+    this.#listeners.add(listener)
+    listener(this.#violations)
+    return () => {
+      this.#listeners.delete(listener)
+    }
+  }
+
+  getTotalCount(): number {
+    return this.#violations.length
+  }
+}
+
+const require = createRequire(import.meta.url)
+
+function loadSandboxRuntimeModule(): SandboxRuntimeModule | null {
+  try {
+    return require('@anthropic-ai/sandbox-runtime') as SandboxRuntimeModule
+  } catch (error) {
+    logForDebugging(
+      `Sandbox runtime unavailable, falling back to no-op sandbox adapter: ${errorMessage(error)}`,
+    )
+    return null
+  }
+}
+
+const fallbackSandboxRuntimeConfigSchema = {
+  parse(value: unknown): unknown {
+    return value
+  },
+}
+
+const fallbackBaseSandboxManager: SandboxRuntimeManagerLike = {
+  checkDependencies: () => ({
+    errors: ['sandbox runtime unavailable'],
+    warnings: [],
+  }),
+  isSupportedPlatform: () => false,
+  initialize: async () => {},
+  updateConfig: () => {},
+  reset: async () => {},
+  wrapWithSandbox: async (command: string) => command,
+  getFsReadConfig: () => ({
+    denyOnly: [],
+    allowWithinDeny: [],
+  }),
+  getFsWriteConfig: () => ({
+    allowOnly: [],
+    denyWithinAllow: [],
+  }),
+  getNetworkRestrictionConfig: () => ({}),
+  getAllowUnixSockets: () => undefined,
+  getAllowLocalBinding: () => undefined,
+  getIgnoreViolations: () => undefined,
+  getEnableWeakerNestedSandbox: () => undefined,
+  getProxyPort: () => undefined,
+  getSocksProxyPort: () => undefined,
+  getLinuxHttpSocketPath: () => undefined,
+  getLinuxSocksSocketPath: () => undefined,
+  waitForNetworkInitialization: async () => false,
+  getSandboxViolationStore: () => new FallbackSandboxViolationStore(),
+  annotateStderrWithSandboxFailures: (_command: string, stderr: string) =>
+    stderr,
+  cleanupAfterCommand: () => {},
+}
+
+const sandboxRuntimeModule = loadSandboxRuntimeModule()
+const BaseSandboxManager =
+  sandboxRuntimeModule?.SandboxManager ?? fallbackBaseSandboxManager
+const SandboxRuntimeConfigSchema =
+  sandboxRuntimeModule?.SandboxRuntimeConfigSchema ??
+  fallbackSandboxRuntimeConfigSchema
+const SandboxViolationStore =
+  sandboxRuntimeModule?.SandboxViolationStore ?? FallbackSandboxViolationStore
 
 // Local copies to avoid circular dependency
 // (permissions.ts imports SandboxManager, bashPermissions.ts imports permissions.ts)
