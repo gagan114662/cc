@@ -8,9 +8,14 @@ function buildCliSmokeEnv(): NodeJS.ProcessEnv {
   const codexHome = mkdtempSync(path.join(tmpdir(), 'cc-cli-smoke-'))
   return {
     ...process.env,
-    ANTHROPIC_API_KEY:
-      process.env.ANTHROPIC_API_KEY ?? 'sk-ant-test-dummy-key-for-ci',
-    CLAUDE_CONFIG_HOME: codexHome,
+    CI: '1',
+    ANTHROPIC_API_KEY: '',
+    ANTHROPIC_AUTH_TOKEN: '',
+    ANTHROPIC_UNIX_SOCKET: '',
+    CLAUDE_CODE_OAUTH_TOKEN: '',
+    CLAUDE_CODE_OAUTH_TOKEN_FILE_DESCRIPTOR: '',
+    CLAUDE_CODE_API_KEY_FILE_DESCRIPTOR: '',
+    CLAUDE_CONFIG_DIR: codexHome,
     CLAUDE_CODE_HARNESS_CONTROL_PLANE_BACKEND: 'filesystem',
     CLAUDE_CODE_HARNESS_POSTGRES_URL: '',
     CLAUDE_CODE_HARNESS_REDIS_URL: '',
@@ -53,6 +58,24 @@ describe('cli help smoke', () => {
 
       expect(result.code).toBe(0)
       expect(result.stdout).toContain('jobs configured')
+    },
+  )
+
+  test(
+    'renders daemon status in non-interactive mode without auth',
+    { timeout: 15_000 },
+    async () => {
+      const result = await execFileNoThrowWithCwd(
+        process.execPath,
+        ['./entrypoints/cli.tsx', 'daemon', 'status'],
+        {
+          cwd: process.cwd(),
+          env: buildCliSmokeEnv(),
+        },
+      )
+
+      expect(result.code).toBe(0)
+      expect(result.stdout).toContain('control plane')
     },
   )
 })

@@ -340,16 +340,25 @@ function getBigQueryExportingReader() {
 }
 
 function isBigQueryMetricsEnabled() {
-  // BigQuery metrics are enabled for:
-  // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
-  // 2. Claude for Enterprise (C4E) users
-  // 3. Claude for Teams users
-  const subscriptionType = getSubscriptionType()
-  const isC4EOrTeamUser =
-    isClaudeAISubscriber() &&
-    (subscriptionType === 'enterprise' || subscriptionType === 'team')
+  try {
+    // BigQuery metrics are enabled for:
+    // 1. API customers (excluding Claude.ai subscribers and Bedrock/Vertex)
+    // 2. Claude for Enterprise (C4E) users
+    // 3. Claude for Teams users
+    const subscriptionType = getSubscriptionType()
+    const isC4EOrTeamUser =
+      isClaudeAISubscriber() &&
+      (subscriptionType === 'enterprise' || subscriptionType === 'team')
 
-  return is1PApiCustomer() || isC4EOrTeamUser
+    return is1PApiCustomer() || isC4EOrTeamUser
+  } catch (error) {
+    logForDebugging(
+      `[telemetry] Skipping BigQuery metrics initialization without auth: ${String(
+        error,
+      )}`,
+    )
+    return false
+  }
 }
 
 /**
