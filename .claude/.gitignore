@@ -1,1 +1,5 @@
 settings.local.json
+harness-state.json
+harness-daemon.json
+harness/remote-events.json
+harness/runs/

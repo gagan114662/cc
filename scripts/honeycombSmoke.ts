@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import { enableConfigs } from 'src/utils/config.js'
 import { flushTelemetry, initializeTelemetry } from 'src/utils/telemetry/instrumentation.js'
 import { logOTelEvent } from 'src/utils/telemetry/events.js'
@@ -12,13 +13,17 @@ const repoRoot = path.resolve(import.meta.dir, '..')
 const localSettingsPath = path.join(repoRoot, '.claude', 'settings.local.json')
 const projectSettingsPath = path.join(repoRoot, '.claude', 'settings.json')
 
-const { settings: localSettings, errors: localErrors } =
-  parseSettingsFile(localSettingsPath)
-if (localErrors.length > 0) {
-  throw new Error(
-    `Failed to parse ${localSettingsPath}: ${localErrors.map(error => error.message).join('; ')}`,
-  )
-}
+const localSettings = existsSync(localSettingsPath)
+  ? (() => {
+      const { settings, errors } = parseSettingsFile(localSettingsPath)
+      if (errors.length > 0) {
+        throw new Error(
+          `Failed to parse ${localSettingsPath}: ${errors.map(error => error.message).join('; ')}`,
+        )
+      }
+      return settings
+    })()
+  : undefined
 
 Object.assign(process.env, localSettings?.env ?? {})
 

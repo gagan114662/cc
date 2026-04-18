@@ -1,0 +1,17 @@
+{
+  "version": "1",
+  "runners": [
+    {
+      "id": "claude-primary",
+      "agentKind": "claude",
+      "slotCapacity": 25,
+      "labels": ["shared", "cc", "claude"]
+    },
+    {
+      "id": "codex-primary",
+      "agentKind": "codex",
+      "slotCapacity": 25,
+      "labels": ["shared", "cc", "codex"]
+    }
+  ]
+}

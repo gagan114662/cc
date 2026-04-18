@@ -78,6 +78,8 @@ Common commands:
   auth
   doctor
   config
+  daemon
+  harness
   update
   memory
   session
@@ -141,14 +143,35 @@ Run 'claude <command> --help' for more information on a command.`);
 
   // Fast-path for `--daemon-worker=<kind>` (internal — supervisor spawns this).
   // Must come before the daemon subcommand check: spawned per-worker, so
-  // perf-sensitive. No enableConfigs(), no analytics sinks at this layer —
-  // workers are lean. If a worker kind needs configs/auth (assistant will),
-  // it calls them inside its run() fn.
-  if (feature('DAEMON') && args[0] === '--daemon-worker') {
+  // perf-sensitive. We still enable configs and telemetry here because the
+  // hosted harness workers emit OTLP events and telemetry init touches auth/config
+  // state during startup.
+  if (args[0] === '--daemon-worker') {
+    const {
+      enableConfigs
+    } = await import('../utils/config.js');
+    enableConfigs();
+    const {
+      initSinks
+    } = await import('../utils/sinks.js');
+    initSinks();
+    const {
+      initializeTelemetry
+    } = await import('../utils/telemetry/instrumentation.js');
+    const workerKind = args[1];
+    if (workerKind === 'harness') {
+      // Harness workers already emit direct control-plane and Honeycomb
+      // heartbeats. Start the worker loop immediately and let global telemetry
+      // initialize in the background so launchd runners can register without
+      // getting stuck behind startup telemetry.
+      void initializeTelemetry().catch(() => {});
+    } else {
+      await initializeTelemetry();
+    }
     const {
       runDaemonWorker
     } = await import('../daemon/workerRegistry.js');
-    await runDaemonWorker(args[1]);
+    await runDaemonWorker(workerKind);
     return;
   }
 
@@ -209,7 +232,7 @@ Run 'claude <command> --help' for more information on a command.`);
   }
 
   // Fast-path for `claude daemon [subcommand]`: long-running supervisor.
-  if (feature('DAEMON') && args[0] === 'daemon') {
+  if (args[0] === 'daemon') {
     profileCheckpoint('cli_daemon_path');
     const {
       enableConfigs
@@ -220,9 +243,34 @@ Run 'claude <command> --help' for more information on a command.`);
     } = await import('../utils/sinks.js');
     initSinks();
     const {
+      initializeTelemetry
+    } = await import('../utils/telemetry/instrumentation.js');
+    await initializeTelemetry();
+    const {
       daemonMain
     } = await import('../daemon/main.js');
     await daemonMain(args.slice(1));
+    return;
+  }
+
+  if (args[0] === 'harness') {
+    profileCheckpoint('cli_harness_path');
+    const {
+      enableConfigs
+    } = await import('../utils/config.js');
+    enableConfigs();
+    const {
+      initSinks
+    } = await import('../utils/sinks.js');
+    initSinks();
+    const {
+      initializeTelemetry
+    } = await import('../utils/telemetry/instrumentation.js');
+    await initializeTelemetry();
+    const {
+      harnessMain
+    } = await import('../daemon/harnessCli.js');
+    await harnessMain(args.slice(1));
     return;
   }
 

@@ -20,6 +20,22 @@ CC is a Bun/TypeScript rebuild of the Claude Code CLI for power users and intern
 
 Optional native and browser integrations are loaded lazily, so basic startup and `--help` work even when those packages are not installed locally.
 
+## Hosted Harness Quickstart
+
+To run the hosted harness control plane locally instead of the filesystem fallback:
+
+1. Run `./bin/setup_harness_control_plane`.
+2. Run `source ./.claude/harness.control-plane.env`.
+3. Run `bun ./entrypoints/cli.tsx harness status --json`.
+
+When hosted mode is active, the status payload will report `"controlPlane": { "kind": "postgres-redis" }`.
+
+More detail lives in `docs/harness-control-plane.md`.
+
+For a shared always-on runner setup, use `./bin/setup_shared_harness_control_plane` with real shared Postgres and Redis URLs, then start workers with `./bin/start_shared_harness_daemon`.
+
+For a managed always-on Mac runner, install the launchd workers with `./bin/install_shared_harness_launch_agents`. If you also want Honeycomb export, create `.claude/harness.observability.env` with either `./bin/setup_harness_observability` or `./bin/setup_harness_observability_from_chrome`.
+
 ## Repo Entry Guide
 
 This repository is now flat: the repo root is the real code root.

@@ -1,4 +1,5 @@
 import path from 'node:path'
+import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { parseSettingsFile } from 'src/utils/settings/settings.js'
 
@@ -54,6 +55,7 @@ type VerificationSummary = {
   hasClaudeSessionEvents: boolean
   verdict:
     | 'working'
+    | 'ingest_only'
     | 'no_claude_session_events'
     | 'query_key_missing'
     | 'wrong_key_type'
@@ -132,16 +134,25 @@ function otlpHeadersToParts(value: string | undefined): Record<string, string> {
   )
 }
 
-function loadHoneycombConfig(repoRoot: string): HoneycombConfig {
+function loadLocalSettingsEnv(repoRoot: string): Record<string, string> {
   const settingsPath = path.join(repoRoot, '.claude', 'settings.local.json')
+  if (!existsSync(settingsPath)) {
+    return {}
+  }
   const { settings, errors } = parseSettingsFile(settingsPath)
   if (errors.length > 0) {
     throw new Error(
       `Failed to parse ${settingsPath}: ${errors.map(error => error.message).join('; ')}`,
     )
   }
+  return settings?.env ?? {}
+}
 
-  const env = settings?.env ?? {}
+function loadHoneycombConfig(repoRoot: string): HoneycombConfig {
+  const env = {
+    ...loadLocalSettingsEnv(repoRoot),
+    ...process.env,
+  }
   const otlpParts = otlpHeadersToParts(env.OTEL_EXPORTER_OTLP_HEADERS)
   return {
     apiBaseUrl:
@@ -312,6 +323,8 @@ function buildHtml(summary: VerificationSummary): string {
   const verdictText =
     summary.verdict === 'working'
       ? 'Honeycomb can see the Claude-session lane.'
+      : summary.verdict === 'ingest_only'
+        ? 'Honeycomb export is configured with an ingest key, but query-side verification is not enabled for this environment yet.'
       : summary.verdict === 'no_claude_session_events'
         ? 'Honeycomb query access works, but Claude-session events have not shown up yet.'
         : summary.verdict === 'wrong_key_type'
@@ -390,8 +403,16 @@ function buildHtml(summary: VerificationSummary): string {
         margin-top: 12px;
         padding: 10px 14px;
         border-radius: 999px;
-        background: ${summary.verdict === 'working' ? 'rgba(15,118,110,0.12)' : 'rgba(154,52,18,0.12)'};
-        color: ${summary.verdict === 'working' ? 'var(--accent)' : 'var(--warn)'};
+        background: ${
+          summary.verdict === 'working' || summary.verdict === 'ingest_only'
+            ? 'rgba(15,118,110,0.12)'
+            : 'rgba(154,52,18,0.12)'
+        };
+        color: ${
+          summary.verdict === 'working' || summary.verdict === 'ingest_only'
+            ? 'var(--accent)'
+            : 'var(--warn)'
+        };
         font-weight: 600;
       }
       .grid {
@@ -497,7 +518,7 @@ async function main(): Promise<void> {
 
   if (!config.dataset || !config.serviceName) {
     throw new Error(
-      'Missing Honeycomb dataset or service name. Check .claude/settings.local.json.',
+      'Missing Honeycomb dataset or service name. Check process env or .claude/settings.local.json.',
     )
   }
 
@@ -522,6 +543,27 @@ async function main(): Promise<void> {
   }
 
   const auth = await authenticateHoneycomb(config.apiBaseUrl, queryKey)
+  if (!config.queryKey && auth.type !== 'configuration') {
+    const summary: VerificationSummary = {
+      authType: auth.type,
+      authEnvironment: auth.environment,
+      authTeam: auth.team,
+      dataset: config.dataset,
+      serviceName: config.serviceName,
+      eventCounts: [],
+      claudeSessionCounts: [],
+      recentClaudeSessions: [],
+      hasClaudeSessionEvents: false,
+      verdict: 'ingest_only',
+      generatedAt: new Date().toISOString(),
+    }
+    if (args.htmlPath) {
+      await writeHtmlReport(path.resolve(repoRoot, args.htmlPath), summary)
+    }
+    console.log(JSON.stringify(summary, null, 2))
+    return
+  }
+
   if (auth.type !== 'configuration') {
     const summary: VerificationSummary = {
       authType: auth.type,

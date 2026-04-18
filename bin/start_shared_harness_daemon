@@ -1,0 +1,80 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${ROOT}/.claude/harness.control-plane.shared.env"
+OBS_ENV_FILE="${ROOT}/.claude/harness.observability.env"
+BUN_BIN="$(command -v bun)"
+BUN_BIN_DIR="$(dirname "${BUN_BIN}")"
+RUNNER_NAME=""
+PASSTHROUGH_ARGS=()
+
+if [[ ! -f "$ENV_FILE" ]]; then
+  echo "Missing ${ENV_FILE}. Run ./bin/setup_shared_harness_control_plane first." >&2
+  exit 1
+fi
+
+while (($# > 0)); do
+  case "$1" in
+    --runner)
+      RUNNER_NAME="${2:-}"
+      shift 2
+      ;;
+    --runner=*)
+      RUNNER_NAME="${1#*=}"
+      shift
+      ;;
+    *)
+      PASSTHROUGH_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+
+# shellcheck disable=SC1090
+source "$ENV_FILE"
+if [[ -f "$OBS_ENV_FILE" ]]; then
+  # shellcheck disable=SC1090
+  source "$OBS_ENV_FILE"
+fi
+export PATH="${BUN_BIN_DIR}:${PATH:-/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin}"
+
+if [[ -n "$RUNNER_NAME" ]]; then
+  WORKER_SLOTS="$("${BUN_BIN}" ./scripts/harnessRunnerManifest.ts get "$RUNNER_NAME" --field slotCapacity)"
+  AGENT_KIND="$("${BUN_BIN}" ./scripts/harnessRunnerManifest.ts get "$RUNNER_NAME" --field agentKind)"
+  RUNNER_LABELS="$("${BUN_BIN}" ./scripts/harnessRunnerManifest.ts get "$RUNNER_NAME" --field labelsCsv)"
+  RUNNER_ID="$RUNNER_NAME"
+else
+  WORKER_SLOTS="${CLAUDE_CODE_HARNESS_WORKER_SLOTS:-${CLAUDE_CODE_HARNESS_WORKERS:-50}}"
+  AGENT_KIND="${CLAUDE_CODE_HARNESS_AGENT_KIND:-claude}"
+  RUNNER_ID="${CLAUDE_CODE_HARNESS_RUNNER_ID:-$(hostname -s 2>/dev/null || hostname)-${AGENT_KIND}}"
+  RUNNER_LABELS="${CLAUDE_CODE_HARNESS_RUNNER_LABELS:-shared,cc}"
+fi
+
+if [[ -n "$RUNNER_NAME" ]]; then
+  export CLAUDE_CODE_HARNESS_WORKER_ID="${RUNNER_ID}-worker-1"
+  export CLAUDE_CODE_HARNESS_RUNNER_ID="${RUNNER_ID}"
+  export CLAUDE_CODE_HARNESS_AGENT_KIND="${AGENT_KIND}"
+  export CLAUDE_CODE_HARNESS_WORKER_SLOTS="${WORKER_SLOTS}"
+  export CLAUDE_CODE_HARNESS_RUNNER_LABELS="${RUNNER_LABELS}"
+  export CLAUDE_CODE_HARNESS_LEASE_LIMIT="${CLAUDE_CODE_HARNESS_LEASE_LIMIT:-${WORKER_SLOTS}}"
+  echo "Started shared harness runner ${RUNNER_ID} (${AGENT_KIND}, ${WORKER_SLOTS} slots)."
+  exec "${BUN_BIN}" ./entrypoints/cli.tsx --daemon-worker harness
+fi
+
+DAEMON_ARGS=(
+  "${BUN_BIN}"
+  ./entrypoints/cli.tsx
+  daemon
+  start
+  "--worker-slots=${WORKER_SLOTS}"
+  "--runner-id=${RUNNER_ID}"
+  "--agent-kind=${AGENT_KIND}"
+  "--labels=${RUNNER_LABELS}"
+)
+
+if ((${#PASSTHROUGH_ARGS[@]} > 0)); then
+  DAEMON_ARGS+=("${PASSTHROUGH_ARGS[@]}")
+fi
+
+exec "${DAEMON_ARGS[@]}"

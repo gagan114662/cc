@@ -1,0 +1,77 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+ENV_FILE="${ROOT}/.claude/harness.observability.env"
+DATASET="${HONEYCOMB_DATASET:-cc-harness}"
+SERVICE_NAME="${HONEYCOMB_SERVICE_NAME:-cc-harness}"
+INGEST_KEY="${HONEYCOMB_INGEST_KEY:-}"
+QUERY_KEY="${HONEYCOMB_QUERY_KEY:-}"
+API_BASE_URL="${HONEYCOMB_API_BASE_URL:-https://api.honeycomb.io}"
+OTLP_ENDPOINT="${HONEYCOMB_OTLP_ENDPOINT:-}"
+TEAM_SLUG="${HONEYCOMB_TEAM_SLUG:-}"
+ENVIRONMENT_SLUG="${HONEYCOMB_ENVIRONMENT_SLUG:-}"
+HOSTNAME_VALUE="$(hostname -s 2>/dev/null || hostname)"
+OTEL_RESOURCE_ATTRIBUTES_VALUE="${OTEL_RESOURCE_ATTRIBUTES:-service.namespace=cc,deployment.environment=harness,host.name=${HOSTNAME_VALUE}}"
+
+if [[ -z "$INGEST_KEY" ]]; then
+  echo "Set HONEYCOMB_INGEST_KEY before running this script." >&2
+  echo "Browser login is not enough for OTLP export; the runner needs an ingest key." >&2
+  exit 1
+fi
+
+if [[ -z "$OTLP_ENDPOINT" ]]; then
+  case "$API_BASE_URL" in
+    *eu1*)
+      OTLP_ENDPOINT="https://api.eu1.honeycomb.io:443"
+      ;;
+    *)
+      OTLP_ENDPOINT="https://api.honeycomb.io:443"
+      ;;
+  esac
+fi
+
+if [[ -n "$TEAM_SLUG" ]]; then
+  OTEL_RESOURCE_ATTRIBUTES_VALUE="${OTEL_RESOURCE_ATTRIBUTES_VALUE},honeycomb.team_slug=${TEAM_SLUG}"
+fi
+
+if [[ -n "$ENVIRONMENT_SLUG" ]]; then
+  OTEL_RESOURCE_ATTRIBUTES_VALUE="${OTEL_RESOURCE_ATTRIBUTES_VALUE},honeycomb.environment_slug=${ENVIRONMENT_SLUG}"
+fi
+
+mkdir -p "${ROOT}/.claude"
+
+cat >"$ENV_FILE" <<EOF
+export CLAUDE_CODE_ENABLE_TELEMETRY=true
+export HONEYCOMB_API_BASE_URL='${API_BASE_URL}'
+export HONEYCOMB_DATASET='${DATASET}'
+export HONEYCOMB_SERVICE_NAME='${SERVICE_NAME}'
+export HONEYCOMB_INGEST_KEY='${INGEST_KEY}'
+export HONEYCOMB_TEAM_SLUG='${TEAM_SLUG}'
+export HONEYCOMB_ENVIRONMENT_SLUG='${ENVIRONMENT_SLUG}'
+export OTEL_SERVICE_NAME='${SERVICE_NAME}'
+export OTEL_LOGS_EXPORTER='otlp'
+export OTEL_TRACES_EXPORTER='otlp'
+export OTEL_METRICS_EXPORTER='otlp'
+export OTEL_EXPORTER_OTLP_PROTOCOL='http/protobuf'
+export OTEL_EXPORTER_OTLP_ENDPOINT='${OTLP_ENDPOINT}'
+export OTEL_EXPORTER_OTLP_HEADERS='x-honeycomb-team=${INGEST_KEY},x-honeycomb-dataset=${DATASET}'
+export OTEL_RESOURCE_ATTRIBUTES='${OTEL_RESOURCE_ATTRIBUTES_VALUE}'
+export OTEL_LOG_TOOL_DETAILS='1'
+export OTEL_LOGS_EXPORT_INTERVAL='5000'
+export OTEL_METRIC_EXPORT_INTERVAL='15000'
+EOF
+
+if [[ -n "$QUERY_KEY" ]]; then
+  cat >>"$ENV_FILE" <<EOF
+export HONEYCOMB_QUERY_KEY='${QUERY_KEY}'
+EOF
+fi
+
+echo "Wrote ${ENV_FILE}"
+echo
+echo "Next:"
+echo "  source ${ENV_FILE}"
+echo "  bun run harness:observability:doctor"
+echo "  bun run harness:observability:smoke"
+echo "  bun run harness:service:restart"

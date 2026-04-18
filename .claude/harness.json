@@ -1,0 +1,350 @@
+{
+  "version": "1",
+  "sources": {
+    "github": {
+      "enabled": true,
+      "provider": "gh",
+      "pollIntervalSeconds": 300,
+      "intake": {
+        "mode": "hybrid",
+        "webhookEvents": [
+          "pull_request_opened",
+          "pull_request_push",
+          "pull_request_reopened",
+          "review_requested_changes",
+          "issue_labeled_automation",
+          "default_branch_failure"
+        ]
+      },
+      "reviewOnPush": true,
+      "trackDefaultBranch": true
+    },
+    "cron": {
+      "enabled": true,
+      "pollIntervalSeconds": 60
+    },
+    "remoteTriggers": {
+      "enabled": true,
+      "mirrorEnabled": true,
+      "dispatchMode": "primary",
+      "localFallback": true,
+      "maxWorkers": 50,
+      "pollIntervalSeconds": 300,
+      "inboxPath": ".claude/harness/remote-events.json",
+      "remoteApi": "ccr",
+      "model": "claude-sonnet-4-6"
+    }
+  },
+  "jobs": [
+    {
+      "id": "pr-review-on-push",
+      "title": "PR review on push",
+      "description": "Run built-in reviewer suites whenever an open pull request receives a new commit.",
+      "kind": "review",
+      "agentKind": "claude",
+      "executionMode": "review-only",
+      "codeChangePolicy": "review-only",
+      "promptTemplate": "Review pull request #{{prNumber}} ({{prUrl}}) at head {{headSha}}. Summarize the state, note any blockers, and prepare the branch for unattended merge if all reviewer suites pass.",
+      "targetAgent": "engineering-lead",
+      "concurrencyKey": "github-pr-{{prNumber}}",
+      "autoCommit": false,
+      "autoMerge": true,
+      "priority": 70,
+      "timeoutSeconds": 1200,
+      "maxParallelism": 40,
+      "repoHealthImpact": "safe",
+      "retryPolicy": {
+        "maxAttempts": 1,
+        "backoffSeconds": 0
+      },
+      "budget": {
+        "maxUsd": 10,
+        "warnUsd": 8,
+        "defaultAttemptUsd": 0.15
+      },
+      "escalationPolicy": {
+        "onFailure": "retry",
+        "onBudgetExceeded": "pause_repo",
+        "notify": []
+      },
+      "verification": {
+        "commands": [],
+        "requirePassing": true
+      },
+      "reviewerSuites": [
+        "scope",
+        "reliability",
+        "security",
+        "test-quality",
+        "release-readiness"
+      ],
+      "sourceBindings": [
+        {
+          "type": "github",
+          "event": "pull_request_opened"
+        },
+        {
+          "type": "github",
+          "event": "pull_request_push"
+        },
+        {
+          "type": "github",
+          "event": "pull_request_reopened"
+        }
+      ]
+    },
+    {
+      "id": "red-main-repair",
+      "title": "Red main repair",
+      "description": "Take ownership of default-branch regressions, pause merges, and drive the fastest safe repair or revert.",
+      "kind": "repair",
+      "agentKind": "claude",
+      "executionMode": "lead-session",
+      "codeChangePolicy": "may-edit",
+      "promptTemplate": "Default branch {{defaultBranch}} is red at {{headSha}} from workflow {{workflowName}}. Fix or revert the regression without waiting for a human. If the fastest safe response is a revert, do it. Keep merges paused until the branch is healthy again.",
+      "targetAgent": "engineering-lead",
+      "concurrencyKey": "default-branch-{{defaultBranch}}",
+      "autoCommit": true,
+      "autoMerge": false,
+      "priority": 100,
+      "timeoutSeconds": 3600,
+      "maxParallelism": 1,
+      "repoHealthImpact": "default-branch",
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffSeconds": 120
+      },
+      "budget": {
+        "maxUsd": 20,
+        "warnUsd": 15,
+        "defaultAttemptUsd": 0.5
+      },
+      "escalationPolicy": {
+        "onFailure": "pause_repo",
+        "onBudgetExceeded": "pause_repo",
+        "notify": []
+      },
+      "verification": {
+        "commands": [
+          "bun run test:repo",
+          "bun run build"
+        ],
+        "requirePassing": true
+      },
+      "reviewerSuites": [
+        "scope",
+        "reliability",
+        "security",
+        "test-quality",
+        "release-readiness"
+      ],
+      "sourceBindings": [
+        {
+          "type": "github",
+          "event": "default_branch_failure"
+        }
+      ]
+    },
+    {
+      "id": "release-health-sweep",
+      "title": "Release health sweep",
+      "description": "Perform the recurring CI and release-health sweep for this repository.",
+      "kind": "maintenance",
+      "agentKind": "either",
+      "executionMode": "review-only",
+      "codeChangePolicy": "review-only",
+      "promptTemplate": "Run the scheduled release-health sweep for this repository. Summarize CI health, unstable checks, and any new blockers since the prior sweep.",
+      "targetAgent": "engineering-lead",
+      "concurrencyKey": "release-health-sweep",
+      "autoCommit": false,
+      "autoMerge": false,
+      "priority": 40,
+      "timeoutSeconds": 1800,
+      "maxParallelism": 1,
+      "repoHealthImpact": "serialized",
+      "retryPolicy": {
+        "maxAttempts": 1,
+        "backoffSeconds": 0
+      },
+      "budget": {
+        "maxUsd": 8,
+        "warnUsd": 6,
+        "defaultAttemptUsd": 0.1
+      },
+      "escalationPolicy": {
+        "onFailure": "retry",
+        "onBudgetExceeded": "pause_repo",
+        "notify": []
+      },
+      "verification": {
+        "commands": [
+          "bun run test:repo",
+          "bun run build"
+        ],
+        "requirePassing": true
+      },
+      "reviewerSuites": [
+        "reliability",
+        "release-readiness"
+      ],
+      "sourceBindings": [
+        {
+          "type": "cron",
+          "cron": "0 11 * * 1-5"
+        }
+      ]
+    },
+    {
+      "id": "review-comment-follow-up",
+      "title": "Review comment follow-up",
+      "description": "Convert requested changes and automation labels into a concrete follow-up lane that can revise the branch without waiting for a human.",
+      "kind": "implementation",
+      "agentKind": "codex",
+      "executionMode": "lead-session",
+      "codeChangePolicy": "may-edit",
+      "promptTemplate": "Follow up on review feedback for pull request #{{prNumber}} ({{prUrl}}). Apply the requested changes, keep the diff focused, rerun the required verification, and prepare the branch to re-enter unattended review.",
+      "targetAgent": "engineering-lead",
+      "concurrencyKey": "github-pr-follow-up-{{prNumber}}",
+      "autoCommit": true,
+      "autoMerge": false,
+      "priority": 85,
+      "timeoutSeconds": 3600,
+      "maxParallelism": 12,
+      "repoHealthImpact": "serialized",
+      "retryPolicy": {
+        "maxAttempts": 2,
+        "backoffSeconds": 180
+      },
+      "budget": {
+        "maxUsd": 15,
+        "warnUsd": 10,
+        "defaultAttemptUsd": 0.35
+      },
+      "escalationPolicy": {
+        "onFailure": "pause_repo",
+        "onBudgetExceeded": "pause_repo",
+        "notify": []
+      },
+      "verification": {
+        "commands": [
+          "bun run test:repo",
+          "bun run build"
+        ],
+        "requirePassing": true
+      },
+      "reviewerSuites": [
+        "scope",
+        "reliability",
+        "security",
+        "test-quality",
+        "release-readiness"
+      ],
+      "sourceBindings": [
+        {
+          "type": "github",
+          "event": "review_requested_changes"
+        },
+        {
+          "type": "github",
+          "event": "issue_labeled_automation",
+          "label": "codex:auto"
+        }
+      ]
+    }
+  ],
+  "reviewers": [
+    {
+      "id": "scope",
+      "title": "Scope reviewer",
+      "kind": "builtin",
+      "blocking": true,
+      "policyTags": [
+        "mergeability",
+        "scope"
+      ],
+      "appliesToKinds": [
+        "review",
+        "repair",
+        "maintenance",
+        "implementation"
+      ],
+      "instructions": "Block oversized or draft work, and keep diffs narrow enough to merge safely."
+    },
+    {
+      "id": "reliability",
+      "title": "Reliability reviewer",
+      "kind": "builtin",
+      "blocking": true,
+      "policyTags": [
+        "ci",
+        "verification",
+        "mainline-health"
+      ],
+      "appliesToKinds": [
+        "review",
+        "repair",
+        "maintenance",
+        "implementation"
+      ],
+      "instructions": "Require passing verification commands and healthy pull request checks before merge."
+    },
+    {
+      "id": "security",
+      "title": "Security reviewer",
+      "kind": "builtin",
+      "blocking": true,
+      "policyTags": [
+        "security"
+      ],
+      "appliesToKinds": [
+        "review",
+        "repair",
+        "implementation"
+      ],
+      "instructions": "Block obvious secrets exposure or dangerous permission/config changes, and warn on sensitive surfaces."
+    },
+    {
+      "id": "test-quality",
+      "title": "Test quality reviewer",
+      "kind": "builtin",
+      "blocking": true,
+      "policyTags": [
+        "testing"
+      ],
+      "appliesToKinds": [
+        "review",
+        "repair",
+        "implementation"
+      ],
+      "instructions": "Require meaningful verification for code-producing work and flag suspiciously untested diffs."
+    },
+    {
+      "id": "release-readiness",
+      "title": "Release readiness reviewer",
+      "kind": "builtin",
+      "blocking": true,
+      "policyTags": [
+        "release",
+        "mergeability"
+      ],
+      "appliesToKinds": [
+        "review",
+        "repair",
+        "maintenance",
+        "implementation"
+      ],
+      "instructions": "Block drafts, merge conflicts, or release blockers that would make unattended merge unsafe."
+    }
+  ],
+  "autonomy": {
+    "autoMerge": true,
+    "deploy": "disabled",
+    "pauseOnMainRed": true,
+    "createRevertJobOnRegression": true
+  },
+  "learning": {
+    "knowledgePath": ".claude/harness/feedback.md",
+    "minimumRepeatCount": 2,
+    "attachToJobPrompts": true
+  }
+}

@@ -47,6 +47,9 @@ import { isInITerm2 } from './swarm/backends/detection.js'
 
 const VALID_WORKTREE_SLUG_SEGMENT = /^[a-zA-Z0-9._-]+$/
 const MAX_WORKTREE_SLUG_LENGTH = 64
+const WORKTREE_SETUP_SCRIPT_RELATIVE_PATH = 'bin/setup_workspace'
+const WORKTREE_ENV_FILE_NAME = '.env'
+const WORKTREE_SETUP_TIMEOUT_MS = 15 * 60 * 1000
 
 /**
  * Validates a worktree slug to prevent path traversal and directory escape.
@@ -507,9 +510,10 @@ export async function copyWorktreeIncludeFiles(
  * Post-creation setup for a newly created worktree.
  * Propagates settings.local.json, configures git hooks, and symlinks directories.
  */
-async function performPostCreationSetup(
+export async function performPostCreationSetup(
   repoRoot: string,
   worktreePath: string,
+  parentWorktreePath: string = repoRoot,
 ): Promise<void> {
   // Copy settings.local.json to the worktree's .claude directory
   // This propagates local settings (which may contain secrets) to the worktree
@@ -584,8 +588,67 @@ async function performPostCreationSetup(
     await symlinkDirectories(repoRoot, worktreePath, dirsToSymlink)
   }
 
+  const sourceEnvPath = join(parentWorktreePath, WORKTREE_ENV_FILE_NAME)
+  const destEnvPath = join(worktreePath, WORKTREE_ENV_FILE_NAME)
+  try {
+    const existingDest = await stat(destEnvPath).then(
+      () => true,
+      () => false,
+    )
+    if (!existingDest) {
+      await copyFile(sourceEnvPath, destEnvPath)
+      logForDebugging(`Copied ${WORKTREE_ENV_FILE_NAME} to worktree: ${destEnvPath}`)
+    }
+  } catch (e: unknown) {
+    const code = getErrnoCode(e)
+    if (code !== 'ENOENT') {
+      logForDebugging(
+        `Failed to copy ${WORKTREE_ENV_FILE_NAME}: ${(e as Error).message}`,
+        { level: 'warn' },
+      )
+    }
+  }
+
   // Copy gitignored files specified in .worktreeinclude (best-effort)
   await copyWorktreeIncludeFiles(repoRoot, worktreePath)
+
+  const setupScriptPath = join(worktreePath, WORKTREE_SETUP_SCRIPT_RELATIVE_PATH)
+  const setupScriptExists = await stat(setupScriptPath).then(
+    stats => stats.isFile(),
+    () => false,
+  )
+  if (setupScriptExists) {
+    const setupResult = await execFileNoThrowWithCwd(
+      'bash',
+      [`./${WORKTREE_SETUP_SCRIPT_RELATIVE_PATH}`],
+      {
+        cwd: worktreePath,
+        timeout: WORKTREE_SETUP_TIMEOUT_MS,
+        env: {
+          ...process.env,
+          CLAUDE_CODE_PARENT_WORKTREE_PATH: parentWorktreePath,
+          CLAUDE_CODE_REPO_ROOT: repoRoot,
+          CLAUDE_CODE_WORKTREE_PATH: worktreePath,
+        },
+      },
+    )
+    if (setupResult.code !== 0) {
+      const details = [
+        setupResult.stderr.trim(),
+        setupResult.stdout.trim(),
+      ]
+        .filter(Boolean)
+        .join('\n')
+      throw new Error(
+        `Worktree setup script ${WORKTREE_SETUP_SCRIPT_RELATIVE_PATH} failed with exit code ${setupResult.code}${
+          details ? `:\n${details}` : ''
+        }`,
+      )
+    }
+    logForDebugging(
+      `Ran ${WORKTREE_SETUP_SCRIPT_RELATIVE_PATH} for worktree: ${worktreePath}`,
+    )
+  }
 
   // The core.hooksPath config-set above is fragile: husky's prepare script
   // (`git config core.hooksPath .husky`) runs on every `bun install` and
@@ -737,6 +800,7 @@ export async function createWorktreeForSession(
     }
 
     const originalBranch = await getBranch()
+    const parentWorktreePath = findGitRoot(originalCwd) ?? gitRoot
 
     const createStart = Date.now()
     const { worktreePath, worktreeBranch, headCommit, existed } =
@@ -749,7 +813,21 @@ export async function createWorktreeForSession(
       logForDebugging(
         `Created worktree at: ${worktreePath} on branch: ${worktreeBranch}`,
       )
-      await performPostCreationSetup(gitRoot, worktreePath)
+      try {
+        await performPostCreationSetup(gitRoot, worktreePath, parentWorktreePath)
+      } catch (error) {
+        await execFileNoThrowWithCwd(
+          gitExe(),
+          ['worktree', 'remove', '--force', worktreePath],
+          { cwd: gitRoot },
+        )
+        await execFileNoThrowWithCwd(
+          gitExe(),
+          ['branch', '-D', worktreeBranch],
+          { cwd: gitRoot },
+        )
+        throw error
+      }
       creationDurationMs = Date.now() - createStart
     }
 
@@ -930,6 +1008,7 @@ export async function createAgentWorktree(slug: string): Promise<{
         'Configure WorktreeCreate/WorktreeRemove hooks in settings.json to use worktree isolation with other VCS systems.',
     )
   }
+  const parentWorktreePath = findGitRoot(getCwd()) ?? gitRoot
 
   const { worktreePath, worktreeBranch, headCommit, existed } =
     await getOrCreateWorktree(gitRoot, slug)
@@ -938,7 +1017,21 @@ export async function createAgentWorktree(slug: string): Promise<{
     logForDebugging(
       `Created agent worktree at: ${worktreePath} on branch: ${worktreeBranch}`,
     )
-    await performPostCreationSetup(gitRoot, worktreePath)
+    try {
+      await performPostCreationSetup(gitRoot, worktreePath, parentWorktreePath)
+    } catch (error) {
+      await execFileNoThrowWithCwd(
+        gitExe(),
+        ['worktree', 'remove', '--force', worktreePath],
+        { cwd: gitRoot },
+      )
+      await execFileNoThrowWithCwd(
+        gitExe(),
+        ['branch', '-D', worktreeBranch],
+        { cwd: gitRoot },
+      )
+      throw error
+    }
   } else {
     // Bump mtime so the periodic stale-worktree cleanup doesn't consider this
     // worktree stale — the fast-resume path is read-only and leaves the original

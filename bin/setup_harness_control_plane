@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+COMPOSE_FILE="${ROOT}/docker-compose.harness.yml"
+ENV_FILE="${ROOT}/.claude/harness.control-plane.env"
+POSTGRES_PORT="${CLAUDE_CODE_HARNESS_POSTGRES_PORT:-54329}"
+REDIS_PORT="${CLAUDE_CODE_HARNESS_REDIS_PORT:-63879}"
+TENANT_ID="${CLAUDE_CODE_HARNESS_TENANT_ID:-$(basename "$ROOT")-local}"
+
+if docker compose version >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker compose)
+elif command -v docker-compose >/dev/null 2>&1; then
+  COMPOSE_CMD=(docker-compose)
+else
+  echo "Docker Compose is required. Install Docker Desktop or docker-compose first." >&2
+  exit 1
+fi
+
+if ! docker info >/dev/null 2>&1; then
+  echo "Docker is not running. Start Docker Desktop and retry." >&2
+  exit 1
+fi
+
+mkdir -p "${ROOT}/.claude"
+
+echo "Starting harness control plane services..."
+"${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" up -d harness-postgres harness-redis
+
+echo "Waiting for Postgres..."
+for _ in $(seq 1 30); do
+  if "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" exec -T harness-postgres \
+    pg_isready -U cc_harness -d cc_harness >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+if ! "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" exec -T harness-postgres \
+  pg_isready -U cc_harness -d cc_harness >/dev/null 2>&1; then
+  echo "Postgres did not become ready in time." >&2
+  exit 1
+fi
+
+echo "Waiting for Redis..."
+for _ in $(seq 1 30); do
+  if "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" exec -T harness-redis \
+    redis-cli ping >/dev/null 2>&1; then
+    break
+  fi
+  sleep 1
+done
+
+if ! "${COMPOSE_CMD[@]}" -f "$COMPOSE_FILE" exec -T harness-redis \
+  redis-cli ping >/dev/null 2>&1; then
+  echo "Redis did not become ready in time." >&2
+  exit 1
+fi
+
+cat >"$ENV_FILE" <<EOF
+export CLAUDE_CODE_HARNESS_CONTROL_PLANE_BACKEND=postgres-redis
+export CLAUDE_CODE_HARNESS_POSTGRES_URL='postgres://cc_harness:cc_harness@127.0.0.1:${POSTGRES_PORT}/cc_harness'
+export CLAUDE_CODE_HARNESS_REDIS_URL='redis://127.0.0.1:${REDIS_PORT}'
+export CLAUDE_CODE_HARNESS_TENANT_ID='${TENANT_ID}'
+EOF
+
+echo
+echo "Hosted harness control plane is ready."
+echo "Env file: ${ENV_FILE}"
+echo
+echo "Next:"
+echo "  source ${ENV_FILE}"
+echo "  bun ./entrypoints/cli.tsx harness status --json"
