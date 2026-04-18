@@ -104,19 +104,6 @@ export async function inspectConductorRepo(
     )
   }
 
-  const gbLocal = remotes.find(
-    remote =>
-      remote.name === 'gb-local' &&
-      remote.kind === 'fetch' &&
-      remote.url === '.',
-  )
-  if (gbLocal) {
-    problems.push('gitbutler_local_remote_only')
-    recommendations.push(
-      'This repo currently uses GitButler local syncing only (`gb-local -> .`). Conductor still needs a GitHub-backed `origin` remote.',
-    )
-  }
-
   return {
     repoPath,
     gitRepo: true,
