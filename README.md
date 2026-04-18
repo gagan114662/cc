@@ -1,4 +1,26 @@
-# CC Repo Entry Guide
+# CC
+
+CC is a Bun/TypeScript rebuild of the Claude Code CLI for power users and internal teams. It combines interactive coding, MCP and plugin integrations, multi-agent workflows, Conductor workspace readiness checks, and autoresearch guardrails in one terminal product.
+
+## What It Offers
+
+- Interactive coding sessions with print, resume, plan, and agent workflows.
+- Team-oriented execution via employee and engineering-lead commands.
+- MCP, plugin, and skill loading for local and remote tool integrations.
+- Conductor readiness diagnostics for workspace setup and release flow.
+- Autoresearch, telemetry, and test-quality checks that keep changes honest.
+
+## Quickstart
+
+1. Run `bun install`.
+2. Run `bun run repo:bootstrap` for a short orientation pass.
+3. Run `bun run build` to produce `dist/cli.js`.
+4. Run `bun ./entrypoints/cli.tsx --help` for the top-level CLI surface.
+5. Run `bun run conductor:doctor --repo .` to verify the repo is ready for Conductor workspaces.
+
+Optional native and browser integrations are loaded lazily, so basic startup and `--help` work even when those packages are not installed locally.
+
+## Repo Entry Guide
 
 This repository is now flat: the repo root is the real code root.
 

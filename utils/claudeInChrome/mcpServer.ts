@@ -1,6 +1,5 @@
 import {
   type ClaudeForChromeContext,
-  createClaudeForChromeMcpServer,
   type Logger,
   type PermissionMode,
 } from '@ant/claude-for-chrome-mcp'
@@ -18,6 +17,7 @@ import { getClaudeAIOAuthTokens } from '../auth.js'
 import { enableConfigs, getGlobalConfig, saveGlobalConfig } from '../config.js'
 import { logForDebugging } from '../debug.js'
 import { isEnvTruthy } from '../envUtils.js'
+import { requireClaudeInChromeMcpModule } from './runtime.js'
 import { sideQuery } from '../sideQuery.js'
 import { getAllSocketPaths, getSecureSocketPath } from './common.js'
 
@@ -249,6 +249,7 @@ export async function runClaudeInChromeMcpServer(): Promise<void> {
   enableConfigs()
   initializeAnalyticsSink()
   const context = createChromeContext()
+  const { createClaudeForChromeMcpServer } = requireClaudeInChromeMcpModule()
 
   const server = createClaudeForChromeMcpServer(context)
   const transport = new StdioServerTransport()

@@ -46,6 +46,48 @@ async function main(): Promise<void> {
     return;
   }
 
+  // Fast-path for top-level help: keep first-run UX available even when
+  // optional native or integration packages are not installed locally.
+  if (args.length === 1 && (args[0] === '--help' || args[0] === '-h' || args[0] === 'help')) {
+    // biome-ignore lint/suspicious/noConsole:: intentional console output
+    console.log(`Usage: claude [options] [prompt]
+
+Claude Code - starts an interactive session by default, use -p/--print for non-interactive output.
+
+Arguments:
+  [prompt]                             Your prompt
+
+Common options:
+  -h, --help                           Display help for command
+  -v, -V, --version                    Display version
+  -p, --print                          Print response and exit
+  -c, --continue                       Continue the most recent conversation
+  -r, --resume [value]                 Resume a conversation by session ID or search term
+  --model <model>                      Model for the current session
+  --permission-mode <mode>             Permission mode for the current session
+  --settings <file-or-json>            Load additional settings
+  --add-dir <directories...>           Additional directories to allow tool access to
+  --mcp-config <configs...>            Load MCP servers from JSON files or strings
+  --plugin-dir <path>                  Load plugins from a directory for this session
+  --output-format <format>             Output format for --print mode
+  --dangerously-skip-permissions       Bypass all permission checks
+
+Common commands:
+  mcp
+  plugin
+  auth
+  doctor
+  config
+  update
+  memory
+  session
+  agents
+  release-notes
+
+Run 'claude <command> --help' for more information on a command.`);
+    return;
+  }
+
   // For all other paths, load the startup profiler
   const {
     profileCheckpoint

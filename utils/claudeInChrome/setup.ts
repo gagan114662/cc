@@ -1,4 +1,3 @@
-import { BROWSER_TOOLS } from '@ant/claude-for-chrome-mcp'
 import { chmod, mkdir, readFile, writeFile } from 'fs/promises'
 import { homedir } from 'os'
 import { join } from 'path'
@@ -29,6 +28,10 @@ import {
   openInChrome,
 } from './common.js'
 import { getChromeSystemPrompt } from './prompt.js'
+import {
+  getBrowserTools,
+  isClaudeInChromeMcpAvailable,
+} from './runtime.js'
 import { isChromeExtensionInstalledPortable } from './setupPortable.js'
 
 const CHROME_EXTENSION_RECONNECT_URL = 'https://clau.de/chrome/reconnect'
@@ -74,6 +77,11 @@ export function shouldAutoEnableClaudeInChrome(): boolean {
     return shouldAutoEnable
   }
 
+  if (!isClaudeInChromeMcpAvailable()) {
+    shouldAutoEnable = false
+    return shouldAutoEnable
+  }
+
   shouldAutoEnable =
     getIsInteractive() &&
     isChromeExtensionInstalled_CACHED_MAY_BE_STALE() &&
@@ -94,7 +102,14 @@ export function setupClaudeInChrome(): {
   systemPrompt: string
 } {
   const isNativeBuild = isInBundledMode()
-  const allowedTools = BROWSER_TOOLS.map(
+  const browserTools = getBrowserTools()
+  if (browserTools.length === 0) {
+    throw new Error(
+      'Claude in Chrome is enabled, but the optional @ant/claude-for-chrome-mcp package is not installed.',
+    )
+  }
+
+  const allowedTools = browserTools.map(
     tool => `mcp__claude-in-chrome__${tool.name}`,
   )
 

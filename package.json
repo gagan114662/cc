@@ -1,9 +1,30 @@
 {
   "name": "claude-code-rebuilt",
+  "description": "Agentic coding CLI with team workflows, MCP integrations, Conductor readiness checks, and autoresearch guardrails.",
   "version": "0.0.0-rebuilt",
   "private": true,
   "type": "module",
   "packageManager": "bun@1.2.23",
+  "homepage": "https://github.com/gagan114662/cc",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/gagan114662/cc.git"
+  },
+  "bugs": {
+    "url": "https://github.com/gagan114662/cc/issues"
+  },
+  "keywords": [
+    "agent",
+    "ai",
+    "bun",
+    "cli",
+    "conductor",
+    "developer-tools",
+    "mcp"
+  ],
+  "engines": {
+    "bun": ">=1.2.23"
+  },
   "bin": {
     "claude": "./entrypoints/cli.tsx"
   },
@@ -25,7 +46,9 @@
     "build:honeycomb-smoke": "bun build ./scripts/honeycombSmoke.ts --outfile ./dist/honeycomb-smoke.js --target bun --format esm --define MACRO='{\"VERSION\":\"0.0.0-rebuilt\",\"BUILD_TIME\":\"2026-03-31T00:00:00.000Z\",\"FEEDBACK_CHANNEL\":\"#claude-code\",\"ISSUES_EXPLAINER\":\"open an issue\",\"PACKAGE_URL\":\"@anthropic-ai/claude-code\",\"NATIVE_PACKAGE_URL\":\"@anthropic-ai/claude-code-native\",\"VERSION_CHANGELOG\":\"\"}'",
     "build:honeycomb-verify": "bun build ./scripts/honeycombVerify.ts --outfile ./dist/honeycomb-verify.js --target bun --format esm --define MACRO='{\"VERSION\":\"0.0.0-rebuilt\",\"BUILD_TIME\":\"2026-03-31T00:00:00.000Z\",\"FEEDBACK_CHANNEL\":\"#claude-code\",\"ISSUES_EXPLAINER\":\"open an issue\",\"PACKAGE_URL\":\"@anthropic-ai/claude-code\",\"NATIVE_PACKAGE_URL\":\"@anthropic-ai/claude-code-native\",\"VERSION_CHANGELOG\":\"\"}'",
     "smoke:cli": "bun ./entrypoints/cli.tsx --version",
+    "smoke:help": "bun ./entrypoints/cli.tsx --help",
     "smoke:bundle": "bun --preload ./test/preload.ts ./dist/cli.js --version",
+    "smoke:bundle-help": "bun ./dist/cli.js --help",
     "smoke:employee": "bun ./scripts/employeeSmoke.ts",
     "smoke:honeycomb": "bun run build:honeycomb-smoke && bun ./dist/honeycomb-smoke.js",
     "honeycomb:verify": "bun ./scripts/honeycombVerify.ts --json",
@@ -36,7 +59,7 @@
     "test:quality:proof": "bun ./scripts/testQualityCheck.ts --root . --html ./test-quality-proof.html",
     "test:deterministic-harness": "bun test ./test/deterministicHarnessRuntime.test.ts",
     "test:autoresearch": "bun test ./test/autoresearchRuntime.test.ts ./test/autoresearchClaudeCodeSessions.test.ts",
-    "pipeline": "bun run typecheck && bun run lint && bun run test:repo && bun run build && bun run build:employee-smoke && bun run smoke:cli && bun run smoke:bundle && bun run smoke:employee"
+    "pipeline": "bun run typecheck && bun run lint && bun run test:repo && bun run build && bun run build:employee-smoke && bun run smoke:cli && bun run smoke:help && bun run smoke:bundle && bun run smoke:bundle-help && bun run smoke:employee"
   },
   "dependencies": {
     "@alcalzone/ansi-tokenize": "^0.1.3",
