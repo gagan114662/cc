@@ -13,6 +13,7 @@ import { createUserMessage, normalizeMessages } from '../../utils/messages.js'
 import {
   buildWorkflowStepExecutionPrompt,
   buildWorkflowSynthesisPrompt,
+  parseWorkflowStepState,
   type WorkflowCommand,
   type WorkflowStepOutcome,
 } from '../../utils/workflowCommands.js'
@@ -201,7 +202,11 @@ export async function executeForkedWorkflow({
       transcriptSubdir,
     })
 
-    stepOutcomes.push({ step, result })
+    stepOutcomes.push({
+      step,
+      result,
+      state: parseWorkflowStepState(result, command),
+    })
   }
 
   const synthesisPrompt = buildWorkflowSynthesisPrompt(

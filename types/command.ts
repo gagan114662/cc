@@ -192,9 +192,12 @@ export type CommandBase = {
   isMcp?: boolean
   argumentHint?: string // Hint text for command arguments (displayed in gray after command)
   whenToUse?: string // From the "Skill" spec. Detailed usage scenarios for when to use this command
+  verbs?: string[] // First-class operations exposed by a workflow/skill (e.g. triage, refresh, publish)
   inputs?: string[] // Structured workflow/skill inputs for agent-facing discovery
   outputs?: string[] // Structured workflow/skill outputs for agent-facing discovery
+  artifactKinds?: string[] // Durable artifacts the workflow/skill is expected to produce
   successCriteria?: string[] // Completion criteria for structured workflows/skills
+  handoffFields?: string[] // Structured state keys passed between workflow steps
   workflowSteps?: WorkflowStep[] // Structured procedure for workflow-backed commands
   version?: string // Version of the command/skill
   disableModelInvocation?: boolean // Whether to disable this command from being invoked by models

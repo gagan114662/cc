@@ -161,15 +161,24 @@ name: Pipeline Refresh
 description: Rebuild the pipeline from the current public surface
 context: fork
 when_to_use: Refresh the growth plan after market, messaging, or demand changes
+verbs:
+  - refresh pipeline
+  - prioritize outreach
 inputs:
   - Website and public positioning
   - Current ICP assumptions
 outputs:
   - Updated pipeline brief
   - Prioritized outreach backlog
+artifact_kinds:
+  - pipeline brief
+  - outreach backlog
 success_criteria:
   - Identifies stale assumptions
   - Produces the next highest-leverage actions
+handoff_fields:
+  - stale_assumptions
+  - priority_segment
 steps:
   - title: Gather evidence
     objective: Review the website and current positioning assumptions
@@ -206,6 +215,10 @@ highest-leverage GTM actions.`,
     expect(workflow.userFacingName?.()).toBe('Pipeline Refresh')
     expect(workflow.context).toBe('fork')
     expect(workflow.progressMessage).toBe('running workflow')
+    expect(workflow.verbs).toEqual([
+      'refresh pipeline',
+      'prioritize outreach',
+    ])
     expect(workflow.inputs).toEqual([
       'Website and public positioning',
       'Current ICP assumptions',
@@ -214,9 +227,17 @@ highest-leverage GTM actions.`,
       'Updated pipeline brief',
       'Prioritized outreach backlog',
     ])
+    expect(workflow.artifactKinds).toEqual([
+      'pipeline brief',
+      'outreach backlog',
+    ])
     expect(workflow.successCriteria).toEqual([
       'Identifies stale assumptions',
       'Produces the next highest-leverage actions',
+    ])
+    expect(workflow.handoffFields).toEqual([
+      'stale_assumptions',
+      'priority_segment',
     ])
     expect(workflow.workflowSteps).toEqual([
       {
@@ -239,10 +260,19 @@ highest-leverage GTM actions.`,
     expect(prompt[0]).toMatchObject({ type: 'text' })
     expect((prompt[0] as { text: string }).text).toContain('Workflow contract:')
     expect((prompt[0] as { text: string }).text).toContain(
+      'Operations: refresh pipeline, prioritize outreach',
+    )
+    expect((prompt[0] as { text: string }).text).toContain(
       'Expected outputs: Updated pipeline brief, Prioritized outreach backlog',
     )
     expect((prompt[0] as { text: string }).text).toContain(
+      'Artifact kinds: pipeline brief, outreach backlog',
+    )
+    expect((prompt[0] as { text: string }).text).toContain(
       'Success criteria: Identifies stale assumptions, Produces the next highest-leverage actions',
+    )
+    expect((prompt[0] as { text: string }).text).toContain(
+      'Structured handoff: stale_assumptions, priority_segment',
     )
     expect((prompt[0] as { text: string }).text).toContain('Procedure:')
     expect((prompt[0] as { text: string }).text).toContain('1. Gather evidence')

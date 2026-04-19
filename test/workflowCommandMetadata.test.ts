@@ -10,12 +10,15 @@ function makeWorkflowCommand(): Command {
     description: 'Rebuild the GTM pipeline from the current public surface',
     whenToUse:
       'The user needs a refreshed plan after messaging, market, or demand changes',
+    verbs: ['refresh pipeline', 'prioritize outreach'],
     inputs: ['Website and positioning', 'Current ICP assumptions'],
     outputs: ['Updated pipeline brief', 'Prioritized outreach backlog'],
+    artifactKinds: ['pipeline brief', 'outreach backlog'],
     successCriteria: [
       'Calls out stale assumptions',
       'Produces the next highest-leverage actions',
     ],
+    handoffFields: ['stale_assumptions', 'priority_segment'],
     workflowSteps: [
       {
         title: 'Gather evidence',
@@ -47,9 +50,12 @@ describe('workflow command metadata', () => {
     const rendered = formatCommandsWithinBudget([makeWorkflowCommand()])
 
     expect(rendered).toContain('Use when:')
+    expect(rendered).toContain('Operations:')
     expect(rendered).toContain('Inputs:')
     expect(rendered).toContain('Outputs:')
+    expect(rendered).toContain('Artifacts:')
     expect(rendered).toContain('Success:')
+    expect(rendered).toContain('Handoff:')
     expect(rendered).toContain('Procedure:')
     expect(rendered).toContain('Tools:')
     expect(rendered).toContain('Arguments:')
@@ -62,8 +68,10 @@ describe('workflow command metadata', () => {
 
     expect(suggestions).toHaveLength(1)
     expect(suggestions[0]?.tag).toBe('workflow')
+    expect(suggestions[0]?.description).toContain('Operations:')
     expect(suggestions[0]?.description).toContain('Outputs:')
     expect(suggestions[0]?.description).toContain('Updated pipeline brief')
+    expect(suggestions[0]?.description).toContain('Artifacts:')
     expect(suggestions[0]?.description).toContain('Procedure:')
   })
 })

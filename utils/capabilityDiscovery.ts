@@ -14,9 +14,12 @@ type CapabilityLike = {
   description?: string
   aliases?: string[]
   whenToUse?: string
+  verbs?: string[]
   inputs?: string[]
   outputs?: string[]
+  artifactKinds?: string[]
   successCriteria?: string[]
+  handoffFields?: string[]
   workflowSteps?: WorkflowStep[]
   allowedTools?: string[]
   loadedFrom?: Command['loadedFrom']
@@ -235,9 +238,12 @@ function collectCapabilityText(capability: CapabilityLike): string {
     capability.aliases?.join(' '),
     capability.description,
     capability.whenToUse,
+    capability.verbs?.join(' '),
     capability.inputs?.join(' '),
     capability.outputs?.join(' '),
+    capability.artifactKinds?.join(' '),
     capability.successCriteria?.join(' '),
+    capability.handoffFields?.join(' '),
     capability.workflowSteps
       ?.map(step =>
         [step.title, step.objective, step.success, step.tools?.join(' ')]
