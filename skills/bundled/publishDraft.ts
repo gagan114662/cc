@@ -74,6 +74,7 @@ export function registerPublishDraftWorkflow(): void {
     userInvocable: true,
     context: 'fork',
     workflowRuntime: 'code',
+    workflowArtifactValidator: 'publish-draft',
     capabilityGrants: ['docs', 'discovery', 'workspace'],
     async getPromptForCommand(args) {
       return [{ type: 'text', text: buildPublishDraftWorkflowPrompt(args) }]

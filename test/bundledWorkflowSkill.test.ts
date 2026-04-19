@@ -83,6 +83,7 @@ describe('bundled workflow skills', () => {
       'workspace',
       'cli',
     ])
+    expect(pipeline?.workflowArtifactValidator).toBe('pipeline-refresh')
     expect(pipeline?.artifactKinds).toContain('pipeline brief')
     expect(pipeline?.verbs).toContain('refresh pipeline')
     expect(pipeline?.workflowSteps).toHaveLength(3)
@@ -93,6 +94,7 @@ describe('bundled workflow skills', () => {
       'workspace',
       'cli',
     ])
+    expect(inbox?.workflowArtifactValidator).toBe('inbox-triage')
     expect(inbox?.artifactKinds).toContain('response queue')
     expect(inbox?.verbs).toContain('triage inbox')
     expect(inbox?.workflowSteps).toHaveLength(3)
@@ -103,6 +105,7 @@ describe('bundled workflow skills', () => {
       'discovery',
       'workspace',
     ])
+    expect(publish?.workflowArtifactValidator).toBe('publish-draft')
     expect(publish?.artifactKinds).toContain('publishing brief')
     expect(publish?.verbs).toContain('publish draft')
     expect(publish?.workflowSteps).toHaveLength(3)

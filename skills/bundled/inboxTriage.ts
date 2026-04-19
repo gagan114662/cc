@@ -73,6 +73,7 @@ export function registerInboxTriageWorkflow(): void {
     userInvocable: true,
     context: 'fork',
     workflowRuntime: 'code',
+    workflowArtifactValidator: 'inbox-triage',
     capabilityGrants: ['discovery', 'workspace', 'cli'],
     async getPromptForCommand(args) {
       return [{ type: 'text', text: buildInboxTriageWorkflowPrompt(args) }]
