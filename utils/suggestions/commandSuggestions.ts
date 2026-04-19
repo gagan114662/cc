@@ -22,6 +22,12 @@ type CommandSearchItem = {
   commandName: string
   command: Command
   aliasKey: string[] | undefined
+  verbKey: string[] | undefined
+  inputKey: string[] | undefined
+  outputKey: string[] | undefined
+  artifactKey: string[] | undefined
+  handoffKey: string[] | undefined
+  workflowStepKey: string[] | undefined
 }
 
 // Cache the Fuse index keyed by the commands array identity. The commands
@@ -52,6 +58,21 @@ function getCommandFuse(commands: Command[]): Fuse<CommandSearchItem> {
         commandName,
         command: cmd,
         aliasKey: cmd.aliases,
+        verbKey: cmd.verbs,
+        inputKey: cmd.inputs,
+        outputKey: cmd.outputs,
+        artifactKey: cmd.artifactKinds,
+        handoffKey: cmd.handoffFields,
+        workflowStepKey: cmd.workflowSteps?.flatMap(step =>
+          [step.title, step.objective, step.success]
+            .filter((value): value is string => Boolean(value))
+            .flatMap(value =>
+              value
+                .split(' ')
+                .map(cleanWord)
+                .filter(Boolean),
+            ),
+        ),
       }
     })
 
@@ -72,6 +93,30 @@ function getCommandFuse(commands: Command[]): Fuse<CommandSearchItem> {
       {
         name: 'aliasKey',
         weight: 2, // Same high priority for aliases
+      },
+      {
+        name: 'verbKey',
+        weight: 2.25, // First-class agent operations should be easy to discover
+      },
+      {
+        name: 'artifactKey',
+        weight: 1.75, // Durable deliverables are strong intent signals
+      },
+      {
+        name: 'outputKey',
+        weight: 1.5,
+      },
+      {
+        name: 'handoffKey',
+        weight: 1.25,
+      },
+      {
+        name: 'workflowStepKey',
+        weight: 1.25,
+      },
+      {
+        name: 'inputKey',
+        weight: 1,
       },
       {
         name: 'descriptionKey',

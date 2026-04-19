@@ -186,6 +186,25 @@ ${args || 'Use browser-harness to complete the requested browser task.'}
 `
 }
 
+export function buildBrowserFunnelAuditWorkflowPrompt(args?: string): string {
+  return `${buildBrowserHarnessSkillPrompt(
+    args ||
+      'Audit the current website funnel in the browser, capture concrete friction points, and propose the next fixes.',
+  )}
+
+Workflow deliverable requirements:
+
+- Walk the live browser flow from landing page to the most relevant conversion point.
+- Capture concrete evidence for every meaningful friction point.
+- Prefer screenshots, page-state notes, and DOM/console evidence over generic commentary.
+- Return enough detail for a final artifact covering:
+  - the funnel path audited
+  - the top friction points
+  - recommended fixes
+  - any blockers that prevented a full audit
+`
+}
+
 export async function getBrowserHarnessStatus(): Promise<BrowserHarnessStatus> {
   const executablePath = await which('browser-harness')
   const config = getGlobalConfig()

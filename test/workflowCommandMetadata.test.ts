@@ -74,4 +74,19 @@ describe('workflow command metadata', () => {
     expect(suggestions[0]?.description).toContain('Artifacts:')
     expect(suggestions[0]?.description).toContain('Procedure:')
   })
+
+  test('finds workflows by structured artifact and handoff fields', () => {
+    const commands = [makeWorkflowCommand()]
+
+    const artifactSuggestions = generateCommandSuggestions('/outreach', commands)
+    expect(artifactSuggestions).toHaveLength(1)
+    expect(artifactSuggestions[0]?.displayText).toContain('/Pipeline Refresh')
+
+    const handoffSuggestions = generateCommandSuggestions(
+      '/stale_assumptions',
+      commands,
+    )
+    expect(handoffSuggestions).toHaveLength(1)
+    expect(handoffSuggestions[0]?.tag).toBe('workflow')
+  })
 })

@@ -3,7 +3,7 @@ import { constants as fsConstants } from 'fs'
 import { mkdir, open } from 'fs/promises'
 import { dirname, isAbsolute, join, normalize, sep as pathSep } from 'path'
 import type { ToolUseContext } from '../Tool.js'
-import type { Command } from '../types/command.js'
+import type { Command, WorkflowStep } from '../types/command.js'
 import { logForDebugging } from '../utils/debug.js'
 import { getBundledSkillsRoot } from '../utils/permissions/filesystem.js'
 import type { HooksSettings } from '../utils/settings/types.js'
@@ -17,6 +17,13 @@ export type BundledSkillDefinition = {
   description: string
   aliases?: string[]
   whenToUse?: string
+  verbs?: string[]
+  inputs?: string[]
+  outputs?: string[]
+  artifactKinds?: string[]
+  successCriteria?: string[]
+  handoffFields?: string[]
+  workflowSteps?: WorkflowStep[]
   argumentHint?: string
   allowedTools?: string[]
   model?: string
@@ -81,6 +88,17 @@ export function registerBundledSkill(definition: BundledSkillDefinition): void {
     allowedTools: definition.allowedTools ?? [],
     argumentHint: definition.argumentHint,
     whenToUse: definition.whenToUse,
+    verbs: definition.verbs,
+    inputs: definition.inputs,
+    outputs: definition.outputs,
+    artifactKinds: definition.artifactKinds,
+    successCriteria: definition.successCriteria,
+    handoffFields: definition.handoffFields,
+    workflowSteps: definition.workflowSteps,
+    kind:
+      definition.workflowSteps && definition.workflowSteps.length > 0
+        ? 'workflow'
+        : undefined,
     model: definition.model,
     disableModelInvocation: definition.disableModelInvocation ?? false,
     userInvocable: definition.userInvocable ?? true,

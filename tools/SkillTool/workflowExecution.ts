@@ -12,11 +12,16 @@ import { extractResultText } from '../../utils/forkedAgent.js'
 import { createUserMessage, normalizeMessages } from '../../utils/messages.js'
 import {
   buildWorkflowStepExecutionPrompt,
+  buildWorkflowSynthesisRepairPrompt,
   buildWorkflowSynthesisPrompt,
   createWorkflowFailureState,
   createWorkflowSkippedState,
+  formatWorkflowFinalResult,
+  parseWorkflowFinalState,
   parseWorkflowStepState,
+  validateWorkflowFinalState,
   type WorkflowCommand,
+  type WorkflowFinalState,
   type WorkflowStepOutcome,
   type WorkflowStepState,
 } from '../../utils/workflowCommands.js'
@@ -42,6 +47,11 @@ export type WorkflowStageRunner = (args: {
   agentId: string
   transcriptSubdir: string
 }) => Promise<string>
+
+type WorkflowSynthesisResult = {
+  rawResult: string
+  finalState: WorkflowFinalState
+}
 
 type ExecuteForkedWorkflowArgs = {
   command: WorkflowCommand
@@ -147,6 +157,63 @@ async function runWorkflowStepWithRetries(args: {
   }
 
   throw new Error('Unreachable workflow retry state')
+}
+
+async function runWorkflowSynthesisWithValidation(args: {
+  command: WorkflowCommand
+  skillContent: string
+  stepOutcomes: WorkflowStepOutcome[]
+  argsText: string
+  runStage: WorkflowStageRunner
+  transcriptSubdir: string
+}): Promise<WorkflowSynthesisResult> {
+  const {
+    command,
+    skillContent,
+    stepOutcomes,
+    argsText,
+    runStage,
+    transcriptSubdir,
+  } = args
+
+  let prompt = buildWorkflowSynthesisPrompt(
+    command,
+    skillContent,
+    argsText,
+    stepOutcomes,
+  )
+
+  for (let attemptIndex = 0; attemptIndex < 2; attemptIndex += 1) {
+    const rawResult = await runStage({
+      prompt,
+      stageKind: 'synthesis',
+      stageIndex: (command.workflowSteps?.length ?? 0) + attemptIndex,
+      agentId: createAgentId(),
+      transcriptSubdir,
+    })
+    const finalState = parseWorkflowFinalState(rawResult)
+    const validation = validateWorkflowFinalState(finalState, command)
+    if (validation.valid) {
+      return { rawResult, finalState }
+    }
+
+    if (attemptIndex === 1) {
+      throw new Error(
+        `Workflow synthesis did not produce a valid artifact contract: ${validation.issues.join('; ')}`,
+      )
+    }
+
+    prompt = buildWorkflowSynthesisRepairPrompt(
+      command,
+      skillContent,
+      argsText,
+      stepOutcomes,
+      rawResult,
+      validation.issues,
+    )
+  }
+
+  throw new Error('Unreachable workflow synthesis retry state')
 }
 
 function reportWorkflowProgress(
@@ -324,20 +391,20 @@ export async function executeForkedWorkflow({
     }
   }
 
-  const synthesisPrompt = buildWorkflowSynthesisPrompt(
+  const synthesisAgentId = createAgentId()
+  const { finalState } = await runWorkflowSynthesisWithValidation({
     command,
     skillContent,
-    args,
     stepOutcomes,
-  )
-  const synthesisAgentId = createAgentId()
-  const finalResult = await runStage({
-    prompt: synthesisPrompt,
-    stageKind: 'synthesis',
-    stageIndex: workflowSteps.length,
-    agentId: synthesisAgentId,
+    argsText: args,
+    runStage: async stageArgs =>
+      runStage({
+        ...stageArgs,
+        agentId: synthesisAgentId,
+      }),
     transcriptSubdir,
   })
+  const finalResult = formatWorkflowFinalResult(finalState)
 
   return {
     data: {

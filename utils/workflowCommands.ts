@@ -27,6 +27,40 @@ export type WorkflowStepOutcome = {
   state: WorkflowStepState
 }
 
+export type WorkflowOutputState = {
+  name: string
+  status: 'produced' | 'missing'
+  evidence: string
+}
+
+export type WorkflowArtifactState = {
+  kind: string
+  status: 'produced' | 'missing'
+  evidence: string
+}
+
+export type WorkflowSuccessCriterionState = {
+  criterion: string
+  status: 'met' | 'unmet'
+  evidence: string
+}
+
+export type WorkflowFinalState = {
+  structured: boolean
+  summary: string
+  completionStatus: 'completed' | 'partial' | 'blocked'
+  outputs: WorkflowOutputState[]
+  artifacts: WorkflowArtifactState[]
+  successCriteria: WorkflowSuccessCriterionState[]
+  missingInputs: string[]
+  unresolvedRisks: string[]
+}
+
+export type WorkflowFinalValidation = {
+  valid: boolean
+  issues: string[]
+}
+
 type WorkflowSummaryOptions = {
   includeWhenToUse?: boolean
   includeVerbs?: boolean
@@ -345,8 +379,19 @@ export function buildWorkflowSynthesisPrompt(
   lines.push(skillContent.trim())
   lines.push(
     '',
-    'Return the final workflow result aligned to the expected outputs and success criteria.',
-    'Call out any unresolved input gaps or follow-up risks explicitly instead of claiming the workflow is fully complete.',
+    'Return ONLY JSON with this shape:',
+    '{',
+    '  "summary": "overall workflow result",',
+    '  "completionStatus": "completed | partial | blocked",',
+    `  "outputs": [${buildWorkflowOutputTemplate(cmd)}],`,
+    `  "artifacts": [${buildWorkflowArtifactTemplate(cmd)}],`,
+    `  "successCriteria": [${buildWorkflowSuccessTemplate(cmd)}],`,
+    '  "missingInputs": ["required inputs that were unavailable"],',
+    '  "unresolvedRisks": ["follow-up risk, blocker, or caveat"]',
+    '}',
+    'Copy the exact expected output names, artifact kinds, and success criteria from the workflow contract.',
+    'If something was not produced or not met, mark it as missing/unmet instead of omitting it.',
+    'Do not claim completion when required outputs or success criteria are still missing.',
   )
 
   return lines.join('\n')
@@ -360,6 +405,48 @@ function buildWorkflowHandoffTemplate(cmd: WorkflowCommand): string {
 
   return fields
     .map(field => `"${field}": "..."`)
+    .join(', ')
+}
+
+function buildWorkflowOutputTemplate(cmd: WorkflowCommand): string {
+  const outputs = cmd.outputs ?? []
+  if (outputs.length === 0) {
+    return '{"name": "primary deliverable", "status": "produced", "evidence": "how it was produced"}'
+  }
+
+  return outputs
+    .map(
+      output =>
+        `{"name": ${JSON.stringify(output)}, "status": "produced | missing", "evidence": "proof or gap"}`,
+    )
+    .join(', ')
+}
+
+function buildWorkflowArtifactTemplate(cmd: WorkflowCommand): string {
+  const artifactKinds = cmd.artifactKinds ?? []
+  if (artifactKinds.length === 0) {
+    return '{"kind": "deliverable", "status": "produced", "evidence": "artifact or proof"}'
+  }
+
+  return artifactKinds
+    .map(
+      artifactKind =>
+        `{"kind": ${JSON.stringify(artifactKind)}, "status": "produced | missing", "evidence": "artifact or gap"}`,
+    )
+    .join(', ')
+}
+
+function buildWorkflowSuccessTemplate(cmd: WorkflowCommand): string {
+  const successCriteria = cmd.successCriteria ?? []
+  if (successCriteria.length === 0) {
+    return '{"criterion": "workflow completed", "status": "met", "evidence": "what proves completion"}'
+  }
+
+  return successCriteria
+    .map(
+      criterion =>
+        `{"criterion": ${JSON.stringify(criterion)}, "status": "met | unmet", "evidence": "supporting evidence or gap"}`,
+    )
     .join(', ')
 }
 
@@ -387,6 +474,89 @@ function normalizeStringList(value: unknown): string[] {
     .filter((item): item is string => typeof item === 'string')
     .map(item => item.trim())
     .filter(Boolean)
+}
+
+function normalizeWorkflowOutputList(value: unknown): WorkflowOutputState[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return []
+    }
+
+    const name =
+      typeof item.name === 'string' && item.name.trim() ? item.name.trim() : null
+    const status =
+      item.status === 'produced' || item.status === 'missing'
+        ? item.status
+        : null
+    const evidence =
+      typeof item.evidence === 'string' ? item.evidence.trim() : ''
+
+    if (!name || !status) {
+      return []
+    }
+
+    return [{ name, status, evidence }]
+  })
+}
+
+function normalizeWorkflowArtifactList(value: unknown): WorkflowArtifactState[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return []
+    }
+
+    const kind =
+      typeof item.kind === 'string' && item.kind.trim() ? item.kind.trim() : null
+    const status =
+      item.status === 'produced' || item.status === 'missing'
+        ? item.status
+        : null
+    const evidence =
+      typeof item.evidence === 'string' ? item.evidence.trim() : ''
+
+    if (!kind || !status) {
+      return []
+    }
+
+    return [{ kind, status, evidence }]
+  })
+}
+
+function normalizeWorkflowSuccessList(
+  value: unknown,
+): WorkflowSuccessCriterionState[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value.flatMap(item => {
+    if (!item || typeof item !== 'object' || Array.isArray(item)) {
+      return []
+    }
+
+    const criterion =
+      typeof item.criterion === 'string' && item.criterion.trim()
+        ? item.criterion.trim()
+        : null
+    const status =
+      item.status === 'met' || item.status === 'unmet' ? item.status : null
+    const evidence =
+      typeof item.evidence === 'string' ? item.evidence.trim() : ''
+
+    if (!criterion || !status) {
+      return []
+    }
+
+    return [{ criterion, status, evidence }]
+  })
 }
 
 export function parseWorkflowStepState(
@@ -444,6 +614,215 @@ export function parseWorkflowStepState(
   } catch {
     return fallback
   }
+}
+
+export function parseWorkflowFinalState(
+  result: string,
+): WorkflowFinalState {
+  const fallback: WorkflowFinalState = {
+    structured: false,
+    summary: result.trim() || 'Workflow completed',
+    completionStatus: 'partial',
+    outputs: [],
+    artifacts: [],
+    successCriteria: [],
+    missingInputs: [],
+    unresolvedRisks: [],
+  }
+
+  const jsonObject = extractJsonObject(result)
+  if (!jsonObject) {
+    return fallback
+  }
+
+  try {
+    const parsed = JSON.parse(jsonObject) as Record<string, unknown>
+    const summary =
+      typeof parsed.summary === 'string' && parsed.summary.trim()
+        ? parsed.summary.trim()
+        : fallback.summary
+    const completionStatus =
+      parsed.completionStatus === 'completed' ||
+      parsed.completionStatus === 'partial' ||
+      parsed.completionStatus === 'blocked'
+        ? parsed.completionStatus
+        : fallback.completionStatus
+
+    return {
+      structured: true,
+      summary,
+      completionStatus,
+      outputs: normalizeWorkflowOutputList(parsed.outputs),
+      artifacts: normalizeWorkflowArtifactList(parsed.artifacts),
+      successCriteria: normalizeWorkflowSuccessList(parsed.successCriteria),
+      missingInputs: normalizeStringList(parsed.missingInputs),
+      unresolvedRisks: normalizeStringList(parsed.unresolvedRisks),
+    }
+  } catch {
+    return fallback
+  }
+}
+
+function validateExpectedItems<T extends { status: string; evidence: string }>(
+  label: string,
+  expected: string[] | undefined,
+  actual: T[],
+  keyOf: (value: T) => string,
+  producedStatus: string,
+): string[] {
+  const normalizedExpected = expected?.map(value => value.trim()).filter(Boolean) ?? []
+  if (normalizedExpected.length === 0) {
+    return []
+  }
+
+  const issues: string[] = []
+  const actualByKey = new Map(actual.map(value => [keyOf(value), value]))
+
+  for (const expectedValue of normalizedExpected) {
+    const actualValue = actualByKey.get(expectedValue)
+    if (!actualValue) {
+      issues.push(`Missing ${label}: ${expectedValue}`)
+      continue
+    }
+    if (actualValue.status !== producedStatus) {
+      issues.push(`${label} not satisfied: ${expectedValue}`)
+      continue
+    }
+    if (!actualValue.evidence.trim()) {
+      issues.push(`${label} missing evidence: ${expectedValue}`)
+    }
+  }
+
+  return issues
+}
+
+export function validateWorkflowFinalState(
+  state: WorkflowFinalState,
+  cmd: WorkflowCommand,
+): WorkflowFinalValidation {
+  const issues: string[] = []
+
+  if (!state.structured) {
+    issues.push('Final workflow result did not return structured JSON.')
+  }
+
+  issues.push(
+    ...validateExpectedItems(
+      'output',
+      cmd.outputs,
+      state.outputs,
+      value => value.name,
+      'produced',
+    ),
+  )
+  issues.push(
+    ...validateExpectedItems(
+      'artifact',
+      cmd.artifactKinds,
+      state.artifacts,
+      value => value.kind,
+      'produced',
+    ),
+  )
+  issues.push(
+    ...validateExpectedItems(
+      'success criterion',
+      cmd.successCriteria,
+      state.successCriteria,
+      value => value.criterion,
+      'met',
+    ),
+  )
+
+  if (
+    state.completionStatus === 'completed' &&
+    (state.missingInputs.length > 0 ||
+      state.outputs.some(output => output.status !== 'produced') ||
+      state.artifacts.some(artifact => artifact.status !== 'produced') ||
+      state.successCriteria.some(criterion => criterion.status !== 'met'))
+  ) {
+    issues.push(
+      'Completion status cannot be "completed" while required outputs, artifacts, inputs, or success criteria are still missing.',
+    )
+  }
+
+  return {
+    valid: issues.length === 0,
+    issues,
+  }
+}
+
+export function buildWorkflowSynthesisRepairPrompt(
+  cmd: WorkflowCommand,
+  skillContent: string,
+  args: string,
+  outcomes: WorkflowStepOutcome[],
+  previousResult: string,
+  validationIssues: string[],
+): string {
+  const lines = [
+    buildWorkflowSynthesisPrompt(cmd, skillContent, args, outcomes),
+    '',
+    'Your previous answer failed workflow artifact validation.',
+    'Fix these issues exactly:',
+    ...validationIssues.map(issue => `- ${issue}`),
+    '',
+    'Previous invalid result:',
+    previousResult.trim(),
+    '',
+    'Return ONLY corrected JSON.',
+  ]
+
+  return lines.join('\n')
+}
+
+function formatWorkflowCoverageSection<T extends { status: string; evidence: string }>(
+  title: string,
+  entries: T[],
+  getLabel: (value: T) => string,
+): string[] {
+  if (entries.length === 0) {
+    return []
+  }
+
+  return [
+    `${title}:`,
+    ...entries.map(entry => {
+      const evidenceText = entry.evidence ? ` (${entry.evidence})` : ''
+      return `- ${getLabel(entry)}: ${entry.status}${evidenceText}`
+    }),
+  ]
+}
+
+export function formatWorkflowFinalResult(state: WorkflowFinalState): string {
+  const lines = [state.summary, `Completion: ${state.completionStatus}`]
+
+  lines.push(
+    ...formatWorkflowCoverageSection('Outputs', state.outputs, value => value.name),
+  )
+  lines.push(
+    ...formatWorkflowCoverageSection(
+      'Artifacts',
+      state.artifacts,
+      value => value.kind,
+    ),
+  )
+  lines.push(
+    ...formatWorkflowCoverageSection(
+      'Success criteria',
+      state.successCriteria,
+      value => value.criterion,
+    ),
+  )
+
+  if (state.missingInputs.length > 0) {
+    lines.push(`Missing inputs: ${state.missingInputs.join(', ')}`)
+  }
+  if (state.unresolvedRisks.length > 0) {
+    lines.push(`Open risks: ${state.unresolvedRisks.join(', ')}`)
+  }
+
+  return lines.join('\n')
 }
 
 export function createWorkflowFailureState(summary: string): WorkflowStepState {
