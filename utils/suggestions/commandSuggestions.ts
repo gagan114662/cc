@@ -11,6 +11,7 @@ import {
   formatWorkflowCommandSummary,
   isWorkflowCommand,
 } from '../workflowCommands.js'
+import { scoreCapabilityForQuery } from '../capabilityDiscovery.js'
 
 // Treat these characters as word separators for command search
 const SEPARATORS = /[:_-]/g
@@ -427,7 +428,12 @@ export function generateCommandSuggestions(
       r.item.command.type === 'prompt'
         ? getSkillUsageScore(getCommandName(r.item.command))
         : 0
-    return { r, name, aliases, usage }
+    const capabilityScore = scoreCapabilityForQuery(
+      r.item.command,
+      query,
+      usage,
+    )
+    return { r, name, aliases, usage, capabilityScore }
   })
 
   const sortedResults = withMeta.sort((a, b) => {
@@ -470,6 +476,13 @@ export function generateCommandSuggestions(
       aPrefixAlias.length !== bPrefixAlias.length
     ) {
       return aPrefixAlias.length - bPrefixAlias.length
+    }
+
+    // Among otherwise similar fuzzy candidates, prefer the capability whose
+    // interface best matches the user's likely intent (workflow/browser/etc.).
+    const capabilityScoreDiff = b.capabilityScore - a.capabilityScore
+    if (Math.abs(capabilityScoreDiff) > 1) {
+      return capabilityScoreDiff
     }
 
     // For similar match types, use Fuse score with usage as tiebreaker

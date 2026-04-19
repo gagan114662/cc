@@ -12,6 +12,11 @@ export type WorkflowCommand = CommandBase &
     kind: 'workflow'
   }
 
+export type WorkflowStepOutcome = {
+  step: WorkflowStep
+  result: string
+}
+
 type WorkflowSummaryOptions = {
   includeWhenToUse?: boolean
   includeInputs?: boolean
@@ -158,6 +163,113 @@ function formatWorkflowSteps(steps: WorkflowStep[]): string[] {
     }
     return stepLines
   })
+}
+
+function formatWorkflowStepOutcomeList(
+  outcomes: WorkflowStepOutcome[],
+  emptyText: string,
+): string[] {
+  if (outcomes.length === 0) {
+    return [emptyText]
+  }
+
+  return outcomes.flatMap((outcome, index) => {
+    const lines = [`${index + 1}. ${outcome.step.title}`, outcome.result.trim()]
+    return lines
+  })
+}
+
+export function buildWorkflowStepExecutionPrompt(
+  cmd: WorkflowCommand,
+  skillContent: string,
+  args: string,
+  step: WorkflowStep,
+  stepIndex: number,
+  priorOutcomes: WorkflowStepOutcome[],
+): string {
+  const lines = [
+    `You are executing step ${stepIndex + 1} of ${cmd.workflowSteps?.length ?? stepIndex + 1} for workflow "${cmd.userFacingName?.() ?? cmd.name}".`,
+    'Complete only this step, then hand off the most useful state for the next step.',
+  ]
+
+  const contract = buildWorkflowExecutionContract(cmd)
+  if (contract) {
+    lines.push('', contract)
+  }
+
+  lines.push('', 'Current step:')
+  lines.push(`Title: ${step.title}`)
+  if (step.objective) {
+    lines.push(`Objective: ${step.objective}`)
+  }
+  if (step.success) {
+    lines.push(`Step success bar: ${step.success}`)
+  }
+  if (step.tools?.length) {
+    lines.push(`Step tools: ${step.tools.join(', ')}`)
+  }
+  if (args.trim()) {
+    lines.push(`Workflow arguments: ${args.trim()}`)
+  }
+
+  lines.push('', 'Completed steps so far:')
+  lines.push(
+    ...formatWorkflowStepOutcomeList(
+      priorOutcomes,
+      'None yet. Establish the initial fact base for the workflow.',
+    ),
+  )
+
+  lines.push('', 'Workflow reference:')
+  lines.push(skillContent.trim())
+  lines.push(
+    '',
+    'Return a concise step handoff with:',
+    '1. What you completed in this step',
+    '2. The key findings, decisions, or artifacts',
+    '3. Any gaps or risks the next step must account for',
+  )
+
+  return lines.join('\n')
+}
+
+export function buildWorkflowSynthesisPrompt(
+  cmd: WorkflowCommand,
+  skillContent: string,
+  args: string,
+  outcomes: WorkflowStepOutcome[],
+): string {
+  const lines = [
+    `You have completed workflow "${cmd.userFacingName?.() ?? cmd.name}".`,
+    'Synthesize the step outputs into the final workflow deliverable.',
+  ]
+
+  const contract = buildWorkflowExecutionContract(cmd)
+  if (contract) {
+    lines.push('', contract)
+  }
+
+  if (args.trim()) {
+    lines.push('', `Workflow arguments: ${args.trim()}`)
+  }
+
+  lines.push('', 'Step outcomes:')
+  lines.push(
+    ...formatWorkflowStepOutcomeList(
+      outcomes,
+      'No step outcomes were captured. State that the workflow could not complete.',
+    ),
+  )
+
+  lines.push('', 'Workflow reference:')
+  lines.push(skillContent.trim())
+  lines.push(
+    '',
+    'Return the final workflow result aligned to the expected outputs and success criteria.',
+    'Call out any unresolved input gaps or follow-up risks explicitly instead of claiming the workflow is fully complete.',
+  )
+
+  return lines.join('\n')
 }
 
 export function decorateWorkflowPromptCommand(

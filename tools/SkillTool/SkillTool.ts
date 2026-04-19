@@ -73,6 +73,7 @@ import {
   renderToolUseProgressMessage,
   renderToolUseRejectedMessage,
 } from './UI.js'
+import { executeForkedWorkflow } from './workflowExecution.js'
 
 /**
  * Gets all commands including MCP resource-delivered prompt commands from
@@ -211,6 +212,21 @@ async function executeForkedSkill(
     command.effort !== undefined
       ? { ...baseAgent, effort: command.effort }
       : baseAgent
+
+  if (command.kind === 'workflow' && command.workflowSteps?.length) {
+    return executeForkedWorkflow({
+      command,
+      commandName,
+      args: args || '',
+      context,
+      canUseTool,
+      parentMessage,
+      onProgress,
+      modifiedGetAppState,
+      agentDefinition,
+      skillContent,
+    })
+  }
 
   // Collect messages from the forked agent
   const agentMessages: Message[] = []
