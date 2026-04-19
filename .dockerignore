@@ -1,0 +1,41 @@
+# Keep the build context small and avoid leaking local session state into images.
+.git
+.github
+.vscode
+.idea
+
+# Host-side build output — the image re-builds via `bun run build`.
+dist
+node_modules
+*.tsbuildinfo
+
+# Local-only Claude state. Employee config is mounted at runtime, not baked in.
+.claude/settings.local.json
+.claude/sessions
+.claude/scheduled_tasks.json
+.claude/history
+.claude/*.log
+
+# Reports, fixtures, proofs — not needed at runtime.
+*.html
+*.pdf
+test-quality-proof.html
+honeycomb-autoresearch-proof.html
+conductor-readiness-proof.html
+research-findings.md
+agent-output-*.md
+
+# Local-only recovery scratch.
+tmp-*.js
+tmp-*.ts
+
+# Test artifacts.
+coverage
+.nyc_output
+
+# OS noise.
+.DS_Store
+Thumbs.db
+
+# Archive tree is reference-only.
+archive
