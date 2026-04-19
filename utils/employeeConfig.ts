@@ -1,7 +1,6 @@
 import { randomUUID } from 'crypto'
 import { readFileSync } from 'fs'
-import { mkdir, readdir, readFile, writeFile } from 'fs/promises'
-import { dirname, join } from 'path'
+import { join } from 'path'
 import { getProjectRoot } from '../bootstrap/state.js'
 import {
   DEFAULT_TENANT,
@@ -9,9 +8,9 @@ import {
   type TenantContext,
 } from '../services/tenant/tenantContext.js'
 import { currentTenantContext } from '../services/tenant/tenantScope.js'
+import { getEmployeeStore } from '../services/employeeStore/store.js'
 import { cronToHuman } from './cron.js'
 import { safeParseJSON } from './json.js'
-import { jsonStringify } from './slowOperations.js'
 import {
   type EmployeeConfig,
   type EmployeeDuty,
@@ -40,6 +39,12 @@ function resolveTenantId(tenantId?: string): string {
   return currentTenantContext().id
 }
 
+// Path of the on-disk snapshot for a given tenant. Under the JSON
+// backend (the default) this is the authoritative location of the
+// config. Under the Postgres backend it is the cache mirror the
+// store writes after every DB upsert, kept so the synchronous
+// reader (engineeringLeadAgent) continues to work in a subprocess
+// that has no Postgres connection.
 export function getEmployeeConfigPath(
   projectRoot?: string,
   tenantId?: string,
@@ -56,17 +61,19 @@ export async function readEmployeeConfig(
   projectRoot?: string,
   tenantId?: string,
 ): Promise<EmployeeConfig | null> {
-  try {
-    const raw = await readFile(
-      getEmployeeConfigPath(projectRoot, tenantId),
-      'utf-8',
-    )
-    return parseEmployeeConfig(raw)
-  } catch {
-    return null
-  }
+  const root = projectRoot ?? getProjectRoot()
+  const resolved = resolveTenantId(tenantId)
+  const store = await getEmployeeStore()
+  return store.read({ projectRoot: root, tenantId: resolved })
 }
 
+// Synchronous read, by design always against the on-disk snapshot.
+// This is the single synchronous entry point into the store and
+// exists only for `tools/AgentTool/built-in/engineeringLeadAgent.ts`,
+// whose `getSystemPrompt()` is a synchronous frame deep inside Ink
+// and cannot be refactored to await. The Postgres backend writes the
+// same snapshot after every upsert, so this reader returns the same
+// bytes as an async `readEmployeeConfig` in steady state.
 export function readEmployeeConfigSync(
   projectRoot?: string,
   tenantId?: string,
@@ -76,7 +83,7 @@ export function readEmployeeConfigSync(
       getEmployeeConfigPath(projectRoot, tenantId),
       'utf-8',
     )
-    return parseEmployeeConfig(raw)
+    return parseEmployeeConfigRaw(raw)
   } catch {
     return null
   }
@@ -87,13 +94,10 @@ export async function writeEmployeeConfig(
   projectRoot?: string,
   tenantId?: string,
 ): Promise<void> {
-  const filePath = getEmployeeConfigPath(projectRoot, tenantId)
-  await mkdir(dirname(filePath), { recursive: true })
-  await writeFile(
-    filePath,
-    jsonStringify(config, null, 2) + '\n',
-    'utf-8',
-  )
+  const root = projectRoot ?? getProjectRoot()
+  const resolved = resolveTenantId(tenantId)
+  const store = await getEmployeeStore()
+  await store.write(config, { projectRoot: root, tenantId: resolved })
 }
 
 export async function upsertEmployeeConfig(
@@ -106,53 +110,25 @@ export async function upsertEmployeeConfig(
   return next
 }
 
-// Enumerate the tenants that actually have an employee.json under the
-// given project root. Used by the daemon on boot to schedule duties
-// for every configured tenant — and by future Phase 2 code paths
-// (durable queue, audit aggregation) that need the same enumeration.
+// Enumerate the tenants that actually have an employee config under
+// the given project root. Used by the daemon on boot to schedule
+// duties for every configured tenant — and by future Phase 2 code
+// paths (durable queue, audit aggregation) that need the same
+// enumeration.
 //
-// Contract:
-//   - If `.claude/employee.json` exists, DEFAULT_TENANT is included.
-//   - Every subdirectory of `.claude/tenants/` that contains its own
-//     `employee.json` is returned as a TenantContext with role
-//     'developer' (the safe default — hosted deployments must opt a
-//     tenant up to admin through their own registry).
-//   - An empty `.claude/tenants/<id>/` directory (no employee.json) is
-//     skipped — plausibly leftover from a migration, not a configured
-//     tenant.
+// Semantics are preserved across backends:
+//   - JSON backend: scans `.claude/employee.json` + `.claude/tenants/<id>/employee.json`
+//   - Postgres backend: SELECT DISTINCT tenant_id FROM employee_configs
+//     WHERE project_root = $1
+// Both return DEFAULT_TENANT with role 'admin' and named tenants with
+// role 'developer'. Hosted deployments that need richer role metadata
+// attach it at a layer above this store.
 export async function listConfiguredTenants(
   projectRoot?: string,
 ): Promise<TenantContext[]> {
   const root = projectRoot ?? getProjectRoot()
-  const tenants: TenantContext[] = []
-
-  try {
-    await readFile(join(root, '.claude', EMPLOYEE_FILE_NAME), 'utf-8')
-    tenants.push(DEFAULT_TENANT)
-  } catch {
-    // No default employee.json — that's fine, the project may only
-    // have named tenants.
-  }
-
-  const tenantsDir = join(root, '.claude', TENANTS_DIR_NAME)
-  let entries: string[] = []
-  try {
-    entries = await readdir(tenantsDir)
-  } catch {
-    return tenants
-  }
-
-  for (const entry of entries) {
-    const configPath = join(tenantsDir, entry, EMPLOYEE_FILE_NAME)
-    try {
-      await readFile(configPath, 'utf-8')
-    } catch {
-      continue
-    }
-    tenants.push({ id: entry, name: entry, role: 'developer' })
-  }
-
-  return tenants
+  const store = await getEmployeeStore()
+  return store.listTenants(root)
 }
 
 export function createEmployeeDutyId(): string {
@@ -254,7 +230,12 @@ export function isEngineeringLeadAgentType(
   return agentType === ENGINEERING_LEAD_AGENT_TYPE
 }
 
-function parseEmployeeConfig(raw: string): EmployeeConfig | null {
+// Exported so the store backends (services/employeeStore/backends/*)
+// can validate raw config payloads through the same parser the
+// synchronous file reader uses. Returns null for any shape that
+// doesn't match the current EmployeeConfig schema; callers treat
+// null as "no config" identically across backends.
+export function parseEmployeeConfigRaw(raw: string): EmployeeConfig | null {
   const parsed = safeParseJSON(raw, false)
   if (!parsed || typeof parsed !== 'object') return null
 
