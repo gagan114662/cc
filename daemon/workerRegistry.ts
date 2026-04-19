@@ -2,20 +2,82 @@ import { runHarnessDaemonWorker } from 'src/services/harness/runtime.js'
 import { logError } from 'src/utils/log.js'
 
 const POOLED_WORKER_START_STAGGER_MS = 150
-const POOLED_WORKER_RESTART_DELAY_MS = Number(
-  process.env.CLAUDE_CODE_HARNESS_WORKER_RESTART_DELAY_MS ?? '1000',
-)
+const DEFAULT_POOLED_WORKER_RESTART_DELAY_MS = 1000
 
-async function sleep(ms: number): Promise<void> {
-  await new Promise(resolve => setTimeout(resolve, ms))
-}
-
-async function runPooledHarnessWorker(input: {
+type HarnessWorkerDescriptor = {
+  workerId: string
   runnerId: string
   agentKind: 'claude' | 'codex'
   workerSlots: number
   runnerLabels: string[]
   workerIndex: number
+}
+
+type HarnessWorkerExecution =
+  | {
+      kind: 'supervised'
+      workers: HarnessWorkerDescriptor[]
+    }
+  | {
+      kind: 'direct'
+      workerId?: string
+      runnerId?: string
+      agentKind: 'claude' | 'codex'
+      workerSlots: number
+      runnerLabels: string[]
+      leaseLimit: number
+    }
+
+export function getPooledWorkerRestartDelayMs(
+  value = process.env.CLAUDE_CODE_HARNESS_WORKER_RESTART_DELAY_MS,
+): number {
+  const parsed = Number.parseInt(value ?? '', 10)
+  return Number.isFinite(parsed) && parsed > 0
+    ? parsed
+    : DEFAULT_POOLED_WORKER_RESTART_DELAY_MS
+}
+
+export function resolveHarnessWorkerExecution(input: {
+  workerId?: string
+  runnerId?: string
+  agentKind: 'claude' | 'codex'
+  workerSlots: number
+  runnerLabels: string[]
+  effectiveLeaseLimit: number
+}): HarnessWorkerExecution {
+  if (input.runnerId) {
+    return {
+      kind: 'supervised',
+      workers: Array.from({ length: input.effectiveLeaseLimit }, (_, index) => ({
+        workerId:
+          input.effectiveLeaseLimit === 1
+            ? input.workerId ?? `${input.runnerId}-worker-1`
+            : `${input.runnerId}-worker-${index + 1}`,
+        runnerId: input.runnerId,
+        agentKind: input.agentKind,
+        workerSlots: input.workerSlots,
+        runnerLabels: input.runnerLabels,
+        workerIndex: index,
+      })),
+    }
+  }
+
+  return {
+    kind: 'direct',
+    workerId: input.workerId,
+    runnerId: input.runnerId,
+    agentKind: input.agentKind,
+    workerSlots: input.workerSlots,
+    runnerLabels: input.runnerLabels,
+    leaseLimit: input.effectiveLeaseLimit,
+  }
+}
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function runSupervisedHarnessWorker(input: HarnessWorkerDescriptor & {
   shouldStop: () => boolean
 }): Promise<void> {
   if (input.workerIndex > 0) {
@@ -25,7 +87,7 @@ async function runPooledHarnessWorker(input: {
   while (!input.shouldStop()) {
     try {
       await runHarnessDaemonWorker(process.cwd(), {
-        workerId: `${input.runnerId}-worker-${input.workerIndex + 1}`,
+        workerId: input.workerId,
         runnerId: input.runnerId,
         agentKind: input.agentKind,
         workerSlots: input.workerSlots,
@@ -38,9 +100,9 @@ async function runPooledHarnessWorker(input: {
         return
       }
       logError(
-        `Harness pooled worker ${input.runnerId}-worker-${input.workerIndex + 1} crashed and will restart: ${error instanceof Error ? error.message : String(error)}`,
+        `Harness worker ${input.workerId} crashed and will restart: ${error instanceof Error ? error.message : String(error)}`,
       )
-      await sleep(POOLED_WORKER_RESTART_DELAY_MS)
+      await sleep(getPooledWorkerRestartDelayMs())
     }
   }
 }
@@ -70,7 +132,16 @@ export async function runDaemonWorker(kind: string): Promise<void> {
           ? Math.max(1, Math.min(Math.max(1, workerSlots), leaseLimit))
           : 1
 
-        if (effectiveLeaseLimit > 1 && runnerId) {
+        const execution = resolveHarnessWorkerExecution({
+          workerId: process.env.CLAUDE_CODE_HARNESS_WORKER_ID,
+          runnerId,
+          agentKind,
+          workerSlots,
+          runnerLabels,
+          effectiveLeaseLimit,
+        })
+
+        if (execution.kind === 'supervised') {
           process.setMaxListeners(0)
           let stopping = false
           const stop = () => {
@@ -79,13 +150,9 @@ export async function runDaemonWorker(kind: string): Promise<void> {
           process.on('SIGTERM', stop)
           process.on('SIGINT', stop)
           await Promise.all(
-            Array.from({ length: effectiveLeaseLimit }, (_, index) =>
-              runPooledHarnessWorker({
-                runnerId,
-                agentKind,
-                workerSlots,
-                runnerLabels,
-                workerIndex: index,
+            execution.workers.map(worker =>
+              runSupervisedHarnessWorker({
+                ...worker,
                 shouldStop: () => stopping,
               }),
             ),
@@ -93,15 +160,8 @@ export async function runDaemonWorker(kind: string): Promise<void> {
           return
         }
 
-      await runHarnessDaemonWorker(process.cwd(), {
-        workerId: process.env.CLAUDE_CODE_HARNESS_WORKER_ID,
-        runnerId,
-        agentKind,
-        workerSlots,
-        runnerLabels,
-        leaseLimit: effectiveLeaseLimit,
-      })
-      return
+        await runHarnessDaemonWorker(process.cwd(), execution)
+        return
       }
     default:
       throw new Error(`Unknown daemon worker kind: ${kind}`)

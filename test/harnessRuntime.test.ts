@@ -1,7 +1,10 @@
-import { describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { mkdtemp, mkdir, readFile, readdir } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import {
+  __setHostedHarnessBackendOverrideForTests,
+} from 'src/services/harness/controlPlane.js'
 import {
   getDefaultHarnessConfig,
   writeHarnessConfig,
@@ -16,7 +19,36 @@ import {
   runHarnessJob,
 } from 'src/services/harness/runtime.js'
 import type { ShellCommandRunner } from 'src/services/harness/shell.js'
+import { HarnessRuntimeStateSchema } from 'src/services/harness/types.js'
 import { createStableId } from 'src/services/harness/utils.js'
+
+type HarnessBackend = NonNullable<
+  Parameters<typeof __setHostedHarnessBackendOverrideForTests>[0]
+>
+
+function createInMemoryHarnessBackend(): HarnessBackend {
+  let state = HarnessRuntimeStateSchema().parse({
+    version: '2',
+    tenant: {
+      id: 'test-tenant',
+      name: 'test-tenant',
+      createdAt: '2026-04-19T00:00:00.000Z',
+    },
+  })
+
+  return {
+    kind: 'filesystem',
+    async readState() {
+      return structuredClone(state)
+    },
+    async writeState(nextState) {
+      state = structuredClone(nextState)
+    },
+    async withLock<T>(mutator: () => Promise<T> | T): Promise<T> {
+      return await mutator()
+    },
+  }
+}
 
 async function createTempRepo(): Promise<string> {
   const repoRoot = await mkdtemp(path.join(os.tmpdir(), 'cc-harness-runtime-'))
@@ -58,6 +90,14 @@ async function writeRunnerManifest(
 }
 
 describe('harness runtime', () => {
+  beforeEach(() => {
+    __setHostedHarnessBackendOverrideForTests(createInMemoryHarnessBackend())
+  })
+
+  afterEach(() => {
+    __setHostedHarnessBackendOverrideForTests(null)
+  })
+
   test('dedupes identical github and remote-trigger jobs, then auto-merges the pull request', async () => {
     const repoRoot = await createTempRepo()
     const claudeConfigDir = await mkdtemp(path.join(os.tmpdir(), 'cc-harness-home-'))
