@@ -182,6 +182,8 @@ export type WorkflowStep = {
   requiresHandoff?: string[]
 }
 
+export type WorkflowRuntime = 'staged' | 'code'
+
 export type CommandBase = {
   availability?: CommandAvailability[]
   description: string
@@ -202,6 +204,7 @@ export type CommandBase = {
   successCriteria?: string[] // Completion criteria for structured workflows/skills
   handoffFields?: string[] // Structured state keys passed between workflow steps
   workflowSteps?: WorkflowStep[] // Structured procedure for workflow-backed commands
+  workflowRuntime?: WorkflowRuntime // Runtime used to execute workflow-backed commands
   version?: string // Version of the command/skill
   disableModelInvocation?: boolean // Whether to disable this command from being invoked by models
   userInvocable?: boolean // Whether users can invoke this skill by typing /skill-name

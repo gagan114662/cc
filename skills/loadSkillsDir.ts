@@ -18,7 +18,12 @@ import {
   logEvent,
 } from '../services/analytics/index.js'
 import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
-import type { Command, PromptCommand, WorkflowStep } from '../types/command.js'
+import type {
+  Command,
+  PromptCommand,
+  WorkflowRuntime,
+  WorkflowStep,
+} from '../types/command.js'
 import {
   parseArgumentNames,
   substituteArguments,
@@ -275,6 +280,26 @@ function parseWorkflowSteps(value: unknown): WorkflowStep[] | undefined {
   return parsed.length > 0 ? parsed : undefined
 }
 
+function parseWorkflowRuntime(
+  frontmatter: FrontmatterData,
+): WorkflowRuntime | undefined {
+  const runtimeCandidate =
+    frontmatter.workflow_runtime ?? frontmatter['workflow-runtime']
+  if (runtimeCandidate === 'staged' || runtimeCandidate === 'code') {
+    return runtimeCandidate
+  }
+
+  const codeModeCandidate = frontmatter.code_mode ?? frontmatter['code-mode']
+  if (codeModeCandidate === true || codeModeCandidate === 'true') {
+    return 'code'
+  }
+  if (codeModeCandidate === false || codeModeCandidate === 'false') {
+    return 'staged'
+  }
+
+  return undefined
+}
+
 /**
  * Parses all skill frontmatter fields that are shared between file-based and
  * MCP skill loading. Caller supplies the resolved skill name and the
@@ -300,6 +325,7 @@ export function parseSkillFrontmatterFields(
   successCriteria: string[] | undefined
   handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
+  workflowRuntime: WorkflowRuntime | undefined
   version: string | undefined
   model: ReturnType<typeof parseUserSpecifiedModel> | undefined
   disableModelInvocation: boolean
@@ -368,6 +394,7 @@ export function parseSkillFrontmatterFields(
       frontmatter.handoff_fields ?? frontmatter['handoff-fields'],
     ),
     workflowSteps: parseWorkflowSteps(frontmatter.steps),
+    workflowRuntime: parseWorkflowRuntime(frontmatter),
     version: frontmatter.version as string | undefined,
     model,
     disableModelInvocation: parseBooleanFrontmatter(
@@ -402,6 +429,7 @@ export function createSkillCommand({
   successCriteria,
   handoffFields,
   workflowSteps,
+  workflowRuntime,
   version,
   model,
   disableModelInvocation,
@@ -432,6 +460,7 @@ export function createSkillCommand({
   successCriteria: string[] | undefined
   handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
+  workflowRuntime: WorkflowRuntime | undefined
   version: string | undefined
   model: string | undefined
   disableModelInvocation: boolean
@@ -462,6 +491,7 @@ export function createSkillCommand({
     successCriteria,
     handoffFields,
     workflowSteps,
+    workflowRuntime,
     version,
     model,
     disableModelInvocation,

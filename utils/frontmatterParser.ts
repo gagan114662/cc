@@ -6,6 +6,7 @@
 import { logForDebugging } from './debug.js'
 import type { HooksSettings } from './settings/types.js'
 import { parseYaml } from './yaml.js'
+import type { WorkflowRuntime } from '../types/command.js'
 
 export type FrontmatterData = {
   // YAML can return null for keys with no value (e.g., "key:" with nothing after)
@@ -21,6 +22,10 @@ export type FrontmatterData = {
   handoff_fields?: string | string[] | null
   'handoff-fields'?: string | string[] | null
   steps?: unknown
+  workflow_runtime?: WorkflowRuntime | null
+  'workflow-runtime'?: WorkflowRuntime | null
+  code_mode?: string | boolean | null
+  'code-mode'?: string | boolean | null
   // Memory type: 'user', 'feedback', 'project', or 'reference'
   // Only applicable to memory files; narrowed via parseMemoryType() in src/memdir/memoryTypes.ts
   type?: string | null

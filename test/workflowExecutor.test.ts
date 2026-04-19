@@ -59,7 +59,7 @@ function makeWorkflowCommand(): WorkflowCommand {
 describe('executeForkedWorkflow', () => {
   test('runs declared steps sequentially before final synthesis', async () => {
     const calls: Array<{
-      stageKind: 'step' | 'synthesis'
+      stageKind: 'codegen' | 'step' | 'synthesis'
       stageIndex: number
       prompt: string
       transcriptSubdir: string
@@ -197,7 +197,7 @@ describe('executeForkedWorkflow', () => {
 
   test('retries structured step failures and continues past continue-on-error steps', async () => {
     const calls: Array<{
-      stageKind: 'step' | 'synthesis'
+      stageKind: 'codegen' | 'step' | 'synthesis'
       stageIndex: number
       prompt: string
     }> = []
@@ -305,7 +305,7 @@ describe('executeForkedWorkflow', () => {
 
   test('retries final synthesis when the artifact contract is invalid', async () => {
     const calls: Array<{
-      stageKind: 'step' | 'synthesis'
+      stageKind: 'codegen' | 'step' | 'synthesis'
       stageIndex: number
       prompt: string
     }> = []
@@ -404,5 +404,139 @@ describe('executeForkedWorkflow', () => {
       'Missing output: Updated pipeline brief',
     )
     expect(result.data.result).toContain('Validated workflow artifact contract')
+  })
+
+  test('runs code-mode workflows through generated orchestration before synthesis', async () => {
+    const calls: Array<{
+      stageKind: 'codegen' | 'step' | 'synthesis'
+      stageIndex: number
+      prompt: string
+    }> = []
+    const command = {
+      ...makeWorkflowCommand(),
+      workflowRuntime: 'code' as const,
+    }
+
+    const result = await executeForkedWorkflow({
+      command,
+      commandName: command.name,
+      args: 'mid-market SaaS',
+      context: { options: { tools: [] } } as any,
+      canUseTool: (() => ({ behavior: 'allow' })) as any,
+      parentMessage: { message: { id: 'parent' } } as any,
+      modifiedGetAppState: (() => ({})) as any,
+      agentDefinition: { agentType: 'general-purpose' } as any,
+      skillContent: '# Refresh the pipeline',
+      stageRunner: async stage => {
+        calls.push(stage)
+        if (stage.stageKind === 'codegen') {
+          return `\`\`\`js
+async ({ runStep, getHandoff, skipStep, state }) => {
+  const evidence = await runStep(0)
+  state.firstSummary = evidence.state.summary
+
+  if (getHandoff().priority_segment) {
+    await runStep(1)
+  }
+
+  if (getHandoff().publish_channel) {
+    await runStep(2)
+  } else {
+    await skipStep(2, 'Publish channel was not established')
+  }
+}
+\`\`\``
+        }
+
+        if (stage.stageKind === 'synthesis') {
+          return JSON.stringify({
+            summary: 'Code mode refreshed the pipeline',
+            completionStatus: 'completed',
+            outputs: [
+              {
+                name: 'Updated pipeline brief',
+                status: 'produced',
+                evidence: 'Derived from code-mode evidence and prioritization',
+              },
+              {
+                name: 'Prioritized outreach backlog',
+                status: 'produced',
+                evidence: 'Ranked for mid-market SaaS',
+              },
+            ],
+            artifacts: [
+              {
+                kind: 'pipeline brief',
+                status: 'produced',
+                evidence: 'Pipeline brief ready',
+              },
+              {
+                kind: 'outreach backlog',
+                status: 'produced',
+                evidence: 'Backlog ready',
+              },
+            ],
+            successCriteria: [
+              {
+                criterion: 'Calls out stale assumptions',
+                status: 'met',
+                evidence: 'Homepage ICP is stale',
+              },
+              {
+                criterion: 'Produces the next highest-leverage actions',
+                status: 'met',
+                evidence: 'Priority segment selected and backlog rebuilt',
+              },
+            ],
+            missingInputs: [],
+            unresolvedRisks: ['Publish channel still needs to be chosen'],
+          })
+        }
+
+        if (stage.stageIndex === 0) {
+          return JSON.stringify({
+            summary: 'Gathered live evidence',
+            artifacts: ['Evidence brief'],
+            risks: ['Homepage messaging may be stale'],
+            handoff: {
+              stale_assumptions: 'Homepage ICP is stale',
+              priority_segment: 'mid-market SaaS',
+            },
+          })
+        }
+
+        if (stage.stageIndex === 1) {
+          return JSON.stringify({
+            summary: 'Prioritized the backlog',
+            artifacts: ['Prioritized backlog'],
+            risks: [],
+            handoff: {
+              priority_segment: 'mid-market SaaS',
+            },
+          })
+        }
+
+        throw new Error(`Unexpected code-mode stage ${stage.stageKind}:${stage.stageIndex}`)
+      },
+    })
+
+    expect(calls.map(call => call.stageKind)).toEqual([
+      'codegen',
+      'step',
+      'step',
+      'synthesis',
+    ])
+    expect(calls[0]?.prompt).toContain('Return ONLY JavaScript')
+    expect(calls[0]?.prompt).toContain('Use code to decide sequencing, branching, looping, and state instead of explaining the workflow in prose')
+    expect(calls[0]?.prompt).toContain('await runStep(stepIndex)')
+    expect(calls[1]?.prompt).toContain('Title: Gather evidence')
+    expect(calls[2]?.prompt).toContain('Title: Prioritize actions')
+    expect(calls[3]?.prompt).toContain('3. Draft publish plan')
+    expect(calls[3]?.prompt).toContain('Status: skipped')
+    expect(calls[3]?.prompt).toContain(
+      'Summary: Skipped: Publish channel was not established',
+    )
+    expect(result.data.result).toContain('Code mode refreshed the pipeline')
+    expect(result.data.result).toContain('Open risks: Publish channel still needs to be chosen')
   })
 })

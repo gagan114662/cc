@@ -27,6 +27,7 @@ describe('bundled workflow skills', () => {
         { title: 'Recommend fixes' },
       ],
       context: 'fork',
+      workflowRuntime: 'code',
       allowedTools: ['Bash'],
       async getPromptForCommand() {
         return [{ type: 'text', text: '# Audit the funnel' }]
@@ -40,6 +41,7 @@ describe('bundled workflow skills', () => {
     expect(workflow).toBeDefined()
     expect(workflow?.kind).toBe('workflow')
     expect(workflow?.context).toBe('fork')
+    expect(workflow?.workflowRuntime).toBe('code')
     expect(workflow?.verbs).toContain('audit funnel')
     expect(workflow?.artifactKinds).toContain('funnel audit')
     expect(workflow?.workflowSteps).toHaveLength(3)

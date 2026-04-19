@@ -61,6 +61,10 @@ export type WorkflowFinalValidation = {
   issues: string[]
 }
 
+export type WorkflowCodeProgram = {
+  source: string
+}
+
 type WorkflowSummaryOptions = {
   includeWhenToUse?: boolean
   includeVerbs?: boolean
@@ -212,6 +216,68 @@ export function buildWorkflowExecutionContract(
   }
   lines.push(
     'Treat the success criteria as the completion bar. If required inputs are missing, gather them or call out the gap before claiming the workflow is done.',
+  )
+
+  return lines.join('\n')
+}
+
+export function buildWorkflowCodeModePrompt(
+  cmd: WorkflowCommand,
+  skillContent: string,
+  args: string,
+): string {
+  const lines = [
+    `You are writing JavaScript to orchestrate workflow "${cmd.userFacingName?.() ?? cmd.name}".`,
+    'Return ONLY JavaScript that evaluates to an async function `(api) => { ... }`.',
+    'Use code to decide sequencing, branching, looping, and state instead of explaining the workflow in prose.',
+  ]
+
+  const contract = buildWorkflowExecutionContract(cmd)
+  if (contract) {
+    lines.push('', contract)
+  }
+
+  if (args.trim()) {
+    lines.push('', `Workflow arguments: ${args.trim()}`)
+  }
+
+  lines.push(
+    '',
+    'The runtime API passed to your function has:',
+    '- `workflow`: readonly workflow metadata including `steps`, `outputs`, `artifactKinds`, and `successCriteria`',
+    '- `args`: the raw workflow argument string',
+    '- `state`: a mutable plain object for temporary state',
+    '- `await runStep(stepIndex)`: execute one declared step and return its structured result',
+    '- `await skipStep(stepIndex, reason?)`: mark a step as skipped',
+    '- `getHandoff()`: returns the accumulated structured handoff object',
+    '- `getOutcomes()`: returns the structured outcomes recorded so far',
+    '- `hasOutcome(stepIndex)`: returns whether that step already has an outcome',
+  )
+
+  lines.push(
+    '',
+    'Rules:',
+    '- Do not import modules or reference Node globals.',
+    '- Only use the provided runtime API.',
+    '- Prefer declared workflow steps over inventing ad hoc tasks.',
+    '- If a step is not applicable, explicitly skip it with a concise reason.',
+    '- Keep the program concise and executable as-is.',
+  )
+
+  lines.push('', 'Workflow reference:')
+  lines.push(skillContent.trim())
+
+  lines.push(
+    '',
+    'Return ONLY JavaScript for an async function. Example:',
+    'async ({ runStep, getHandoff, skipStep }) => {',
+    '  await runStep(0)',
+    '  if (getHandoff().priority_segment) {',
+    '    await runStep(1)',
+    '  } else {',
+    "    await skipStep(1, 'Missing priority segment')",
+    '  }',
+    '}',
   )
 
   return lines.join('\n')
@@ -463,6 +529,15 @@ function extractJsonObject(value: string): string | null {
   }
 
   return value.slice(firstBrace, lastBrace + 1)
+}
+
+export function extractWorkflowProgramSource(value: string): string {
+  const fencedMatch = value.match(/```(?:javascript|js|ts|typescript)?\s*([\s\S]*?)```/i)
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim()
+  }
+
+  return value.trim()
 }
 
 function normalizeStringList(value: unknown): string[] {

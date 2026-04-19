@@ -160,6 +160,7 @@ describe('fetchMcpWorkflowsForClient', () => {
 name: Pipeline Refresh
 description: Rebuild the pipeline from the current public surface
 context: fork
+workflow_runtime: code
 when_to_use: Refresh the growth plan after market, messaging, or demand changes
 verbs:
   - refresh pipeline
@@ -218,6 +219,7 @@ highest-leverage GTM actions.`,
     expect(workflow.loadedFrom).toBe('mcp')
     expect(workflow.userFacingName?.()).toBe('Pipeline Refresh')
     expect(workflow.context).toBe('fork')
+    expect(workflow.workflowRuntime).toBe('code')
     expect(workflow.progressMessage).toBe('running workflow')
     expect(workflow.verbs).toEqual([
       'refresh pipeline',

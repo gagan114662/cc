@@ -53,6 +53,7 @@ export function registerBrowserFunnelAuditWorkflow(): void {
     allowedTools: ['Bash', 'Read', 'Grep', 'Glob'],
     userInvocable: true,
     context: 'fork',
+    workflowRuntime: 'code',
     isEnabled: () => isBrowserHarnessInstalledSync(),
     files: BROWSER_HARNESS_REFERENCE_FILES,
     async getPromptForCommand(args) {
