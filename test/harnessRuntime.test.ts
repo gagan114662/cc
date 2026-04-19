@@ -9,6 +9,7 @@ import {
 import { pollGitHubDiscovery } from 'src/services/harness/github.js'
 import type { HarnessDependencies } from 'src/services/harness/runtime.js'
 import {
+  buildNextWorkerHeartbeat,
   getHarnessStatus,
   ingestGitHubWebhookEvent,
   pollHarnessOnce,
@@ -455,6 +456,40 @@ describe('harness runtime', () => {
     } finally {
       process.env.CLAUDE_CONFIG_DIR = previousClaudeConfigDir
     }
+  })
+
+  test('preserves telemetry export state across worker heartbeat refreshes', () => {
+    const next = buildNextWorkerHeartbeat(
+      {
+        workerId: 'claude-primary-worker-1',
+        pid: 100,
+        runnerId: 'claude-primary',
+        agentKind: 'claude',
+        labels: ['shared', 'cc', 'claude'],
+        slotCapacity: 25,
+        healthy: true,
+        observabilityEnvLoaded: true,
+        lastTelemetryExportAt: '2026-04-19T12:00:00.000Z',
+        repoId: 'repo-1',
+        lastHeartbeatAt: '2026-04-19T12:00:01.000Z',
+      },
+      {
+        workerId: 'claude-primary-worker-1',
+        pid: 101,
+        runnerId: 'claude-primary',
+        agentKind: 'claude',
+        labels: ['shared', 'cc', 'claude'],
+        slotCapacity: 25,
+        repoId: 'repo-1',
+        lastHeartbeatAt: '2026-04-19T12:00:10.000Z',
+        observabilityEnvLoaded: true,
+      },
+    )
+
+    expect(next.pid).toBe(101)
+    expect(next.lastHeartbeatAt).toBe('2026-04-19T12:00:10.000Z')
+    expect(next.observabilityEnvLoaded).toBe(true)
+    expect(next.lastTelemetryExportAt).toBe('2026-04-19T12:00:00.000Z')
   })
 
   test('treats only the latest default-branch run as authoritative for red-main detection', async () => {

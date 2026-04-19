@@ -1,4 +1,49 @@
 import { runHarnessDaemonWorker } from 'src/services/harness/runtime.js'
+import { logError } from 'src/utils/log.js'
+
+const POOLED_WORKER_START_STAGGER_MS = 150
+const POOLED_WORKER_RESTART_DELAY_MS = Number(
+  process.env.CLAUDE_CODE_HARNESS_WORKER_RESTART_DELAY_MS ?? '1000',
+)
+
+async function sleep(ms: number): Promise<void> {
+  await new Promise(resolve => setTimeout(resolve, ms))
+}
+
+async function runPooledHarnessWorker(input: {
+  runnerId: string
+  agentKind: 'claude' | 'codex'
+  workerSlots: number
+  runnerLabels: string[]
+  workerIndex: number
+  shouldStop: () => boolean
+}): Promise<void> {
+  if (input.workerIndex > 0) {
+    await sleep(input.workerIndex * POOLED_WORKER_START_STAGGER_MS)
+  }
+
+  while (!input.shouldStop()) {
+    try {
+      await runHarnessDaemonWorker(process.cwd(), {
+        workerId: `${input.runnerId}-worker-${input.workerIndex + 1}`,
+        runnerId: input.runnerId,
+        agentKind: input.agentKind,
+        workerSlots: input.workerSlots,
+        runnerLabels: input.runnerLabels,
+        leaseLimit: 1,
+      })
+      return
+    } catch (error) {
+      if (input.shouldStop()) {
+        return
+      }
+      logError(
+        `Harness pooled worker ${input.runnerId}-worker-${input.workerIndex + 1} crashed and will restart: ${error instanceof Error ? error.message : String(error)}`,
+      )
+      await sleep(POOLED_WORKER_RESTART_DELAY_MS)
+    }
+  }
+}
 
 export async function runDaemonWorker(kind: string): Promise<void> {
   switch (kind) {
@@ -27,15 +72,21 @@ export async function runDaemonWorker(kind: string): Promise<void> {
 
         if (effectiveLeaseLimit > 1 && runnerId) {
           process.setMaxListeners(0)
+          let stopping = false
+          const stop = () => {
+            stopping = true
+          }
+          process.on('SIGTERM', stop)
+          process.on('SIGINT', stop)
           await Promise.all(
             Array.from({ length: effectiveLeaseLimit }, (_, index) =>
-              runHarnessDaemonWorker(process.cwd(), {
-                workerId: `${runnerId}-worker-${index + 1}`,
+              runPooledHarnessWorker({
                 runnerId,
                 agentKind,
                 workerSlots,
                 runnerLabels,
-                leaseLimit: 1,
+                workerIndex: index,
+                shouldStop: () => stopping,
               }),
             ),
           )
