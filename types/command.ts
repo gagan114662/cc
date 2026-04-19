@@ -184,6 +184,19 @@ export type WorkflowStep = {
 
 export type WorkflowRuntime = 'staged' | 'code'
 
+export const WORKFLOW_CAPABILITY_GRANTS = [
+  'browser',
+  'github',
+  'docs',
+  'cli',
+  'mcp',
+  'workspace',
+  'discovery',
+] as const
+
+export type WorkflowCapabilityGrant =
+  (typeof WORKFLOW_CAPABILITY_GRANTS)[number]
+
 export type CommandBase = {
   availability?: CommandAvailability[]
   description: string
@@ -205,6 +218,7 @@ export type CommandBase = {
   handoffFields?: string[] // Structured state keys passed between workflow steps
   workflowSteps?: WorkflowStep[] // Structured procedure for workflow-backed commands
   workflowRuntime?: WorkflowRuntime // Runtime used to execute workflow-backed commands
+  capabilityGrants?: WorkflowCapabilityGrant[] // Explicit runtime APIs exposed to code-mode workflows
   version?: string // Version of the command/skill
   disableModelInvocation?: boolean // Whether to disable this command from being invoked by models
   userInvocable?: boolean // Whether users can invoke this skill by typing /skill-name

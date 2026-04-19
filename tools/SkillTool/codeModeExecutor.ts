@@ -5,6 +5,8 @@ import { getOriginalCwd, getSessionId, getSessionProjectDir } from '../../bootst
 import type { Command } from '../../commands.js'
 import type { ToolUseContext } from '../../Tool.js'
 import { commandBelongsToServer } from '../../services/mcp/utils.js'
+import type { WorkflowCapabilityGrant } from '../../types/command.js'
+import { WORKFLOW_CAPABILITY_GRANTS } from '../../types/command.js'
 import { getBrowserHarnessStatus, type BrowserHarnessStatus } from '../../utils/browserHarness.js'
 import {
   getCapabilityFamily,
@@ -96,6 +98,7 @@ type PersistedCodeModeState = {
     displayName: string
     args: string
     runtime: 'code'
+    capabilityGrants: WorkflowCapabilityGrant[]
     transcriptSubdir: string
   }
   phase: 'planning' | 'executing' | 'completed' | 'failed'
@@ -188,13 +191,13 @@ type CodeModeProgramApi = {
   args: string
   state: CodeModeStateApi
   workflow: CodeModeWorkflowApi
-  browser: CodeModeBrowserApi
-  github: CodeModeGitHubApi
-  docs: CodeModeDocsApi
-  cli: CodeModeCliApi
-  mcp: CodeModeMcpApi
-  workspace: CodeModeWorkspaceApi
-  discovery: CodeModeDiscoveryApi
+  browser?: CodeModeBrowserApi
+  github?: CodeModeGitHubApi
+  docs?: CodeModeDocsApi
+  cli?: CodeModeCliApi
+  mcp?: CodeModeMcpApi
+  workspace?: CodeModeWorkspaceApi
+  discovery?: CodeModeDiscoveryApi
   runStep(stepIndex: number): Promise<WorkflowStepOutcome>
   skipStep(stepIndex: number, reason?: string): Promise<WorkflowStepOutcome>
   getHandoff(): Record<string, string>
@@ -364,6 +367,35 @@ function cloneCapabilityDescriptor(
   }
 }
 
+function resolveCapabilityGrants(
+  command: WorkflowCommand,
+): Set<WorkflowCapabilityGrant> {
+  return new Set(
+    command.capabilityGrants && command.capabilityGrants.length > 0
+      ? command.capabilityGrants
+      : WORKFLOW_CAPABILITY_GRANTS,
+  )
+}
+
+function hasCapabilityGrant(
+  grants: Set<WorkflowCapabilityGrant>,
+  grant: WorkflowCapabilityGrant,
+): boolean {
+  return grants.has(grant)
+}
+
+function isVisibleForCapabilityGrants(
+  command: Extract<Command, { type: 'prompt' }>,
+  grants: Set<WorkflowCapabilityGrant>,
+): boolean {
+  return (
+    (hasCapabilityGrant(grants, 'browser') && looksBrowserBackedCapability(command)) ||
+    (hasCapabilityGrant(grants, 'github') && looksGitHubCapability(command)) ||
+    (hasCapabilityGrant(grants, 'docs') && looksDocsCapability(command)) ||
+    (hasCapabilityGrant(grants, 'mcp') && command.loadedFrom === 'mcp')
+  )
+}
+
 function buildCapabilitySnapshot(
   allCommands: Command[],
   command: WorkflowCommand,
@@ -372,44 +404,68 @@ function buildCapabilitySnapshot(
   statePath: string,
   transcriptSubdir: string,
 ): CodeModeCapabilitySnapshot {
+  const capabilityGrants = resolveCapabilityGrants(command)
+  const hasExplicitCapabilityGrants = Boolean(command.capabilityGrants?.length)
   const promptCommands = allCommands.filter(
     (item): item is Extract<Command, { type: 'prompt' }> => item.type === 'prompt',
   )
-  const browserWorkflows = allCommands.filter(
-    item => item.type === 'prompt' && looksBrowserBackedCapability(item),
-  )
-  const githubCommands = promptCommands.filter(looksGitHubCapability)
-  const docsCommands = promptCommands.filter(looksDocsCapability)
+  const visiblePromptCommands = hasExplicitCapabilityGrants
+    ? promptCommands.filter(item =>
+        isVisibleForCapabilityGrants(item, capabilityGrants),
+      )
+    : promptCommands
+  const browserWorkflows = hasCapabilityGrant(capabilityGrants, 'browser')
+    ? promptCommands.filter(looksBrowserBackedCapability)
+    : []
+  const githubCommands = hasCapabilityGrant(capabilityGrants, 'github')
+    ? promptCommands.filter(looksGitHubCapability)
+    : []
+  const docsCommands = hasCapabilityGrant(capabilityGrants, 'docs')
+    ? promptCommands.filter(looksDocsCapability)
+    : []
   const githubWorkflows = githubCommands.filter(item => item.kind === 'workflow')
   const githubRepoCapabilities = githubCommands.filter(
     item => item.kind !== 'workflow',
   )
   const docsWorkflows = docsCommands.filter(item => item.kind === 'workflow')
   const docsCapabilities = docsCommands.filter(item => item.kind !== 'workflow')
-  const mcpCommands = allCommands.filter(item => item.loadedFrom === 'mcp')
+  const mcpCommands = hasCapabilityGrant(capabilityGrants, 'mcp')
+    ? allCommands.filter(item => item.loadedFrom === 'mcp')
+    : []
   const mcpWorkflows = mcpCommands.filter(item => item.kind === 'workflow')
   const mcpSkills = mcpCommands.filter(item => item.kind !== 'workflow')
-  const allowedTools = [...(command.allowedTools ?? [])]
-  const availableTools = context.options.tools.map(tool => ({
-    name: tool.name,
-    workflowAllowed: allowedTools.includes(tool.name),
-    available: true,
-  }))
+  const allowedTools = hasCapabilityGrant(capabilityGrants, 'cli')
+    ? [...(command.allowedTools ?? [])]
+    : []
+  const availableTools = hasCapabilityGrant(capabilityGrants, 'cli')
+    ? context.options.tools.map(tool => ({
+        name: tool.name,
+        workflowAllowed: allowedTools.includes(tool.name),
+        available: true,
+      }))
+    : []
 
-  const mcpServers = context.getAppState().mcp.clients.map(client => {
-    const serverCommands = mcpCommands.filter(item =>
-      commandBelongsToServer(item, client.name),
-    )
-    return {
-      name: client.name,
-      connected: client.type === 'connected',
-      workflowCount: serverCommands.filter(item => item.kind === 'workflow')
-        .length,
-      skillCount: serverCommands.filter(item => item.kind !== 'workflow')
-        .length,
-      resourceCount: context.getAppState().mcp.resources[client.name]?.length ?? 0,
-    }
-  })
+  const mcpServers = hasCapabilityGrant(capabilityGrants, 'mcp')
+    ? context.getAppState().mcp.clients.map(client => {
+        const serverCommands = mcpCommands.filter(item =>
+          commandBelongsToServer(item, client.name),
+        )
+        return {
+          name: client.name,
+          connected: client.type === 'connected',
+          workflowCount: serverCommands.filter(item => item.kind === 'workflow')
+            .length,
+          skillCount: serverCommands.filter(item => item.kind !== 'workflow')
+            .length,
+          resourceCount:
+            context.getAppState().mcp.resources[client.name]?.length ?? 0,
+        }
+      })
+    : []
+
+  const visibleFamilies = [
+    ...new Set(visiblePromptCommands.map(item => getCapabilityFamily(item))),
+  ]
 
   return {
     workspace: {
@@ -421,8 +477,13 @@ function buildCapabilitySnapshot(
       statePath,
     },
     discovery: {
-      capabilityCount: allCommands.filter(item => item.type === 'prompt').length,
-      families: [...CAPABILITY_FAMILIES],
+      capabilityCount: visiblePromptCommands.length,
+      families:
+        visibleFamilies.length > 0
+          ? visibleFamilies
+          : hasExplicitCapabilityGrants
+            ? []
+            : [...CAPABILITY_FAMILIES],
     },
     github: {
       workflows: githubWorkflows.map(summarizeCommand),
@@ -502,6 +563,11 @@ export class CodeModeStateStore {
         displayName: args.command.userFacingName?.() ?? args.command.name,
         args: args.argsText,
         runtime: 'code',
+        capabilityGrants: [
+          ...(args.command.capabilityGrants?.length
+            ? args.command.capabilityGrants
+            : WORKFLOW_CAPABILITY_GRANTS),
+        ],
         transcriptSubdir: args.transcriptSubdir,
       },
       phase: 'planning',
@@ -792,8 +858,15 @@ export class CodeModeExecutor {
       info: () => ({ ...this.capabilitySnapshot.workspace }),
     })
 
+    const capabilityGrants = resolveCapabilityGrants(this.args.command)
+    const hasExplicitCapabilityGrants = Boolean(
+      this.args.command.capabilityGrants?.length,
+    )
     const promptCapabilities = this.allCommands.filter(
-      (item): item is Extract<Command, { type: 'prompt' }> => item.type === 'prompt',
+      (item): item is Extract<Command, { type: 'prompt' }> =>
+        item.type === 'prompt' &&
+        (!hasExplicitCapabilityGrants ||
+          isVisibleForCapabilityGrants(item, capabilityGrants)),
     )
 
     const discoveryApi: CodeModeDiscoveryApi = Object.freeze({
@@ -851,26 +924,40 @@ export class CodeModeExecutor {
         ),
     })
 
-    const api: CodeModeProgramApi = Object.freeze({
+    const api: CodeModeProgramApi = {
       args: this.args.argsText,
       state: stateApi,
       workflow: workflowApi,
-      browser: browserApi,
-      github: githubApi,
-      docs: docsApi,
-      cli: cliApi,
-      mcp: mcpApi,
-      workspace: workspaceApi,
-      discovery: discoveryApi,
       runStep: workflowApi.runStep,
       skipStep: workflowApi.skipStep,
       getHandoff: workflowApi.getHandoff,
       getOutcomes: workflowApi.getOutcomes,
       hasOutcome: workflowApi.hasOutcome,
-    })
+    }
+    if (hasCapabilityGrant(capabilityGrants, 'browser')) {
+      api.browser = browserApi
+    }
+    if (hasCapabilityGrant(capabilityGrants, 'github')) {
+      api.github = githubApi
+    }
+    if (hasCapabilityGrant(capabilityGrants, 'docs')) {
+      api.docs = docsApi
+    }
+    if (hasCapabilityGrant(capabilityGrants, 'cli')) {
+      api.cli = cliApi
+    }
+    if (hasCapabilityGrant(capabilityGrants, 'mcp')) {
+      api.mcp = mcpApi
+    }
+    if (hasCapabilityGrant(capabilityGrants, 'workspace')) {
+      api.workspace = workspaceApi
+    }
+    if (hasCapabilityGrant(capabilityGrants, 'discovery')) {
+      api.discovery = discoveryApi
+    }
 
     try {
-      await runProgramInSandbox(program, api)
+      await runProgramInSandbox(program, Object.freeze(api))
       await this.stateStore.recordOutcomes(this.args.getOutcomes())
       return {
         stepOutcomes: this.args.getOutcomes(),

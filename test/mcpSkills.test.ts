@@ -180,6 +180,9 @@ success_criteria:
 handoff_fields:
   - stale_assumptions
   - priority_segment
+capability_grants:
+  - browser
+  - discovery
 steps:
   - title: Gather evidence
     objective: Review the website and current positioning assumptions
@@ -241,6 +244,7 @@ highest-leverage GTM actions.`,
       'Identifies stale assumptions',
       'Produces the next highest-leverage actions',
     ])
+    expect(workflow.capabilityGrants).toEqual(['browser', 'discovery'])
     expect(workflow.handoffFields).toEqual([
       'stale_assumptions',
       'priority_segment',

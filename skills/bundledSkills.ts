@@ -5,6 +5,7 @@ import { dirname, isAbsolute, join, normalize, sep as pathSep } from 'path'
 import type { ToolUseContext } from '../Tool.js'
 import type {
   Command,
+  WorkflowCapabilityGrant,
   WorkflowRuntime,
   WorkflowStep,
 } from '../types/command.js'
@@ -29,6 +30,7 @@ export type BundledSkillDefinition = {
   handoffFields?: string[]
   workflowSteps?: WorkflowStep[]
   workflowRuntime?: WorkflowRuntime
+  capabilityGrants?: WorkflowCapabilityGrant[]
   argumentHint?: string
   allowedTools?: string[]
   model?: string
@@ -101,6 +103,7 @@ export function registerBundledSkill(definition: BundledSkillDefinition): void {
     handoffFields: definition.handoffFields,
     workflowSteps: definition.workflowSteps,
     workflowRuntime: definition.workflowRuntime,
+    capabilityGrants: definition.capabilityGrants,
     kind:
       definition.workflowSteps && definition.workflowSteps.length > 0
         ? 'workflow'

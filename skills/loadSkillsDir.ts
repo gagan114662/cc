@@ -21,9 +21,11 @@ import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
 import type {
   Command,
   PromptCommand,
+  WorkflowCapabilityGrant,
   WorkflowRuntime,
   WorkflowStep,
 } from '../types/command.js'
+import { WORKFLOW_CAPABILITY_GRANTS } from '../types/command.js'
 import {
   parseArgumentNames,
   substituteArguments,
@@ -300,6 +302,22 @@ function parseWorkflowRuntime(
   return undefined
 }
 
+function parseWorkflowCapabilityGrants(
+  value: unknown,
+): WorkflowCapabilityGrant[] | undefined {
+  const parsed = parseStringListFrontmatter(value)
+  if (!parsed) {
+    return undefined
+  }
+
+  const valid = parsed.filter(
+    (item): item is WorkflowCapabilityGrant =>
+      WORKFLOW_CAPABILITY_GRANTS.includes(item as WorkflowCapabilityGrant),
+  )
+
+  return valid.length > 0 ? [...new Set(valid)] : undefined
+}
+
 /**
  * Parses all skill frontmatter fields that are shared between file-based and
  * MCP skill loading. Caller supplies the resolved skill name and the
@@ -326,6 +344,7 @@ export function parseSkillFrontmatterFields(
   handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
   workflowRuntime: WorkflowRuntime | undefined
+  capabilityGrants: WorkflowCapabilityGrant[] | undefined
   version: string | undefined
   model: ReturnType<typeof parseUserSpecifiedModel> | undefined
   disableModelInvocation: boolean
@@ -395,6 +414,9 @@ export function parseSkillFrontmatterFields(
     ),
     workflowSteps: parseWorkflowSteps(frontmatter.steps),
     workflowRuntime: parseWorkflowRuntime(frontmatter),
+    capabilityGrants: parseWorkflowCapabilityGrants(
+      frontmatter.capability_grants ?? frontmatter['capability-grants'],
+    ),
     version: frontmatter.version as string | undefined,
     model,
     disableModelInvocation: parseBooleanFrontmatter(
@@ -430,6 +452,7 @@ export function createSkillCommand({
   handoffFields,
   workflowSteps,
   workflowRuntime,
+  capabilityGrants,
   version,
   model,
   disableModelInvocation,
@@ -461,6 +484,7 @@ export function createSkillCommand({
   handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
   workflowRuntime: WorkflowRuntime | undefined
+  capabilityGrants: WorkflowCapabilityGrant[] | undefined
   version: string | undefined
   model: string | undefined
   disableModelInvocation: boolean
@@ -492,6 +516,7 @@ export function createSkillCommand({
     handoffFields,
     workflowSteps,
     workflowRuntime,
+    capabilityGrants,
     version,
     model,
     disableModelInvocation,

@@ -6,7 +6,10 @@
 import { logForDebugging } from './debug.js'
 import type { HooksSettings } from './settings/types.js'
 import { parseYaml } from './yaml.js'
-import type { WorkflowRuntime } from '../types/command.js'
+import type {
+  WorkflowCapabilityGrant,
+  WorkflowRuntime,
+} from '../types/command.js'
 
 export type FrontmatterData = {
   // YAML can return null for keys with no value (e.g., "key:" with nothing after)
@@ -24,6 +27,8 @@ export type FrontmatterData = {
   steps?: unknown
   workflow_runtime?: WorkflowRuntime | null
   'workflow-runtime'?: WorkflowRuntime | null
+  capability_grants?: WorkflowCapabilityGrant[] | string | null
+  'capability-grants'?: WorkflowCapabilityGrant[] | string | null
   code_mode?: string | boolean | null
   'code-mode'?: string | boolean | null
   // Memory type: 'user', 'feedback', 'project', or 'reference'
