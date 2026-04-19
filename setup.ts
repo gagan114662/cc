@@ -20,6 +20,7 @@ import {
 } from './bootstrap/state.js'
 import { getCommands } from './commands.js'
 import { initSessionMemory } from './services/SessionMemory/sessionMemory.js'
+import { denyBypassIfUnauthorized } from './services/tenant/bypassAuthorization.js'
 import { asSessionId } from './types/ids.js'
 import { isAgentSwarmsEnabled } from './utils/agentSwarmsEnabled.js'
 import { checkAndRestoreTerminalBackup } from './utils/appleTerminalBackup.js'
@@ -403,6 +404,17 @@ export async function setup(
     permissionMode === 'bypassPermissions' ||
     allowDangerouslySkipPermissions
   ) {
+    // Tenant-role gate (Phase 2 item 4b): disabling permission prompts
+    // deletes the safety net every downstream session relies on, so it
+    // must require admin — not developer, not viewer. Single-operator
+    // deployments are unaffected because DEFAULT_TENANT is admin.
+    const bypassDenialReason = denyBypassIfUnauthorized()
+    if (bypassDenialReason) {
+      // biome-ignore lint/suspicious/noConsole:: intentional console output
+      console.error(bypassDenialReason)
+      process.exit(1)
+    }
+
     // Check if running as root/sudo on Unix-like systems
     // Allow root if in a sandbox (e.g., TPU devspaces that require root)
     if (
