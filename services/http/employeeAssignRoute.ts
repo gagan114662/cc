@@ -24,6 +24,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import { writeAuditEntry } from '../audit/durableAuditLog.js'
+import { enqueueAssignment } from '../assignmentQueue/storage.js'
 import { withAssignmentSpan } from '../observability/dutySpans.js'
 import { denyAssignIfUnauthorized } from '../tenant/assignmentAuthorization.js'
 import {
@@ -53,6 +54,11 @@ export type HandleEmployeeAssignOptions = {
   idFactory?: () => string
   // Clock override for the audit ts. Defaults to new Date().
   now?: () => Date
+  // Where the per-tenant assignments-queue.jsonl lives. Default resolves
+  // via storage.getAssignmentQueuePath → getProjectRoot(). The daemon
+  // passes its own projectRoot so the HTTP handler enqueues into the
+  // same file the daemon drainer watches.
+  projectRoot?: string
 }
 
 type ParsedBody =
@@ -179,6 +185,11 @@ export async function handleEmployeeAssignRequest(
   // the correct stamp on each entry — same isolation property
   // test/tenantScope.test.ts proves at the scope level, now exercised
   // by an actual HTTP route.
+  // Audit first, then enqueue — audit is the "we received this"
+  // contract (SOC 2), queue is the operational "it needs to run".
+  // If enqueue throws the client gets 500 and the audit entry is
+  // already durable, which is what we want — we never want to lose
+  // the receipt record even if the queue write fails.
   await runWithTenantScope(
     { tenant, correlationId: id },
     () =>
@@ -194,6 +205,10 @@ export async function handleEmployeeAssignRequest(
               source: 'http.v1',
             },
             opts.auditDir ? { dir: opts.auditDir } : undefined,
+          )
+          await enqueueAssignment(
+            { id, assignment: body.assignment },
+            { projectRoot: opts.projectRoot, tenantId: tenant.id },
           )
         },
       ),
