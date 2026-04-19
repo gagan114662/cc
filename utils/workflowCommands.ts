@@ -244,14 +244,13 @@ export function buildWorkflowCodeModePrompt(
   lines.push(
     '',
     'The runtime API passed to your function has:',
-    '- `workflow`: readonly workflow metadata including `steps`, `outputs`, `artifactKinds`, and `successCriteria`',
+    '- `workflow`: readonly workflow metadata plus `runStep(stepIndex)`, `skipStep(stepIndex, reason?)`, `getHandoff()`, `getOutcomes()`, and `hasOutcome(stepIndex)`',
     '- `args`: the raw workflow argument string',
-    '- `state`: a mutable plain object for temporary state',
-    '- `await runStep(stepIndex)`: execute one declared step and return its structured result',
-    '- `await skipStep(stepIndex, reason?)`: mark a step as skipped',
-    '- `getHandoff()`: returns the accumulated structured handoff object',
-    '- `getOutcomes()`: returns the structured outcomes recorded so far',
-    '- `hasOutcome(stepIndex)`: returns whether that step already has an outcome',
+    '- `state`: persistent workflow state with `get(key)`, `set(key, value)`, `delete(key)`, `replace(object)`, and `snapshot()`',
+    '- `browser`: typed browser capability helpers with `status()`, `listWorkflows()`, and `hasWorkflow(name)`',
+    '- `cli`: typed CLI capability helpers with `allowedTools()`, `listTools()`, `isAllowed(toolName)`, and `isAvailable(toolName)`',
+    '- `mcp`: typed MCP capability helpers with `listServers()`, `listWorkflows(serverName?)`, `listSkills(serverName?)`, and `hasServer(serverName)`',
+    '- Top-level aliases remain available: `await runStep(stepIndex)`, `await skipStep(stepIndex, reason?)`, `getHandoff()`, `getOutcomes()`, and `hasOutcome(stepIndex)`',
   )
 
   lines.push(
@@ -270,12 +269,13 @@ export function buildWorkflowCodeModePrompt(
   lines.push(
     '',
     'Return ONLY JavaScript for an async function. Example:',
-    'async ({ runStep, getHandoff, skipStep }) => {',
-    '  await runStep(0)',
-    '  if (getHandoff().priority_segment) {',
-    '    await runStep(1)',
+    'async ({ workflow, state, browser }) => {',
+    '  await workflow.runStep(0)',
+    "  await state.set('browserReady', browser.status().installed)",
+    '  if (workflow.getHandoff().priority_segment) {',
+    '    await workflow.runStep(1)',
     '  } else {',
-    "    await skipStep(1, 'Missing priority segment')",
+    "    await workflow.skipStep(1, 'Missing priority segment')",
     '  }',
     '}',
   )

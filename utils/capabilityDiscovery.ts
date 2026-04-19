@@ -292,7 +292,9 @@ function inferDiscoveryIntent(queryText: string): DiscoveryIntent {
   }
 }
 
-function getCapabilityFamily(capability: CapabilityLike): CapabilityFamily {
+export function getCapabilityFamily(
+  capability: CapabilityLike,
+): CapabilityFamily {
   const searchableText = collectCapabilityText(capability)
 
   if (
