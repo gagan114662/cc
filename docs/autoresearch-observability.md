@@ -179,6 +179,12 @@ Create SLOs on the trusted-output metrics:
 - hidden-holdout predictive accuracy remains `1`
 - dogfood miss rate remains `0`
 
+Operator surface:
+
+- `bun run honeycomb:deploy-slos -- --dry-run` previews the create/update plan against the Honeycomb management API.
+- `bun run honeycomb:deploy-slos` applies the SLO registry.
+- `bun run honeycomb:verify` now reports `sloCoverage` so the deployed set can be compared against the starter registry.
+
 ## Splitter Topology
 
 The current config in [autoresearch.config.json](/Users/gaganarora/Desktop/my%20projects/cc/autoresearch.config.json) maps work like this:
