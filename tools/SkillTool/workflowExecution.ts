@@ -13,9 +13,12 @@ import { createUserMessage, normalizeMessages } from '../../utils/messages.js'
 import {
   buildWorkflowStepExecutionPrompt,
   buildWorkflowSynthesisPrompt,
+  createWorkflowFailureState,
+  createWorkflowSkippedState,
   parseWorkflowStepState,
   type WorkflowCommand,
   type WorkflowStepOutcome,
+  type WorkflowStepState,
 } from '../../utils/workflowCommands.js'
 import { createAgentId } from '../../utils/uuid.js'
 import { clearInvokedSkillsForAgent } from '../../bootstrap/state.js'
@@ -52,6 +55,98 @@ type ExecuteForkedWorkflowArgs = {
   agentDefinition: AgentDefinition
   skillContent: string
   stageRunner?: WorkflowStageRunner
+}
+
+function buildCombinedHandoff(
+  outcomes: WorkflowStepOutcome[],
+): Record<string, string> {
+  return Object.assign({}, ...outcomes.map(outcome => outcome.state.handoff))
+}
+
+function summarizeError(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
+}
+
+function hasRequiredHandoff(
+  requiredFields: string[] | undefined,
+  handoff: Record<string, string>,
+): boolean {
+  if (!requiredFields || requiredFields.length === 0) {
+    return true
+  }
+
+  return requiredFields.every(field => Boolean(handoff[field]))
+}
+
+async function runWorkflowStepWithRetries(args: {
+  command: WorkflowCommand
+  skillContent: string
+  stepOutcomes: WorkflowStepOutcome[]
+  stepIndex: number
+  argsText: string
+  runStage: WorkflowStageRunner
+  transcriptSubdir: string
+}): Promise<{
+  result: string
+  state: WorkflowStepState
+}> {
+  const {
+    command,
+    skillContent,
+    stepOutcomes,
+    stepIndex,
+    argsText,
+    runStage,
+    transcriptSubdir,
+  } = args
+  const step = command.workflowSteps?.[stepIndex]
+  if (!step) {
+    throw new Error(`Missing workflow step at index ${stepIndex}`)
+  }
+
+  const maxAttempts = 1 + (step.retryCount ?? 0)
+  let lastFailure: string | null = null
+
+  for (let attemptIndex = 0; attemptIndex < maxAttempts; attemptIndex += 1) {
+    const prompt = buildWorkflowStepExecutionPrompt(
+      command,
+      skillContent,
+      argsText,
+      step,
+      stepIndex,
+      stepOutcomes,
+      {
+        attemptNumber: attemptIndex + 1,
+        maxAttempts,
+        previousFailure: lastFailure,
+      },
+    )
+    const agentId = createAgentId()
+
+    try {
+      const result = await runStage({
+        prompt,
+        stageKind: 'step',
+        stageIndex: stepIndex,
+        agentId,
+        transcriptSubdir,
+      })
+      const state = parseWorkflowStepState(result, command)
+      if (state.structured || attemptIndex === maxAttempts - 1) {
+        return { result, state }
+      }
+
+      lastFailure =
+        'Step did not return the required structured JSON handoff.'
+    } catch (error) {
+      lastFailure = summarizeError(error)
+      if (attemptIndex === maxAttempts - 1) {
+        throw error
+      }
+    }
+  }
+
+  throw new Error('Unreachable workflow retry state')
 }
 
 function reportWorkflowProgress(
@@ -185,28 +280,48 @@ export async function executeForkedWorkflow({
   const stepOutcomes: WorkflowStepOutcome[] = []
 
   for (const [stepIndex, step] of workflowSteps.entries()) {
-    const prompt = buildWorkflowStepExecutionPrompt(
-      command,
-      skillContent,
-      args,
-      step,
-      stepIndex,
-      stepOutcomes,
-    )
-    const agentId = createAgentId()
-    const result = await runStage({
-      prompt,
-      stageKind: 'step',
-      stageIndex: stepIndex,
-      agentId,
-      transcriptSubdir,
-    })
+    const combinedHandoff = buildCombinedHandoff(stepOutcomes)
+    if (!hasRequiredHandoff(step.requiresHandoff, combinedHandoff)) {
+      const missingFields =
+        step.requiresHandoff?.filter(field => !combinedHandoff[field]) ?? []
+      const summary = `Skipped: missing required handoff fields (${missingFields.join(', ')})`
+      stepOutcomes.push({
+        step,
+        result: summary,
+        state: createWorkflowSkippedState(summary),
+      })
+      continue
+    }
 
-    stepOutcomes.push({
-      step,
-      result,
-      state: parseWorkflowStepState(result, command),
-    })
+    try {
+      const { result, state } = await runWorkflowStepWithRetries({
+        command,
+        skillContent,
+        stepOutcomes,
+        stepIndex,
+        argsText: args,
+        runStage,
+        transcriptSubdir,
+      })
+
+      stepOutcomes.push({
+        step,
+        result,
+        state,
+      })
+    } catch (error) {
+      const summary = `Step failed: ${summarizeError(error)}`
+      if (step.onFailure === 'continue') {
+        stepOutcomes.push({
+          step,
+          result: summary,
+          state: createWorkflowFailureState(summary),
+        })
+        continue
+      }
+
+      throw error
+    }
   }
 
   const synthesisPrompt = buildWorkflowSynthesisPrompt(

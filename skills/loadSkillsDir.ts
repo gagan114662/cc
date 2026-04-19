@@ -39,6 +39,7 @@ import {
   coerceDescriptionToString,
   type FrontmatterData,
   type FrontmatterShell,
+  parsePositiveIntFromFrontmatter,
   parseBooleanFrontmatter,
   parseFrontmatter,
   parseShellFrontmatter,
@@ -244,12 +245,29 @@ function parseWorkflowSteps(value: unknown): WorkflowStep[] | undefined {
       const tools = parseStringListFrontmatter(
         record.tools ?? record['allowed-tools'],
       )
+      const retryCount = parsePositiveIntFromFrontmatter(
+        record.retryCount ?? record.retry_count ?? record.retries,
+      )
+      const onFailureCandidate =
+        record.onFailure ?? record.on_failure ?? record['on-failure']
+      const onFailure =
+        onFailureCandidate === 'continue' || onFailureCandidate === 'abort'
+          ? onFailureCandidate
+          : undefined
+      const requiresHandoff = parseStringListFrontmatter(
+        record.requiresHandoff ??
+          record.requires_handoff ??
+          record['requires-handoff'],
+      )
 
       return {
         title,
         objective,
         success,
         tools,
+        retryCount,
+        onFailure,
+        requiresHandoff,
       }
     })
     .filter((step): step is WorkflowStep => step !== null)

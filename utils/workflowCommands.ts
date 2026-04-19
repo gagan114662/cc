@@ -13,6 +13,8 @@ export type WorkflowCommand = CommandBase &
   }
 
 export type WorkflowStepState = {
+  status: 'completed' | 'failed' | 'skipped'
+  structured: boolean
   summary: string
   artifacts: string[]
   risks: string[]
@@ -193,6 +195,15 @@ function formatWorkflowSteps(steps: WorkflowStep[]): string[] {
     if (step.tools?.length) {
       stepLines.push(`   Tools: ${step.tools.join(', ')}`)
     }
+    if (step.retryCount !== undefined) {
+      stepLines.push(`   Retries: ${step.retryCount}`)
+    }
+    if (step.onFailure) {
+      stepLines.push(`   On failure: ${step.onFailure}`)
+    }
+    if (step.requiresHandoff?.length) {
+      stepLines.push(`   Requires handoff: ${step.requiresHandoff.join(', ')}`)
+    }
     return stepLines
   })
 }
@@ -208,6 +219,7 @@ function formatWorkflowStepOutcomeList(
   return outcomes.flatMap((outcome, index) => {
     const lines = [
       `${index + 1}. ${outcome.step.title}`,
+      `Status: ${outcome.state.status}`,
       `Summary: ${outcome.state.summary}`,
     ]
     if (outcome.state.artifacts.length > 0) {
@@ -237,11 +249,18 @@ export function buildWorkflowStepExecutionPrompt(
   step: WorkflowStep,
   stepIndex: number,
   priorOutcomes: WorkflowStepOutcome[],
+  options: {
+    attemptNumber?: number
+    maxAttempts?: number
+    previousFailure?: string | null
+  } = {},
 ): string {
   const lines = [
     `You are executing step ${stepIndex + 1} of ${cmd.workflowSteps?.length ?? stepIndex + 1} for workflow "${cmd.userFacingName?.() ?? cmd.name}".`,
     'Complete only this step, then hand off the most useful state for the next step.',
   ]
+  const attemptNumber = options.attemptNumber ?? 1
+  const maxAttempts = options.maxAttempts ?? 1
 
   const contract = buildWorkflowExecutionContract(cmd)
   if (contract) {
@@ -258,6 +277,12 @@ export function buildWorkflowStepExecutionPrompt(
   }
   if (step.tools?.length) {
     lines.push(`Step tools: ${step.tools.join(', ')}`)
+  }
+  if (maxAttempts > 1) {
+    lines.push(`Attempt: ${attemptNumber} of ${maxAttempts}`)
+  }
+  if (options.previousFailure) {
+    lines.push(`Previous failure: ${options.previousFailure}`)
   }
   if (args.trim()) {
     lines.push(`Workflow arguments: ${args.trim()}`)
@@ -369,6 +394,8 @@ export function parseWorkflowStepState(
   cmd: WorkflowCommand,
 ): WorkflowStepState {
   const fallback: WorkflowStepState = {
+    status: 'completed',
+    structured: false,
     summary: result.trim() || 'Step completed',
     artifacts: [],
     risks: [],
@@ -407,6 +434,8 @@ export function parseWorkflowStepState(
     }
 
     return {
+      status: 'completed',
+      structured: true,
       summary,
       artifacts,
       risks,
@@ -414,6 +443,28 @@ export function parseWorkflowStepState(
     }
   } catch {
     return fallback
+  }
+}
+
+export function createWorkflowFailureState(summary: string): WorkflowStepState {
+  return {
+    status: 'failed',
+    structured: false,
+    summary,
+    artifacts: [],
+    risks: [summary],
+    handoff: {},
+  }
+}
+
+export function createWorkflowSkippedState(summary: string): WorkflowStepState {
+  return {
+    status: 'skipped',
+    structured: false,
+    summary,
+    artifacts: [],
+    risks: [],
+    handoff: {},
   }
 }
 
