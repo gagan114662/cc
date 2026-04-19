@@ -12,16 +12,27 @@ export type WorkflowCommand = CommandBase &
     kind: 'workflow'
   }
 
+export type WorkflowStepState = {
+  summary: string
+  artifacts: string[]
+  risks: string[]
+  handoff: Record<string, string>
+}
+
 export type WorkflowStepOutcome = {
   step: WorkflowStep
   result: string
+  state: WorkflowStepState
 }
 
 type WorkflowSummaryOptions = {
   includeWhenToUse?: boolean
+  includeVerbs?: boolean
   includeInputs?: boolean
   includeOutputs?: boolean
+  includeArtifactKinds?: boolean
   includeSuccessCriteria?: boolean
+  includeHandoffFields?: boolean
   includeTools?: boolean
   includeArguments?: boolean
   includeSteps?: boolean
@@ -69,9 +80,12 @@ export function formatWorkflowCommandSummary(
 ): string {
   const {
     includeWhenToUse = true,
+    includeVerbs = true,
     includeInputs = true,
     includeOutputs = true,
+    includeArtifactKinds = true,
     includeSuccessCriteria = true,
+    includeHandoffFields = true,
     includeTools = false,
     includeArguments = false,
     includeSteps = true,
@@ -81,6 +95,11 @@ export function formatWorkflowCommandSummary(
 
   if (includeWhenToUse && cmd.whenToUse) {
     parts.push(`Use when: ${cmd.whenToUse}`)
+  }
+
+  if (includeVerbs) {
+    const verbs = formatLabeledList('Operations', cmd.verbs)
+    if (verbs) parts.push(verbs)
   }
 
   if (includeInputs) {
@@ -93,9 +112,19 @@ export function formatWorkflowCommandSummary(
     if (outputs) parts.push(outputs)
   }
 
+  if (includeArtifactKinds) {
+    const artifacts = formatLabeledList('Artifacts', cmd.artifactKinds)
+    if (artifacts) parts.push(artifacts)
+  }
+
   if (includeSuccessCriteria) {
     const success = formatLabeledList('Success', cmd.successCriteria)
     if (success) parts.push(success)
+  }
+
+  if (includeHandoffFields) {
+    const handoff = formatLabeledList('Handoff', cmd.handoffFields)
+    if (handoff) parts.push(handoff)
   }
 
   if (includeSteps) {
@@ -120,9 +149,12 @@ export function buildWorkflowExecutionContract(
   cmd: WorkflowCommand,
 ): string | null {
   const sections = [
+    formatLabeledList('Operations', cmd.verbs),
     formatLabeledList('Inputs', cmd.inputs),
     formatLabeledList('Expected outputs', cmd.outputs),
+    formatLabeledList('Artifact kinds', cmd.artifactKinds),
     formatLabeledList('Success criteria', cmd.successCriteria),
+    formatLabeledList('Structured handoff', cmd.handoffFields),
     formatLabeledList('Arguments', cmd.argNames),
     formatLabeledList('Recommended tools', cmd.allowedTools),
   ].filter((value): value is string => value !== null)
@@ -174,9 +206,28 @@ function formatWorkflowStepOutcomeList(
   }
 
   return outcomes.flatMap((outcome, index) => {
-    const lines = [`${index + 1}. ${outcome.step.title}`, outcome.result.trim()]
+    const lines = [
+      `${index + 1}. ${outcome.step.title}`,
+      `Summary: ${outcome.state.summary}`,
+    ]
+    if (outcome.state.artifacts.length > 0) {
+      lines.push(`Artifacts: ${outcome.state.artifacts.join(', ')}`)
+    }
+    if (outcome.state.risks.length > 0) {
+      lines.push(`Risks: ${outcome.state.risks.join(', ')}`)
+    }
+    if (Object.keys(outcome.state.handoff).length > 0) {
+      lines.push(`Handoff: ${formatWorkflowHandoff(outcome.state.handoff)}`)
+    }
+    lines.push(`Raw result: ${outcome.result.trim()}`)
     return lines
   })
+}
+
+function formatWorkflowHandoff(handoff: Record<string, string>): string {
+  return Object.entries(handoff)
+    .map(([key, value]) => `${key}=${value}`)
+    .join('; ')
 }
 
 export function buildWorkflowStepExecutionPrompt(
@@ -224,10 +275,14 @@ export function buildWorkflowStepExecutionPrompt(
   lines.push(skillContent.trim())
   lines.push(
     '',
-    'Return a concise step handoff with:',
-    '1. What you completed in this step',
-    '2. The key findings, decisions, or artifacts',
-    '3. Any gaps or risks the next step must account for',
+    'Return ONLY JSON with this shape:',
+    '{',
+    '  "summary": "what this step completed",',
+    '  "artifacts": ["durable outputs or evidence produced"],',
+    '  "risks": ["open gaps, blockers, or follow-up risks"],',
+    `  "handoff": {${buildWorkflowHandoffTemplate(cmd)}}`,
+    '}',
+    'Keep handoff values concise strings. If a handoff field is unknown, omit it instead of inventing it.',
   )
 
   return lines.join('\n')
@@ -270,6 +325,96 @@ export function buildWorkflowSynthesisPrompt(
   )
 
   return lines.join('\n')
+}
+
+function buildWorkflowHandoffTemplate(cmd: WorkflowCommand): string {
+  const fields = cmd.handoffFields ?? []
+  if (fields.length === 0) {
+    return '"next_step_context": "key state for the next step"'
+  }
+
+  return fields
+    .map(field => `"${field}": "..."`)
+    .join(', ')
+}
+
+function extractJsonObject(value: string): string | null {
+  const fencedMatch = value.match(/```json\s*([\s\S]*?)```/i)
+  if (fencedMatch?.[1]) {
+    return fencedMatch[1].trim()
+  }
+
+  const firstBrace = value.indexOf('{')
+  const lastBrace = value.lastIndexOf('}')
+  if (firstBrace === -1 || lastBrace === -1 || lastBrace <= firstBrace) {
+    return null
+  }
+
+  return value.slice(firstBrace, lastBrace + 1)
+}
+
+function normalizeStringList(value: unknown): string[] {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .filter((item): item is string => typeof item === 'string')
+    .map(item => item.trim())
+    .filter(Boolean)
+}
+
+export function parseWorkflowStepState(
+  result: string,
+  cmd: WorkflowCommand,
+): WorkflowStepState {
+  const fallback: WorkflowStepState = {
+    summary: result.trim() || 'Step completed',
+    artifacts: [],
+    risks: [],
+    handoff: {},
+  }
+
+  const jsonObject = extractJsonObject(result)
+  if (!jsonObject) {
+    return fallback
+  }
+
+  try {
+    const parsed = JSON.parse(jsonObject) as Record<string, unknown>
+    const summary =
+      typeof parsed.summary === 'string' && parsed.summary.trim()
+        ? parsed.summary.trim()
+        : fallback.summary
+    const artifacts = normalizeStringList(parsed.artifacts)
+    const risks = normalizeStringList(parsed.risks)
+    const rawHandoff =
+      parsed.handoff && typeof parsed.handoff === 'object' && !Array.isArray(parsed.handoff)
+        ? (parsed.handoff as Record<string, unknown>)
+        : {}
+    const handoff = Object.fromEntries(
+      Object.entries(rawHandoff)
+        .filter(([, value]) => typeof value === 'string' && value.trim())
+        .map(([key, value]) => [key, String(value).trim()]),
+    )
+
+    if ((cmd.handoffFields?.length ?? 0) > 0) {
+      for (const field of cmd.handoffFields ?? []) {
+        if (!(field in handoff)) {
+          continue
+        }
+      }
+    }
+
+    return {
+      summary,
+      artifacts,
+      risks,
+      handoff,
+    }
+  } catch {
+    return fallback
+  }
 }
 
 export function decorateWorkflowPromptCommand(

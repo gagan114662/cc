@@ -102,9 +102,12 @@ export function estimateSkillFrontmatterTokens(skill: Command): number {
     skill.name,
     skill.description,
     skill.whenToUse,
+    skill.verbs?.join(' '),
     skill.inputs?.join(' '),
     skill.outputs?.join(' '),
+    skill.artifactKinds?.join(' '),
     skill.successCriteria?.join(' '),
+    skill.handoffFields?.join(' '),
     skill.workflowSteps
       ?.map(step => [step.title, step.objective, step.success].filter(Boolean).join(' '))
       .join(' '),
@@ -272,9 +275,12 @@ export function parseSkillFrontmatterFields(
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  verbs: string[] | undefined
   inputs: string[] | undefined
   outputs: string[] | undefined
+  artifactKinds: string[] | undefined
   successCriteria: string[] | undefined
+  handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
   version: string | undefined
   model: ReturnType<typeof parseUserSpecifiedModel> | undefined
@@ -331,10 +337,17 @@ export function parseSkillFrontmatterFields(
       frontmatter.arguments as string | string[] | undefined,
     ),
     whenToUse: frontmatter.when_to_use as string | undefined,
+    verbs: parseStringListFrontmatter(frontmatter.verbs),
     inputs: parseStringListFrontmatter(frontmatter.inputs),
     outputs: parseStringListFrontmatter(frontmatter.outputs),
+    artifactKinds: parseStringListFrontmatter(
+      frontmatter.artifact_kinds ?? frontmatter['artifact-kinds'],
+    ),
     successCriteria: parseStringListFrontmatter(
       frontmatter.success_criteria ?? frontmatter['success-criteria'],
+    ),
+    handoffFields: parseStringListFrontmatter(
+      frontmatter.handoff_fields ?? frontmatter['handoff-fields'],
     ),
     workflowSteps: parseWorkflowSteps(frontmatter.steps),
     version: frontmatter.version as string | undefined,
@@ -364,9 +377,12 @@ export function createSkillCommand({
   argumentHint,
   argumentNames,
   whenToUse,
+  verbs,
   inputs,
   outputs,
+  artifactKinds,
   successCriteria,
+  handoffFields,
   workflowSteps,
   version,
   model,
@@ -391,9 +407,12 @@ export function createSkillCommand({
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  verbs: string[] | undefined
   inputs: string[] | undefined
   outputs: string[] | undefined
+  artifactKinds: string[] | undefined
   successCriteria: string[] | undefined
+  handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
   version: string | undefined
   model: string | undefined
@@ -418,9 +437,12 @@ export function createSkillCommand({
     argumentHint,
     argNames: argumentNames.length > 0 ? argumentNames : undefined,
     whenToUse,
+    verbs,
     inputs,
     outputs,
+    artifactKinds,
     successCriteria,
+    handoffFields,
     workflowSteps,
     version,
     model,

@@ -9,12 +9,15 @@ function makeWorkflowCommand(): WorkflowCommand {
     description: 'Rebuild the GTM pipeline from the current public surface',
     whenToUse:
       'The user needs a refreshed plan after messaging, market, or demand changes',
+    verbs: ['refresh pipeline', 'prioritize outreach'],
     inputs: ['Website and positioning', 'Current ICP assumptions'],
     outputs: ['Updated pipeline brief', 'Prioritized outreach backlog'],
+    artifactKinds: ['pipeline brief', 'outreach backlog'],
     successCriteria: [
       'Calls out stale assumptions',
       'Produces the next highest-leverage actions',
     ],
+    handoffFields: ['stale_assumptions', 'priority_segment'],
     workflowSteps: [
       {
         title: 'Gather evidence',
@@ -70,7 +73,21 @@ describe('executeForkedWorkflow', () => {
         if (stage.stageKind === 'synthesis') {
           return 'Final workflow deliverable'
         }
-        return `Completed ${stage.stageIndex + 1}`
+        return JSON.stringify({
+          summary: `Completed ${stage.stageIndex + 1}`,
+          artifacts: [`Artifact ${stage.stageIndex + 1}`],
+          risks:
+            stage.stageIndex === 0 ? ['Homepage messaging may be stale'] : [],
+          handoff:
+            stage.stageIndex === 0
+              ? {
+                  stale_assumptions: 'Homepage ICP is outdated',
+                  priority_segment: 'B2B SaaS',
+                }
+              : {
+                  stale_assumptions: 'Resolved',
+                },
+        })
       },
     })
 
@@ -85,19 +102,25 @@ describe('executeForkedWorkflow', () => {
     expect(calls[0]?.prompt).toContain('Title: Gather evidence')
     expect(calls[0]?.prompt).toContain('Workflow arguments: B2B SaaS')
     expect(calls[0]?.prompt).toContain('None yet. Establish the initial fact base')
+    expect(calls[0]?.prompt).toContain('Return ONLY JSON')
+    expect(calls[0]?.prompt).toContain('"stale_assumptions": "..."')
 
     expect(calls[1]?.prompt).toContain('You are executing step 2 of 2')
     expect(calls[1]?.prompt).toContain('Title: Prioritize actions')
     expect(calls[1]?.prompt).toContain('Completed steps so far:')
     expect(calls[1]?.prompt).toContain('1. Gather evidence')
-    expect(calls[1]?.prompt).toContain('Completed 1')
+    expect(calls[1]?.prompt).toContain('Summary: Completed 1')
+    expect(calls[1]?.prompt).toContain('Artifacts: Artifact 1')
+    expect(calls[1]?.prompt).toContain(
+      'Handoff: stale_assumptions=Homepage ICP is outdated; priority_segment=B2B SaaS',
+    )
 
     expect(calls[2]?.prompt).toContain('Synthesize the step outputs')
     expect(calls[2]?.prompt).toContain('Step outcomes:')
     expect(calls[2]?.prompt).toContain('1. Gather evidence')
-    expect(calls[2]?.prompt).toContain('Completed 1')
+    expect(calls[2]?.prompt).toContain('Summary: Completed 1')
     expect(calls[2]?.prompt).toContain('2. Prioritize actions')
-    expect(calls[2]?.prompt).toContain('Completed 2')
+    expect(calls[2]?.prompt).toContain('Summary: Completed 2')
 
     expect(result.data).toMatchObject({
       success: true,
