@@ -15,6 +15,7 @@ import {
   sortLogs,
 } from '../types/logs.js'
 import { writeAuditEntry } from '../services/audit/durableAuditLog.js'
+import { currentTenantContext } from '../services/tenant/tenantScope.js'
 import { CACHE_PATHS } from './cachePaths.js'
 import { stripDisplayTags, stripDisplayTagsAllowEmpty } from './displayTags.js'
 import { isEnvTruthy } from './envUtils.js'
@@ -62,19 +63,39 @@ export function dateToFilename(date: Date): string {
   return date.toISOString().replace(/[:.]/g, '-')
 }
 
-// In-memory error log for recent errors
-// Moved from bootstrap/state.ts to break import cycle
+// In-memory error log for recent errors — partitioned per tenant.
+// Phase 2 item 1b: one tenant's noise (retry storm, ENOENT burst)
+// must not evict another tenant's errors, and getInMemoryErrors()
+// must not leak errors across tenants. Each bucket is a separate
+// 100-entry FIFO; DEFAULT_TENANT catches the legacy single-operator
+// CLI path where no scope is active.
 const MAX_IN_MEMORY_ERRORS = 100
-let inMemoryErrorLog: Array<{ error: string; timestamp: string }> = []
+const inMemoryErrorLogByTenant = new Map<
+  string,
+  Array<{ error: string; timestamp: string }>
+>()
+
+function getOrCreateTenantBucket(
+  tenantId: string,
+): Array<{ error: string; timestamp: string }> {
+  let bucket = inMemoryErrorLogByTenant.get(tenantId)
+  if (!bucket) {
+    bucket = []
+    inMemoryErrorLogByTenant.set(tenantId, bucket)
+  }
+  return bucket
+}
 
 function addToInMemoryErrorLog(errorInfo: {
   error: string
   timestamp: string
 }): void {
-  if (inMemoryErrorLog.length >= MAX_IN_MEMORY_ERRORS) {
-    inMemoryErrorLog.shift() // Remove oldest error
+  const tenantId = currentTenantContext().id
+  const bucket = getOrCreateTenantBucket(tenantId)
+  if (bucket.length >= MAX_IN_MEMORY_ERRORS) {
+    bucket.shift() // Remove oldest error
   }
-  inMemoryErrorLog.push(errorInfo)
+  bucket.push(errorInfo)
 }
 
 /**
@@ -213,7 +234,9 @@ export function logError(error: unknown): void {
 }
 
 export function getInMemoryErrors(): { error: string; timestamp: string }[] {
-  return [...inMemoryErrorLog]
+  const tenantId = currentTenantContext().id
+  const bucket = inMemoryErrorLogByTenant.get(tenantId)
+  return bucket ? [...bucket] : []
 }
 
 /**
@@ -372,5 +395,5 @@ export function captureAPIRequest(
 export function _resetErrorLogForTesting(): void {
   errorLogSink = null
   errorQueue.length = 0
-  inMemoryErrorLog = []
+  inMemoryErrorLogByTenant.clear()
 }

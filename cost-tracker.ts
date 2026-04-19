@@ -42,6 +42,7 @@ import {
   getModelMaxOutputTokens,
 } from './utils/context.js'
 import { isFastModeEnabled } from './utils/fastMode.js'
+import { tenantAttributesForTelemetry } from './services/tenant/telemetryAttrs.js'
 import { formatDuration, formatNumber } from './utils/format.js'
 import type { FpsMetrics } from './utils/fpsTracker.js'
 import { getCanonicalName } from './utils/model/model.js'
@@ -283,10 +284,15 @@ export function addToTotalSessionCost(
   const modelUsage = addToTotalModelUsage(cost, usage, model)
   addToTotalCostState(cost, modelUsage, model)
 
-  const attrs =
+  // Stamp tenant.id on cost/token attributes so Honeycomb queries can
+  // split cost per tenant (Phase 2 item 1b). Without this the HTTP API's
+  // concurrent submissions from different tenants all fold into
+  // DEFAULT_TENANT downstream.
+  const baseAttrs =
     isFastModeEnabled() && usage.speed === 'fast'
       ? { model, speed: 'fast' }
       : { model }
+  const attrs = { ...baseAttrs, ...tenantAttributesForTelemetry() }
 
   getCostCounter()?.add(cost, attrs)
   getTokenCounter()?.add(usage.input_tokens, { ...attrs, type: 'input' })
