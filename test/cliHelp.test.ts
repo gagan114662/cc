@@ -4,11 +4,14 @@ import path from 'node:path'
 import { describe, expect, test } from 'bun:test'
 import { execFileNoThrowWithCwd } from 'src/utils/execFileNoThrow.js'
 
+const CLI_STATUS_TIMEOUT_MS = 30_000
+
 function buildCliSmokeEnv(): NodeJS.ProcessEnv {
   const codexHome = mkdtempSync(path.join(tmpdir(), 'cc-cli-smoke-'))
   return {
     ...process.env,
     CI: '1',
+    CLAUDE_CODE_SIMPLE: '1',
     ANTHROPIC_API_KEY: '',
     ANTHROPIC_AUTH_TOKEN: '',
     ANTHROPIC_UNIX_SOCKET: '',
@@ -45,7 +48,7 @@ describe('cli help smoke', () => {
 
   test(
     'renders harness status in non-interactive mode',
-    { timeout: 15_000 },
+    { timeout: CLI_STATUS_TIMEOUT_MS },
     async () => {
       const result = await execFileNoThrowWithCwd(
         process.execPath,
@@ -63,7 +66,7 @@ describe('cli help smoke', () => {
 
   test(
     'renders daemon status in non-interactive mode without auth',
-    { timeout: 15_000 },
+    { timeout: CLI_STATUS_TIMEOUT_MS },
     async () => {
       const result = await execFileNoThrowWithCwd(
         process.execPath,

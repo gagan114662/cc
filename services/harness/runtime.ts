@@ -527,6 +527,37 @@ function appendEventLedger(
   ].slice(0, 500)
 }
 
+export function buildNextWorkerHeartbeat(
+  existing: HarnessRuntimeState['workerHeartbeats'][string] | undefined,
+  input: {
+    workerId: string
+    pid: number
+    runnerId: string
+    agentKind: Exclude<HarnessAgentKind, 'either'>
+    labels: string[]
+    slotCapacity: number
+    repoId: string
+    lastHeartbeatAt: string
+    observabilityEnvLoaded: boolean
+  },
+): HarnessRuntimeState['workerHeartbeats'][string] {
+  return {
+    ...existing,
+    workerId: input.workerId,
+    pid: input.pid,
+    runnerId: input.runnerId,
+    agentKind: input.agentKind,
+    labels: input.labels,
+    slotCapacity: input.slotCapacity,
+    healthy: true,
+    observabilityEnvLoaded:
+      existing?.observabilityEnvLoaded ?? input.observabilityEnvLoaded,
+    lastTelemetryExportAt: existing?.lastTelemetryExportAt,
+    repoId: input.repoId,
+    lastHeartbeatAt: input.lastHeartbeatAt,
+  }
+}
+
 function refreshObservabilityHealth(state: HarnessRuntimeState, now: Date): void {
   refreshRunnerHealth(state, now)
   const exportConfig = loadHarnessObservabilityExportConfig()
@@ -2065,18 +2096,20 @@ export async function pollHarnessOnce(
       state.lastPolledAt = nowIso(now)
       refreshObservabilityHealth(state, now)
       if (!injectedDeps?.workerId) {
-        state.workerHeartbeats[runnerContext.workerId] = {
-          workerId: runnerContext.workerId,
-          pid: process.pid,
-          runnerId: runnerContext.runnerId,
-          agentKind: runnerContext.agentKind,
-          labels: runnerContext.labels,
-          slotCapacity: runnerContext.slotCapacity,
-          healthy: true,
-          observabilityEnvLoaded: isHarnessObservabilityEnvLoaded(),
-          repoId: scopedRepoId,
-          lastHeartbeatAt: nowIso(now),
-        }
+        state.workerHeartbeats[runnerContext.workerId] = buildNextWorkerHeartbeat(
+          state.workerHeartbeats[runnerContext.workerId],
+          {
+            workerId: runnerContext.workerId,
+            pid: process.pid,
+            runnerId: runnerContext.runnerId,
+            agentKind: runnerContext.agentKind,
+            labels: runnerContext.labels,
+            slotCapacity: runnerContext.slotCapacity,
+            repoId: scopedRepoId,
+            lastHeartbeatAt: nowIso(now),
+            observabilityEnvLoaded: isHarnessObservabilityEnvLoaded(),
+          },
+        )
         upsertRunnerRegistration(state, runnerContext, now)
       }
       appendEventLedger(
@@ -2902,18 +2935,20 @@ export async function runHarnessDaemonWorker(
       state.daemon.startedAt = control.startedAt
       state.daemon.lastHeartbeatAt = control.lastHeartbeatAt
       refreshObservabilityHealth(state, deps.now())
-      state.workerHeartbeats[runnerContext.workerId] = {
-        workerId: runnerContext.workerId,
-        pid: process.pid,
-        runnerId: runnerContext.runnerId,
-        agentKind: runnerContext.agentKind,
-        labels: runnerContext.labels,
-        slotCapacity: runnerContext.slotCapacity,
-        healthy: true,
-        observabilityEnvLoaded: isHarnessObservabilityEnvLoaded(),
-        repoId,
-        lastHeartbeatAt: control.lastHeartbeatAt!,
-      }
+      state.workerHeartbeats[runnerContext.workerId] = buildNextWorkerHeartbeat(
+        state.workerHeartbeats[runnerContext.workerId],
+        {
+          workerId: runnerContext.workerId,
+          pid: process.pid,
+          runnerId: runnerContext.runnerId,
+          agentKind: runnerContext.agentKind,
+          labels: runnerContext.labels,
+          slotCapacity: runnerContext.slotCapacity,
+          repoId,
+          lastHeartbeatAt: control.lastHeartbeatAt!,
+          observabilityEnvLoaded: isHarnessObservabilityEnvLoaded(),
+        },
+      )
       upsertRunnerRegistration(state, runnerContext, deps.now())
       appendEventLedger(
         state,

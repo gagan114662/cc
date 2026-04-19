@@ -250,7 +250,10 @@ Run 'claude <command> --help' for more information on a command.`);
       daemonMain
     } = await import('../daemon/main.js');
     await daemonMain(args.slice(1));
-    return;
+    // Fast-path daemon commands are non-interactive and should terminate even if
+    // telemetry or sink initialization leaves background handles behind.
+    // eslint-disable-next-line custom-rules/no-process-exit
+    process.exit(0);
   }
 
   if (args[0] === 'harness') {
@@ -271,7 +274,10 @@ Run 'claude <command> --help' for more information on a command.`);
       harnessMain
     } = await import('../daemon/harnessCli.js');
     await harnessMain(args.slice(1));
-    return;
+    // Fast-path harness commands are non-interactive and should terminate even if
+    // telemetry or sink initialization leaves background handles behind.
+    // eslint-disable-next-line custom-rules/no-process-exit
+    process.exit(0);
   }
 
   // Fast-path for `claude ps|logs|attach|kill` and `--bg`/`--background`.

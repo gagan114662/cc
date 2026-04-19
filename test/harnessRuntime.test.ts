@@ -1,7 +1,10 @@
-import { describe, expect, test } from 'bun:test'
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { mkdtemp, mkdir, readFile, readdir } from 'node:fs/promises'
 import os from 'node:os'
 import path from 'node:path'
+import {
+  __setHostedHarnessBackendOverrideForTests,
+} from 'src/services/harness/controlPlane.js'
 import {
   getDefaultHarnessConfig,
   writeHarnessConfig,
@@ -9,13 +12,43 @@ import {
 import { pollGitHubDiscovery } from 'src/services/harness/github.js'
 import type { HarnessDependencies } from 'src/services/harness/runtime.js'
 import {
+  buildNextWorkerHeartbeat,
   getHarnessStatus,
   ingestGitHubWebhookEvent,
   pollHarnessOnce,
   runHarnessJob,
 } from 'src/services/harness/runtime.js'
 import type { ShellCommandRunner } from 'src/services/harness/shell.js'
+import { HarnessRuntimeStateSchema } from 'src/services/harness/types.js'
 import { createStableId } from 'src/services/harness/utils.js'
+
+type HarnessBackend = NonNullable<
+  Parameters<typeof __setHostedHarnessBackendOverrideForTests>[0]
+>
+
+function createInMemoryHarnessBackend(): HarnessBackend {
+  let state = HarnessRuntimeStateSchema().parse({
+    version: '2',
+    tenant: {
+      id: 'test-tenant',
+      name: 'test-tenant',
+      createdAt: '2026-04-19T00:00:00.000Z',
+    },
+  })
+
+  return {
+    kind: 'filesystem',
+    async readState() {
+      return structuredClone(state)
+    },
+    async writeState(nextState) {
+      state = structuredClone(nextState)
+    },
+    async withLock<T>(mutator: () => Promise<T> | T): Promise<T> {
+      return await mutator()
+    },
+  }
+}
 
 async function createTempRepo(): Promise<string> {
   const repoRoot = await mkdtemp(path.join(os.tmpdir(), 'cc-harness-runtime-'))
@@ -57,6 +90,14 @@ async function writeRunnerManifest(
 }
 
 describe('harness runtime', () => {
+  beforeEach(() => {
+    __setHostedHarnessBackendOverrideForTests(createInMemoryHarnessBackend())
+  })
+
+  afterEach(() => {
+    __setHostedHarnessBackendOverrideForTests(null)
+  })
+
   test('dedupes identical github and remote-trigger jobs, then auto-merges the pull request', async () => {
     const repoRoot = await createTempRepo()
     const claudeConfigDir = await mkdtemp(path.join(os.tmpdir(), 'cc-harness-home-'))
@@ -455,6 +496,40 @@ describe('harness runtime', () => {
     } finally {
       process.env.CLAUDE_CONFIG_DIR = previousClaudeConfigDir
     }
+  })
+
+  test('preserves telemetry export state across worker heartbeat refreshes', () => {
+    const next = buildNextWorkerHeartbeat(
+      {
+        workerId: 'claude-primary-worker-1',
+        pid: 100,
+        runnerId: 'claude-primary',
+        agentKind: 'claude',
+        labels: ['shared', 'cc', 'claude'],
+        slotCapacity: 25,
+        healthy: true,
+        observabilityEnvLoaded: true,
+        lastTelemetryExportAt: '2026-04-19T12:00:00.000Z',
+        repoId: 'repo-1',
+        lastHeartbeatAt: '2026-04-19T12:00:01.000Z',
+      },
+      {
+        workerId: 'claude-primary-worker-1',
+        pid: 101,
+        runnerId: 'claude-primary',
+        agentKind: 'claude',
+        labels: ['shared', 'cc', 'claude'],
+        slotCapacity: 25,
+        repoId: 'repo-1',
+        lastHeartbeatAt: '2026-04-19T12:00:10.000Z',
+        observabilityEnvLoaded: true,
+      },
+    )
+
+    expect(next.pid).toBe(101)
+    expect(next.lastHeartbeatAt).toBe('2026-04-19T12:00:10.000Z')
+    expect(next.observabilityEnvLoaded).toBe(true)
+    expect(next.lastTelemetryExportAt).toBe('2026-04-19T12:00:00.000Z')
   })
 
   test('treats only the latest default-branch run as authoritative for red-main detection', async () => {
