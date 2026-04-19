@@ -177,6 +177,9 @@ export type WorkflowStep = {
   objective?: string
   success?: string
   tools?: string[]
+  retryCount?: number
+  onFailure?: 'abort' | 'continue'
+  requiresHandoff?: string[]
 }
 
 export type CommandBase = {

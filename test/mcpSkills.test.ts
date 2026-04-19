@@ -185,11 +185,15 @@ steps:
     success: You have a current fact base for the pipeline refresh
     tools:
       - Read
+    retries: 1
   - title: Rebuild the backlog
     objective: Turn the refreshed view into concrete GTM actions
     success: The backlog is prioritized and ready to execute
     tools:
       - Read
+    on_failure: continue
+    requires_handoff:
+      - priority_segment
 arguments:
   - segment
 allowed-tools:
@@ -245,12 +249,15 @@ highest-leverage GTM actions.`,
         objective: 'Review the website and current positioning assumptions',
         success: 'You have a current fact base for the pipeline refresh',
         tools: ['Read'],
+        retryCount: 1,
       },
       {
         title: 'Rebuild the backlog',
         objective: 'Turn the refreshed view into concrete GTM actions',
         success: 'The backlog is prioritized and ready to execute',
         tools: ['Read'],
+        onFailure: 'continue',
+        requiresHandoff: ['priority_segment'],
       },
     ])
     expect(workflow.argNames).toEqual(['segment'])
