@@ -71,6 +71,7 @@
     "smoke:bundle-daemon": "bun ./dist/cli.js daemon status --json",
     "smoke:employee": "bun ./scripts/employeeSmoke.ts",
     "smoke:honeycomb": "bun run build:honeycomb-smoke && bun ./dist/honeycomb-smoke.js",
+    "honeycomb:deploy-slos": "bun ./scripts/honeycombDeploySLOs.ts --json",
     "honeycomb:verify": "bun ./scripts/honeycombVerify.ts --json",
     "honeycomb:proof": "bun ./scripts/honeycombVerify.ts --html ./honeycomb-autoresearch-proof.html",
     "test": "bun test ./test",

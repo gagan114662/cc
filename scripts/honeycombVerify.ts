@@ -1,7 +1,7 @@
 import path from 'node:path'
-import { existsSync } from 'node:fs'
 import { mkdir, writeFile } from 'node:fs/promises'
 import { parseSettingsFile } from 'src/utils/settings/settings.js'
+import { STARTER_SLOS } from 'src/services/observability/slos.js'
 
 type HoneycombConfig = {
   apiBaseUrl: string
@@ -55,13 +55,16 @@ type VerificationSummary = {
   hasClaudeSessionEvents: boolean
   verdict:
     | 'working'
-    | 'ingest_only'
     | 'no_claude_session_events'
     | 'query_key_missing'
     | 'wrong_key_type'
-    | 'queries_unavailable'
   queryUrl?: string
   generatedAt: string
+  sloCoverage?: {
+    expected: string[]
+    present: string[]
+    missing: string[]
+  }
 }
 
 function usage(): never {
@@ -134,25 +137,16 @@ function otlpHeadersToParts(value: string | undefined): Record<string, string> {
   )
 }
 
-function loadLocalSettingsEnv(repoRoot: string): Record<string, string> {
+function loadHoneycombConfig(repoRoot: string): HoneycombConfig {
   const settingsPath = path.join(repoRoot, '.claude', 'settings.local.json')
-  if (!existsSync(settingsPath)) {
-    return {}
-  }
   const { settings, errors } = parseSettingsFile(settingsPath)
   if (errors.length > 0) {
     throw new Error(
       `Failed to parse ${settingsPath}: ${errors.map(error => error.message).join('; ')}`,
     )
   }
-  return settings?.env ?? {}
-}
 
-function loadHoneycombConfig(repoRoot: string): HoneycombConfig {
-  const env = {
-    ...loadLocalSettingsEnv(repoRoot),
-    ...process.env,
-  }
+  const env = settings?.env ?? {}
   const otlpParts = otlpHeadersToParts(env.OTEL_EXPORTER_OTLP_HEADERS)
   return {
     apiBaseUrl:
@@ -323,15 +317,11 @@ function buildHtml(summary: VerificationSummary): string {
   const verdictText =
     summary.verdict === 'working'
       ? 'Honeycomb can see the Claude-session lane.'
-      : summary.verdict === 'ingest_only'
-        ? 'Honeycomb export is configured with an ingest key, but query-side verification is not enabled for this environment yet.'
       : summary.verdict === 'no_claude_session_events'
         ? 'Honeycomb query access works, but Claude-session events have not shown up yet.'
         : summary.verdict === 'wrong_key_type'
           ? 'Honeycomb access is configured with the wrong key type. A configuration key is required for queries.'
-          : summary.verdict === 'queries_unavailable'
-            ? 'Honeycomb auth and ingest are working, but the API key lacks Run Queries permission (free-plan limitation). Data is flowing.'
-            : 'Honeycomb query access is not configured yet.'
+          : 'Honeycomb query access is not configured yet.'
 
   const eventRows = summary.eventCounts
     .map(
@@ -403,16 +393,8 @@ function buildHtml(summary: VerificationSummary): string {
         margin-top: 12px;
         padding: 10px 14px;
         border-radius: 999px;
-        background: ${
-          summary.verdict === 'working' || summary.verdict === 'ingest_only'
-            ? 'rgba(15,118,110,0.12)'
-            : 'rgba(154,52,18,0.12)'
-        };
-        color: ${
-          summary.verdict === 'working' || summary.verdict === 'ingest_only'
-            ? 'var(--accent)'
-            : 'var(--warn)'
-        };
+        background: ${summary.verdict === 'working' ? 'rgba(15,118,110,0.12)' : 'rgba(154,52,18,0.12)'};
+        color: ${summary.verdict === 'working' ? 'var(--accent)' : 'var(--warn)'};
         font-weight: 600;
       }
       .grid {
@@ -506,6 +488,35 @@ function buildHtml(summary: VerificationSummary): string {
 </html>`
 }
 
+async function fetchSLOCoverage(
+  config: HoneycombConfig,
+  queryKey: string,
+): Promise<VerificationSummary['sloCoverage']> {
+  // A query key only — ingest keys cannot read /1/slos. Return coverage
+  // as "unknown" (no present[], all expected listed as missing) rather
+  // than throwing, so verify stays usable in lower-privilege setups.
+  const expected = STARTER_SLOS.map(slo => slo.name)
+  try {
+    const { status, body } = await fetchJson(
+      `${config.apiBaseUrl}/1/slos/${config.dataset}`,
+      { headers: { 'X-Honeycomb-Team': queryKey } },
+    )
+    if (status !== 200 || !Array.isArray(body)) {
+      return { expected, present: [], missing: expected }
+    }
+    const names = new Set(
+      (body as Array<{ name?: string }>)
+        .map(s => s.name)
+        .filter((n): n is string => typeof n === 'string'),
+    )
+    const present = expected.filter(n => names.has(n))
+    const missing = expected.filter(n => !names.has(n))
+    return { expected, present, missing }
+  } catch {
+    return { expected, present: [], missing: expected }
+  }
+}
+
 async function writeHtmlReport(filePath: string, summary: VerificationSummary) {
   await mkdir(path.dirname(filePath), { recursive: true })
   await writeFile(filePath, `${buildHtml(summary)}\n`, 'utf8')
@@ -518,7 +529,7 @@ async function main(): Promise<void> {
 
   if (!config.dataset || !config.serviceName) {
     throw new Error(
-      'Missing Honeycomb dataset or service name. Check process env or .claude/settings.local.json.',
+      'Missing Honeycomb dataset or service name. Check .claude/settings.local.json.',
     )
   }
 
@@ -543,27 +554,6 @@ async function main(): Promise<void> {
   }
 
   const auth = await authenticateHoneycomb(config.apiBaseUrl, queryKey)
-  if (!config.queryKey && auth.type !== 'configuration') {
-    const summary: VerificationSummary = {
-      authType: auth.type,
-      authEnvironment: auth.environment,
-      authTeam: auth.team,
-      dataset: config.dataset,
-      serviceName: config.serviceName,
-      eventCounts: [],
-      claudeSessionCounts: [],
-      recentClaudeSessions: [],
-      hasClaudeSessionEvents: false,
-      verdict: 'ingest_only',
-      generatedAt: new Date().toISOString(),
-    }
-    if (args.htmlPath) {
-      await writeHtmlReport(path.resolve(repoRoot, args.htmlPath), summary)
-    }
-    console.log(JSON.stringify(summary, null, 2))
-    return
-  }
-
   if (auth.type !== 'configuration') {
     const summary: VerificationSummary = {
       authType: auth.type,
@@ -590,87 +580,66 @@ async function main(): Promise<void> {
     { column: 'service.name', op: '=', value: config.serviceName },
   ]
 
-  // Query execution requires the "Run Queries" API permission. On Honeycomb's
-  // free plan, a configuration key may have "Manage Queries and Columns" but
-  // still lack the ability to execute queries via /1/query_results/. Detect
-  // this and report a clear verdict instead of crashing.
-  let eventsResult: HoneycombQueryResult | null = null
-  let claudeTypeResult: HoneycombQueryResult | null = null
-  let claudeRecentResult: HoneycombQueryResult | null = null
-  let queriesUnavailable = false
-
-  try {
-    const eventsQueryId = await createQuery(config, queryKey, {
-      calculations: [{ op: 'COUNT' }],
-      breakdowns: ['event.name'],
-      filters: baseFilters,
-      orders: [{ op: 'COUNT', order: 'descending' }],
-      limit: 100,
-      time_range: timeRange,
-    })
-    eventsResult = await runQuery(config, queryKey, eventsQueryId)
-
-    const claudeTypeQueryId = await createQuery(config, queryKey, {
-      calculations: [{ op: 'COUNT' }],
-      breakdowns: ['autoresearch.claude_code_event_type'],
-      filters: [
-        ...baseFilters,
-        {
-          column: 'event.name',
-          op: '=',
-          value: 'autoresearch_claude_code_session_observed',
-        },
-      ],
-      orders: [{ op: 'COUNT', order: 'descending' }],
-      limit: 20,
-      time_range: timeRange,
-    })
-    claudeTypeResult = await runQuery(config, queryKey, claudeTypeQueryId)
-
-    const claudeRecentQueryId = await createQuery(config, queryKey, {
-      calculations: [{ op: 'COUNT' }],
-      breakdowns: [
-        'autoresearch.claude_code_session_id',
-        'autoresearch.claude_code_event_type',
-        'autoresearch.claude_code_failure_tags',
-        'autoresearch.claude_code_result',
-      ],
-      filters: [
-        ...baseFilters,
-        {
-          column: 'event.name',
-          op: '=',
-          value: 'autoresearch_claude_code_session_observed',
-        },
-      ],
-      orders: [{ op: 'COUNT', order: 'descending' }],
-      limit: 20,
-      time_range: timeRange,
-    })
-    claudeRecentResult = await runQuery(config, queryKey, claudeRecentQueryId)
-  } catch (error: unknown) {
-    const message = error instanceof Error ? error.message : String(error)
-    if (message.includes('status 401') || message.includes("isn't allowed")) {
-      queriesUnavailable = true
-    } else {
-      throw error
-    }
-  }
-
+  const eventsQueryId = await createQuery(config, queryKey, {
+    calculations: [{ op: 'COUNT' }],
+    breakdowns: ['event.name'],
+    filters: baseFilters,
+    orders: [{ op: 'COUNT', order: 'descending' }],
+    limit: 100,
+    time_range: timeRange,
+  })
+  const eventsResult = await runQuery(config, queryKey, eventsQueryId)
   const eventCounts =
-    eventsResult?.data?.results?.map(row => ({
+    eventsResult.data?.results?.map(row => ({
       eventName: normalizeString(row.data['event.name']),
       count: readCountRow(row, 'COUNT'),
     })) ?? []
 
+  const claudeTypeQueryId = await createQuery(config, queryKey, {
+    calculations: [{ op: 'COUNT' }],
+    breakdowns: ['autoresearch.claude_code_event_type'],
+    filters: [
+      ...baseFilters,
+      {
+        column: 'event.name',
+        op: '=',
+        value: 'autoresearch_claude_code_session_observed',
+      },
+    ],
+    orders: [{ op: 'COUNT', order: 'descending' }],
+    limit: 20,
+    time_range: timeRange,
+  })
+  const claudeTypeResult = await runQuery(config, queryKey, claudeTypeQueryId)
   const claudeSessionCounts =
-    claudeTypeResult?.data?.results?.map(row => ({
+    claudeTypeResult.data?.results?.map(row => ({
       eventType: normalizeString(row.data['autoresearch.claude_code_event_type']),
       count: readCountRow(row, 'COUNT'),
     })) ?? []
 
+  const claudeRecentQueryId = await createQuery(config, queryKey, {
+    calculations: [{ op: 'COUNT' }],
+    breakdowns: [
+      'autoresearch.claude_code_session_id',
+      'autoresearch.claude_code_event_type',
+      'autoresearch.claude_code_failure_tags',
+      'autoresearch.claude_code_result',
+    ],
+    filters: [
+      ...baseFilters,
+      {
+        column: 'event.name',
+        op: '=',
+        value: 'autoresearch_claude_code_session_observed',
+      },
+    ],
+    orders: [{ op: 'COUNT', order: 'descending' }],
+    limit: 20,
+    time_range: timeRange,
+  })
+  const claudeRecentResult = await runQuery(config, queryKey, claudeRecentQueryId)
   const recentClaudeSessions =
-    claudeRecentResult?.data?.results?.map(row => ({
+    claudeRecentResult.data?.results?.map(row => ({
       sessionId: normalizeString(row.data['autoresearch.claude_code_session_id']),
       eventType: normalizeString(
         row.data['autoresearch.claude_code_event_type'],
@@ -683,11 +652,7 @@ async function main(): Promise<void> {
     })) ?? []
 
   const hasClaudeSessionEvents = recentClaudeSessions.length > 0
-  const verdict: VerificationSummary['verdict'] = queriesUnavailable
-    ? 'queries_unavailable'
-    : hasClaudeSessionEvents
-      ? 'working'
-      : 'no_claude_session_events'
+  const sloCoverage = await fetchSLOCoverage(config, queryKey)
   const summary: VerificationSummary = {
     authType: auth.type,
     authEnvironment: auth.environment,
@@ -698,9 +663,10 @@ async function main(): Promise<void> {
     claudeSessionCounts,
     recentClaudeSessions,
     hasClaudeSessionEvents,
-    verdict,
-    queryUrl: claudeRecentResult?.links?.query_url ?? eventsResult?.links?.query_url,
+    verdict: hasClaudeSessionEvents ? 'working' : 'no_claude_session_events',
+    queryUrl: claudeRecentResult.links?.query_url ?? eventsResult.links?.query_url,
     generatedAt: new Date().toISOString(),
+    sloCoverage,
   }
 
   if (args.htmlPath) {
