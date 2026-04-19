@@ -36,12 +36,6 @@ async function writeEmployeeConfig(root: string, duties: object[]): Promise<void
   )
 }
 
-function pickEphemeralPort(): number {
-  // Random in the 40000-49999 range — high enough to avoid well-known
-  // services, low enough that repeat runs in CI don't exhaust the space.
-  return 40000 + Math.floor(Math.random() * 10000)
-}
-
 async function fetchJson(url: string): Promise<{ status: number; body: unknown }> {
   const res = await fetch(url)
   const body = await res.json().catch(() => null)
@@ -53,7 +47,9 @@ beforeEach(async () => {
     tmpdir(),
     `cc-daemon-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   )
-  port = pickEphemeralPort()
+  // Ask the kernel for a free port. startDaemon rewrites state.args.port
+  // to the actual bound port once the HTTP server is listening.
+  port = 0
   await mkdir(projectRoot, { recursive: true })
 })
 
@@ -97,7 +93,8 @@ describe('daemon boot', () => {
     })
 
     try {
-      const health = await fetchJson(`http://127.0.0.1:${port}/health`)
+      const actualPort = state.args.port
+      const health = await fetchJson(`http://127.0.0.1:${actualPort}/health`)
       expect(health.status).toBe(200)
       const body = health.body as {
         status: string
@@ -111,7 +108,7 @@ describe('daemon boot', () => {
       expect(body.duties[0]!.tokenBudget).toBe(8000)
       expect(body.duties[0]!.costCap).toBe(0.5)
 
-      const ready = await fetchJson(`http://127.0.0.1:${port}/ready`)
+      const ready = await fetchJson(`http://127.0.0.1:${actualPort}/ready`)
       expect(ready.status).toBe(200)
     } finally {
       await stopDaemon(state, 'test-cleanup')
@@ -142,7 +139,7 @@ describe('daemon boot', () => {
     // After stop completes, a fetch should fail (server closed).
     let closed = false
     try {
-      await fetch(`http://127.0.0.1:${port}/health`)
+      await fetch(`http://127.0.0.1:${state.args.port}/health`)
     } catch {
       closed = true
     }
@@ -160,7 +157,7 @@ describe('daemon boot', () => {
     })
 
     try {
-      const health = await fetchJson(`http://127.0.0.1:${port}/health`)
+      const health = await fetchJson(`http://127.0.0.1:${state.args.port}/health`)
       expect(health.status).toBe(200)
       const body = health.body as { duties: unknown[] }
       expect(body.duties).toEqual([])
