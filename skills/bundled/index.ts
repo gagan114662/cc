@@ -6,8 +6,11 @@ import { registerBrowserFunnelAuditWorkflow } from './browserFunnelAudit.js'
 import { registerBrowserHarnessSkill } from './browserHarness.js'
 import { registerBrowserSupportFaqAuditWorkflow } from './browserSupportFaqAudit.js'
 import { registerDebugSkill } from './debug.js'
+import { registerInboxTriageWorkflow } from './inboxTriage.js'
 import { registerKeybindingsSkill } from './keybindings.js'
 import { registerLoremIpsumSkill } from './loremIpsum.js'
+import { registerPipelineRefreshWorkflow } from './pipelineRefresh.js'
+import { registerPublishDraftWorkflow } from './publishDraft.js'
 import { registerRememberSkill } from './remember.js'
 import { registerSimplifySkill } from './simplify.js'
 import { registerSkillifySkill } from './skillify.js'
@@ -38,6 +41,9 @@ export function initBundledSkills(): void {
   registerBrowserFunnelAuditWorkflow()
   registerBrowserCompetitiveTeardownWorkflow()
   registerBrowserSupportFaqAuditWorkflow()
+  registerPipelineRefreshWorkflow()
+  registerInboxTriageWorkflow()
+  registerPublishDraftWorkflow()
   registerStuckSkill()
   if (feature('KAIROS') || feature('KAIROS_DREAM')) {
     /* eslint-disable @typescript-eslint/no-require-imports */
