@@ -8,11 +8,26 @@
 
 import {
   context as otelContext,
+  propagation,
   SpanStatusCode,
   trace,
   type Attributes,
   type Span,
 } from '@opentelemetry/api'
+import { W3CTraceContextPropagator } from '@opentelemetry/core'
+
+// The API package ships a noop propagator by default — so propagation.inject
+// would be a silent no-op unless someone (usually the SDK) registers a real
+// one. The CLI sets one up during heavier bootstrap, but the daemon path is
+// small and skips that. Register once at module load so TRACEPARENT actually
+// materializes in duty subprocess env vars.
+let propagatorRegistered = false
+export function ensureW3CPropagatorRegistered(): void {
+  if (propagatorRegistered) return
+  propagation.setGlobalPropagator(new W3CTraceContextPropagator())
+  propagatorRegistered = true
+}
+ensureW3CPropagatorRegistered()
 
 export const DUTY_SPAN_NAME = 'employee.duty.tick'
 export const ASSIGNMENT_SPAN_NAME = 'employee.assignment.run'
@@ -89,4 +104,26 @@ export function stampEmployeeAttrs(base: BaseAttrs): void {
   for (const [k, v] of Object.entries(next)) {
     if (v !== undefined) span.setAttribute(k, v as string | number | boolean)
   }
+}
+
+// Emit the W3C trace context for `span` (or the active span, if any) as env
+// vars suitable for subprocess inheritance. OTel SDKs auto-ingest
+// TRACEPARENT / TRACESTATE so the child's first span becomes a child of the
+// daemon's duty span — that stitches duty → CLI invocation together in
+// Honeycomb. Returns {} when no span context is available.
+//
+// `span` is accepted explicitly because the daemon does not register an
+// async-hooks ContextManager (keeps boot light), so otelContext.active()
+// alone won't surface the currently-running span. Callers inside
+// withDutySpan should pass the span argument they already receive.
+export function traceEnvForActiveContext(span?: Span): Record<string, string> {
+  const ctx = span
+    ? trace.setSpan(otelContext.active(), span)
+    : otelContext.active()
+  const carrier: Record<string, string> = {}
+  propagation.inject(ctx, carrier)
+  const out: Record<string, string> = {}
+  if (carrier.traceparent) out.TRACEPARENT = carrier.traceparent
+  if (carrier.tracestate) out.TRACESTATE = carrier.tracestate
+  return out
 }
