@@ -85,6 +85,28 @@ import {
   isLocalYoloModeActive,
   syncLocalYoloEnvironment,
 } from './localYolo.js'
+import {
+  hasRole,
+  resolveTenantContext,
+  type TenantContext,
+} from '../../services/tenant/tenantContext.js'
+
+// Tenant-aware admin gate for bypassPermissions mode. Reuses hasRole so
+// DEFAULT_TENANT (admin) preserves the historical single-operator path —
+// a developer/viewer tenant explicitly set via CC_TENANT_ROLE fails this
+// check and is routed to the same "unavailable" fallback that Statsig /
+// settings denial already drives.
+export function isBypassPermissionsAllowedByTenant(
+  tenant: TenantContext = resolveTenantContext(),
+): boolean {
+  return hasRole(tenant, 'admin')
+}
+
+export function tenantBypassDeniedNotification(
+  tenant: TenantContext = resolveTenantContext(),
+): string {
+  return `Bypass permissions mode requires admin role — tenant "${tenant.id}" has role "${tenant.role}". Set CC_TENANT_ROLE=admin (operator only) to enable.`
+}
 
 /**
  * Checks if a Bash permission rule is dangerous for auto mode.
@@ -785,6 +807,9 @@ export function initialPermissionModeFromCLI({
 
   let result: { mode: PermissionMode; notification?: string } | undefined
 
+  const tenant = resolveTenantContext()
+  const bypassAllowedByTenant = isBypassPermissionsAllowedByTenant(tenant)
+
   for (const mode of orderedModes) {
     if (
       mode === 'bypassPermissions' &&
@@ -804,6 +829,18 @@ export function initialPermissionModeFromCLI({
         notification = 'Bypass permissions mode was disabled by settings'
       }
       continue // Skip this mode if it's disabled
+    }
+
+    // Tenant-role denial runs even in local-yolo-eligible environments: a
+    // user who explicitly sets CC_TENANT_ROLE=developer/viewer is asking
+    // to be sandboxed, so we honor that intent over the local-yolo default.
+    if (mode === 'bypassPermissions' && !bypassAllowedByTenant) {
+      logForDebugging(
+        `bypassPermissions mode denied: tenant ${tenant.id} role ${tenant.role} < admin`,
+        { level: 'warn' },
+      )
+      notification = tenantBypassDeniedNotification(tenant)
+      continue
     }
 
     result = { mode, notification } // Use the first valid mode
@@ -954,9 +991,15 @@ export async function initializeToolPermissionContext({
   const settingsDisableBypassPermissionsMode =
     settings.permissions?.disableBypassPermissionsMode === 'disable'
   const localYoloEligible = isLocalYoloEligibleEnvironment()
+  const tenant = resolveTenantContext()
+  const bypassAllowedByTenant = isBypassPermissionsAllowedByTenant(tenant)
+  // Shift-tab and SDK control messages read isBypassPermissionsModeAvailable;
+  // dropping it to false for non-admin tenants routes every mode-entry path
+  // through the same "unavailable" fallback as the Statsig/settings gate.
   const isBypassPermissionsModeAvailable =
     (permissionMode === 'bypassPermissions' ||
       allowDangerouslySkipPermissions) &&
+    bypassAllowedByTenant &&
     (localYoloEligible ||
       (!growthBookDisableBypassPermissionsMode &&
         !settingsDisableBypassPermissionsMode))
