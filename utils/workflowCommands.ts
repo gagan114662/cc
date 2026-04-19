@@ -80,6 +80,41 @@ type WorkflowSummaryOptions = {
   includeSteps?: boolean
 }
 
+function collectWorkflowHandoff(
+  outcomes: WorkflowStepOutcome[],
+): Record<string, string> {
+  return Object.assign({}, ...outcomes.map(outcome => outcome.state.handoff))
+}
+
+function normalizeValidatorText(value: string): string {
+  return value.trim().toLowerCase()
+}
+
+function textIncludesAny(value: string, phrases: string[]): boolean {
+  const normalized = normalizeValidatorText(value)
+  return phrases.some(phrase => normalized.includes(phrase))
+}
+
+function findWorkflowArtifactEvidence(
+  state: WorkflowFinalState,
+  kind: string,
+): string {
+  return state.artifacts
+    .filter(artifact => artifact.kind === kind)
+    .map(artifact => artifact.evidence)
+    .join('\n')
+}
+
+function findWorkflowOutputEvidence(
+  state: WorkflowFinalState,
+  name: string,
+): string {
+  return state.outputs
+    .filter(output => output.name === name)
+    .map(output => output.evidence)
+    .join('\n')
+}
+
 export function isWorkflowCommand(
   cmd: Command | CommandBase,
 ): cmd is WorkflowCommand {
@@ -131,6 +166,21 @@ function summarizeWorkflowSteps(steps: WorkflowStep[] | undefined): string | nul
   }
 
   return `Procedure: ${summarizeList(normalized, 3)}`
+}
+
+function buildWorkflowValidatorGuidance(
+  cmd: WorkflowCommand,
+): string | null {
+  switch (cmd.workflowArtifactValidator) {
+    case 'pipeline-refresh':
+      return 'Validator focus: include stale-assumption evidence, the next priority segment, the next motion, and proof that the outreach backlog is prioritized.'
+    case 'inbox-triage':
+      return 'Validator focus: include urgent-routing evidence, the response owner, and proof that the response queue reflects urgency or blocked work.'
+    case 'publish-draft':
+      return 'Validator focus: include the target channel, the primary edit gap, and proof that the publishing brief and checklist are channel-specific and concrete.'
+    default:
+      return null
+  }
 }
 
 export function formatWorkflowCommandSummary(
@@ -198,6 +248,11 @@ export function formatWorkflowCommandSummary(
     if (procedure) parts.push(procedure)
   }
 
+  const validatorGuidance = buildWorkflowValidatorGuidance(cmd)
+  if (validatorGuidance) {
+    parts.push(validatorGuidance)
+  }
+
   if (includeTools) {
     const tools = formatLabeledList('Tools', cmd.allowedTools)
     if (tools) parts.push(tools)
@@ -245,6 +300,10 @@ export function buildWorkflowExecutionContract(
   if (cmd.workflowSteps?.length) {
     lines.push('Procedure:')
     lines.push(...formatWorkflowSteps(cmd.workflowSteps))
+  }
+  const validatorGuidance = buildWorkflowValidatorGuidance(cmd)
+  if (validatorGuidance) {
+    lines.push(validatorGuidance)
   }
   lines.push(
     'Treat the success criteria as the completion bar. If required inputs are missing, gather them or call out the gap before claiming the workflow is done.',
@@ -873,9 +932,216 @@ function validateExpectedItems<T extends { status: string; evidence: string }>(
   return issues
 }
 
+function validatePipelineRefreshArtifacts(
+  state: WorkflowFinalState,
+  stepOutcomes: WorkflowStepOutcome[],
+): string[] {
+  const issues: string[] = []
+  const handoff = collectWorkflowHandoff(stepOutcomes)
+  if (!handoff.stale_assumptions) {
+    issues.push(
+      'Pipeline validator requires stale_assumptions handoff evidence from the workflow steps.',
+    )
+  }
+  if (!handoff.priority_segment) {
+    issues.push(
+      'Pipeline validator requires priority_segment handoff evidence from the workflow steps.',
+    )
+  }
+  if (!handoff.next_motion) {
+    issues.push(
+      'Pipeline validator requires next_motion handoff evidence from the workflow steps.',
+    )
+  }
+
+  const pipelineEvidence = [
+    state.summary,
+    findWorkflowArtifactEvidence(state, 'pipeline brief'),
+    findWorkflowOutputEvidence(state, 'Pipeline refresh brief'),
+  ]
+    .filter(Boolean)
+    .join('\n')
+  if (
+    pipelineEvidence &&
+    !textIncludesAny(pipelineEvidence, [
+      'stale',
+      'assumption',
+      'segment',
+      'motion',
+      'focus',
+    ])
+  ) {
+    issues.push(
+      'Pipeline validator requires the pipeline brief evidence to mention the stale assumptions or next focus explicitly.',
+    )
+  }
+
+  const backlogEvidence = [
+    findWorkflowArtifactEvidence(state, 'outreach backlog'),
+    findWorkflowOutputEvidence(state, 'Prioritized outreach backlog'),
+  ]
+    .filter(Boolean)
+    .join('\n')
+  if (
+    backlogEvidence &&
+    !textIncludesAny(backlogEvidence, [
+      'priorit',
+      'ordered',
+      'ranked',
+      'backlog',
+    ])
+  ) {
+    issues.push(
+      'Pipeline validator requires the outreach backlog evidence to show that the backlog was prioritized.',
+    )
+  }
+
+  return issues
+}
+
+function validateInboxTriageArtifacts(
+  state: WorkflowFinalState,
+  stepOutcomes: WorkflowStepOutcome[],
+): string[] {
+  const issues: string[] = []
+  const handoff = collectWorkflowHandoff(stepOutcomes)
+  if (!handoff.urgent_queue) {
+    issues.push(
+      'Inbox triage validator requires urgent_queue handoff evidence from the workflow steps.',
+    )
+  }
+  if (!handoff.response_owner) {
+    issues.push(
+      'Inbox triage validator requires response_owner handoff evidence from the workflow steps.',
+    )
+  }
+
+  const triageEvidence = [
+    state.summary,
+    findWorkflowArtifactEvidence(state, 'triage brief'),
+    findWorkflowOutputEvidence(state, 'Inbox triage brief'),
+  ]
+    .filter(Boolean)
+    .join('\n')
+  if (
+    triageEvidence &&
+    !textIncludesAny(triageEvidence, [
+      'urgent',
+      'blocked',
+      'routing',
+      'route',
+    ])
+  ) {
+    issues.push(
+      'Inbox triage validator requires the triage brief evidence to describe urgency, blocked work, or routing decisions.',
+    )
+  }
+
+  const queueEvidence = [
+    findWorkflowArtifactEvidence(state, 'response queue'),
+    findWorkflowOutputEvidence(state, 'Prioritized response queue'),
+  ]
+    .filter(Boolean)
+    .join('\n')
+  if (
+    queueEvidence &&
+    !textIncludesAny(queueEvidence, [
+      'queue',
+      'response owner',
+      'follow-up',
+      'priority',
+    ])
+  ) {
+    issues.push(
+      'Inbox triage validator requires the response queue evidence to show an actionable response or follow-up queue.',
+    )
+  }
+
+  return issues
+}
+
+function validatePublishDraftArtifacts(
+  state: WorkflowFinalState,
+  stepOutcomes: WorkflowStepOutcome[],
+): string[] {
+  const issues: string[] = []
+  const handoff = collectWorkflowHandoff(stepOutcomes)
+  if (!handoff.target_channel) {
+    issues.push(
+      'Publish-draft validator requires target_channel handoff evidence from the workflow steps.',
+    )
+  }
+  if (!handoff.primary_edit_gap) {
+    issues.push(
+      'Publish-draft validator requires primary_edit_gap handoff evidence from the workflow steps.',
+    )
+  }
+
+  const publishingEvidence = [
+    state.summary,
+    findWorkflowArtifactEvidence(state, 'publishing brief'),
+    findWorkflowOutputEvidence(state, 'Publishing brief'),
+  ]
+    .filter(Boolean)
+    .join('\n')
+  if (
+    publishingEvidence &&
+    !textIncludesAny(publishingEvidence, [
+      'channel',
+      'publish',
+      'audience',
+      'release',
+    ])
+  ) {
+    issues.push(
+      'Publish-draft validator requires the publishing brief evidence to mention the target channel or release plan explicitly.',
+    )
+  }
+
+  const checklistEvidence = [
+    findWorkflowArtifactEvidence(state, 'edit checklist'),
+    findWorkflowOutputEvidence(state, 'Edit checklist'),
+  ]
+    .filter(Boolean)
+    .join('\n')
+  if (
+    checklistEvidence &&
+    !textIncludesAny(checklistEvidence, [
+      'edit',
+      'checklist',
+      'blocker',
+      'revise',
+    ])
+  ) {
+    issues.push(
+      'Publish-draft validator requires the edit checklist evidence to call out concrete edits or blockers.',
+    )
+  }
+
+  return issues
+}
+
+function validateWorkflowArtifactsByKind(
+  cmd: WorkflowCommand,
+  state: WorkflowFinalState,
+  stepOutcomes: WorkflowStepOutcome[],
+): string[] {
+  switch (cmd.workflowArtifactValidator) {
+    case 'pipeline-refresh':
+      return validatePipelineRefreshArtifacts(state, stepOutcomes)
+    case 'inbox-triage':
+      return validateInboxTriageArtifacts(state, stepOutcomes)
+    case 'publish-draft':
+      return validatePublishDraftArtifacts(state, stepOutcomes)
+    default:
+      return []
+  }
+}
+
 export function validateWorkflowFinalState(
   state: WorkflowFinalState,
   cmd: WorkflowCommand,
+  stepOutcomes: WorkflowStepOutcome[] = [],
 ): WorkflowFinalValidation {
   const issues: string[] = []
 
@@ -922,6 +1188,8 @@ export function validateWorkflowFinalState(
       'Completion status cannot be "completed" while required outputs, artifacts, inputs, or success criteria are still missing.',
     )
   }
+
+  issues.push(...validateWorkflowArtifactsByKind(cmd, state, stepOutcomes))
 
   return {
     valid: issues.length === 0,

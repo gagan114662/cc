@@ -506,6 +506,150 @@ describe('executeForkedWorkflow', () => {
     expect(result.data.result).toContain('Validated workflow artifact contract')
   })
 
+  test('retries final synthesis when a workflow-specific artifact validator rejects the output', async () => {
+    const calls: Array<{
+      stageKind: 'codegen' | 'step' | 'synthesis'
+      stageIndex: number
+      prompt: string
+    }> = []
+    const command = {
+      ...makeWorkflowCommand(),
+      outputs: ['Publishing brief', 'Edit checklist'],
+      artifactKinds: ['publishing brief', 'edit checklist'],
+      successCriteria: [
+        'Adapts the draft to the intended channel',
+        'Calls out the biggest edits still needed',
+      ],
+      handoffFields: ['target_channel', 'primary_edit_gap'],
+      workflowArtifactValidator: 'publish-draft' as const,
+    }
+    let synthesisAttempts = 0
+
+    const result = await executeForkedWorkflow({
+      command,
+      commandName: command.name,
+      args: 'LinkedIn launch note',
+      context: { options: { tools: [] } } as any,
+      canUseTool: (() => ({ behavior: 'allow' })) as any,
+      parentMessage: { message: { id: 'parent' } } as any,
+      modifiedGetAppState: (() => ({})) as any,
+      agentDefinition: { agentType: 'general-purpose' } as any,
+      skillContent: '# Publish the draft',
+      stageRunner: async stage => {
+        calls.push(stage)
+        if (stage.stageKind === 'step') {
+          return JSON.stringify({
+            summary: `Completed ${stage.stageIndex + 1}`,
+            artifacts: [`Artifact ${stage.stageIndex + 1}`],
+            risks: [],
+            handoff: {
+              target_channel: 'LinkedIn',
+              primary_edit_gap: 'CTA needs tightening',
+            },
+          })
+        }
+
+        synthesisAttempts += 1
+        if (synthesisAttempts === 1) {
+          return JSON.stringify({
+            summary: 'Prepared the final draft package',
+            completionStatus: 'completed',
+            outputs: [
+              {
+                name: 'Publishing brief',
+                status: 'produced',
+                evidence: 'Final draft package ready',
+              },
+              {
+                name: 'Edit checklist',
+                status: 'produced',
+                evidence: 'Final checks complete',
+              },
+            ],
+            artifacts: [
+              {
+                kind: 'publishing brief',
+                status: 'produced',
+                evidence: 'Final draft package ready',
+              },
+              {
+                kind: 'edit checklist',
+                status: 'produced',
+                evidence: 'Final checks complete',
+              },
+            ],
+            successCriteria: [
+              {
+                criterion: 'Adapts the draft to the intended channel',
+                status: 'met',
+                evidence: 'Package prepared',
+              },
+              {
+                criterion: 'Calls out the biggest edits still needed',
+                status: 'met',
+                evidence: 'Checklist ready',
+              },
+            ],
+            missingInputs: [],
+            unresolvedRisks: [],
+          })
+        }
+
+        return JSON.stringify({
+          summary: 'Prepared the LinkedIn publishing brief and edit checklist',
+          completionStatus: 'completed',
+          outputs: [
+            {
+              name: 'Publishing brief',
+              status: 'produced',
+              evidence: 'LinkedIn publishing brief for the launch audience and release plan',
+            },
+            {
+              name: 'Edit checklist',
+              status: 'produced',
+              evidence: 'Edit checklist calls out the CTA rewrite and approval blocker',
+            },
+          ],
+          artifacts: [
+            {
+              kind: 'publishing brief',
+              status: 'produced',
+              evidence: 'LinkedIn publishing brief for the launch audience and release plan',
+            },
+            {
+              kind: 'edit checklist',
+              status: 'produced',
+              evidence: 'Edit checklist calls out the CTA rewrite and approval blocker',
+            },
+          ],
+          successCriteria: [
+            {
+              criterion: 'Adapts the draft to the intended channel',
+              status: 'met',
+              evidence: 'LinkedIn channel is explicit',
+            },
+            {
+              criterion: 'Calls out the biggest edits still needed',
+              status: 'met',
+              evidence: 'CTA rewrite is the main edit gap',
+            },
+          ],
+          missingInputs: [],
+          unresolvedRisks: [],
+        })
+      },
+    })
+
+    expect(synthesisAttempts).toBe(2)
+    expect(calls.filter(call => call.stageKind === 'synthesis')).toHaveLength(2)
+    expect(calls.at(-1)?.prompt).toContain(
+      'Publish-draft validator requires the publishing brief evidence to mention the target channel or release plan explicitly.',
+    )
+    expect(result.data.result).toContain(
+      'Prepared the LinkedIn publishing brief and edit checklist',
+    )
+  })
+
   test('runs code-mode workflows through generated orchestration before synthesis', async () => {
     const calls: Array<{
       stageKind: 'codegen' | 'step' | 'synthesis'

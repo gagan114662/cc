@@ -184,6 +184,15 @@ export type WorkflowStep = {
 
 export type WorkflowRuntime = 'staged' | 'code'
 
+export const WORKFLOW_ARTIFACT_VALIDATORS = [
+  'pipeline-refresh',
+  'inbox-triage',
+  'publish-draft',
+] as const
+
+export type WorkflowArtifactValidator =
+  (typeof WORKFLOW_ARTIFACT_VALIDATORS)[number]
+
 export const WORKFLOW_CAPABILITY_GRANTS = [
   'browser',
   'github',
@@ -218,6 +227,7 @@ export type CommandBase = {
   handoffFields?: string[] // Structured state keys passed between workflow steps
   workflowSteps?: WorkflowStep[] // Structured procedure for workflow-backed commands
   workflowRuntime?: WorkflowRuntime // Runtime used to execute workflow-backed commands
+  workflowArtifactValidator?: WorkflowArtifactValidator // Domain-specific validator applied to final workflow artifacts
   capabilityGrants?: WorkflowCapabilityGrant[] // Explicit runtime APIs exposed to code-mode workflows
   version?: string // Version of the command/skill
   disableModelInvocation?: boolean // Whether to disable this command from being invoked by models

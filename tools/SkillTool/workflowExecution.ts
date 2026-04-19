@@ -435,7 +435,11 @@ async function runWorkflowSynthesisWithValidation(args: {
       transcriptSubdir,
     })
     const finalState = parseWorkflowFinalState(rawResult)
-    const validation = validateWorkflowFinalState(finalState, command)
+    const validation = validateWorkflowFinalState(
+      finalState,
+      command,
+      stepOutcomes,
+    )
     if (validation.valid) {
       return { rawResult, finalState }
     }

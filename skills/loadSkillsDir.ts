@@ -21,11 +21,15 @@ import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
 import type {
   Command,
   PromptCommand,
+  WorkflowArtifactValidator,
   WorkflowCapabilityGrant,
   WorkflowRuntime,
   WorkflowStep,
 } from '../types/command.js'
-import { WORKFLOW_CAPABILITY_GRANTS } from '../types/command.js'
+import {
+  WORKFLOW_ARTIFACT_VALIDATORS,
+  WORKFLOW_CAPABILITY_GRANTS,
+} from '../types/command.js'
 import {
   parseArgumentNames,
   substituteArguments,
@@ -318,6 +322,19 @@ function parseWorkflowCapabilityGrants(
   return valid.length > 0 ? [...new Set(valid)] : undefined
 }
 
+function parseWorkflowArtifactValidator(
+  value: unknown,
+): WorkflowArtifactValidator | undefined {
+  if (typeof value !== 'string') {
+    return undefined
+  }
+
+  const normalized = value.trim() as WorkflowArtifactValidator
+  return WORKFLOW_ARTIFACT_VALIDATORS.includes(normalized)
+    ? normalized
+    : undefined
+}
+
 /**
  * Parses all skill frontmatter fields that are shared between file-based and
  * MCP skill loading. Caller supplies the resolved skill name and the
@@ -344,6 +361,7 @@ export function parseSkillFrontmatterFields(
   handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
   workflowRuntime: WorkflowRuntime | undefined
+  workflowArtifactValidator: WorkflowArtifactValidator | undefined
   capabilityGrants: WorkflowCapabilityGrant[] | undefined
   version: string | undefined
   model: ReturnType<typeof parseUserSpecifiedModel> | undefined
@@ -414,6 +432,10 @@ export function parseSkillFrontmatterFields(
     ),
     workflowSteps: parseWorkflowSteps(frontmatter.steps),
     workflowRuntime: parseWorkflowRuntime(frontmatter),
+    workflowArtifactValidator: parseWorkflowArtifactValidator(
+      frontmatter.workflow_artifact_validator ??
+        frontmatter['workflow-artifact-validator'],
+    ),
     capabilityGrants: parseWorkflowCapabilityGrants(
       frontmatter.capability_grants ?? frontmatter['capability-grants'],
     ),
@@ -452,6 +474,7 @@ export function createSkillCommand({
   handoffFields,
   workflowSteps,
   workflowRuntime,
+  workflowArtifactValidator,
   capabilityGrants,
   version,
   model,
@@ -484,6 +507,7 @@ export function createSkillCommand({
   handoffFields: string[] | undefined
   workflowSteps: WorkflowStep[] | undefined
   workflowRuntime: WorkflowRuntime | undefined
+  workflowArtifactValidator: WorkflowArtifactValidator | undefined
   capabilityGrants: WorkflowCapabilityGrant[] | undefined
   version: string | undefined
   model: string | undefined
@@ -516,6 +540,7 @@ export function createSkillCommand({
     handoffFields,
     workflowSteps,
     workflowRuntime,
+    workflowArtifactValidator,
     capabilityGrants,
     version,
     model,

@@ -74,6 +74,7 @@ export function registerPipelineRefreshWorkflow(): void {
     userInvocable: true,
     context: 'fork',
     workflowRuntime: 'code',
+    workflowArtifactValidator: 'pipeline-refresh',
     capabilityGrants: ['discovery', 'workspace', 'cli'],
     async getPromptForCommand(args) {
       return [{ type: 'text', text: buildPipelineRefreshWorkflowPrompt(args) }]
