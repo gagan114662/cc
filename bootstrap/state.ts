@@ -141,7 +141,15 @@ type State = {
   // .claude/scheduled_tasks.json — they die with the process. Typed via
   // SessionCronTask below (not importing from cronTasks.ts keeps
   // bootstrap a leaf of the import DAG).
-  sessionCronTasks: SessionCronTask[]
+  //
+  // Keyed by tenant id so two tenants running on the same daemon don't
+  // see each other's session crons via CronListTool and don't fire each
+  // other's tasks with the wrong tenant in scope. The scheduler loop
+  // reads every bucket via getAllSessionCronTasks() because its tick
+  // runs outside any AsyncLocalStorage scope; tenant-facing helpers
+  // (getSessionCronTasks / addSessionCronTask) resolve the active
+  // tenant from currentTenantContext().
+  sessionCronTasksByTenant: Map<string, SessionCronTask[]>
   // Teams created this session via TeamCreate. cleanupSessionTeams()
   // removes these on gracefulShutdown so subagent-created teams don't
   // persist on disk forever (gh-32730). TeamDelete removes entries to
@@ -363,7 +371,7 @@ function getInitialState(): State {
     sessionBypassPermissionsMode: false,
     // Scheduled tasks disabled until flag or dialog enables them
     scheduledTasksEnabled: false,
-    sessionCronTasks: [],
+    sessionCronTasksByTenant: new Map(),
     sessionCreatedTeamsByTenant: new Map(),
     // Session-only trust flag (not persisted to disk)
     sessionTrustAccepted: false,
@@ -1295,29 +1303,87 @@ export type SessionCronTask = {
    * instead of the main REPL command queue. Session-only — never written to disk.
    */
   agentId?: string
+  /**
+   * Tenant that created the task. Stamped by addSessionCronTask from the
+   * active AsyncLocalStorage scope (or DEFAULT_TENANT when no scope is
+   * active). The scheduler fire loop surfaces this on onFireTask so daemon
+   * callers can wrap the downstream prompt handling in the owning tenant's
+   * scope. Required — cross-tenant routing breaks silently without it.
+   */
+  tenantId: string
 }
 
-export function getSessionCronTasks(): SessionCronTask[] {
-  return STATE.sessionCronTasks
-}
-
-export function addSessionCronTask(task: SessionCronTask): void {
-  STATE.sessionCronTasks.push(task)
+function getSessionCronBucket(tenantId: string): SessionCronTask[] {
+  let bucket = STATE.sessionCronTasksByTenant.get(tenantId)
+  if (!bucket) {
+    bucket = []
+    STATE.sessionCronTasksByTenant.set(tenantId, bucket)
+  }
+  return bucket
 }
 
 /**
- * Returns the number of tasks actually removed. Callers use this to skip
- * downstream work (e.g. the disk read in removeCronTasks) when all ids
- * were accounted for here.
+ * Tasks visible to the active tenant. CronListTool calls this (wrapped
+ * through listAllCronTasks) so a tenant sees only its own crons. The
+ * scheduler itself uses getAllSessionCronTasks() — its tick runs outside
+ * any scope, and it needs to see every tenant's tasks to fire them.
+ */
+export function getSessionCronTasks(): SessionCronTask[] {
+  const tenantId = currentTenantContext().id
+  return getSessionCronBucket(tenantId)
+}
+
+/**
+ * Every tenant's session tasks, flattened. Only the cron scheduler should
+ * call this — it runs as a process-wide tick outside any AsyncLocalStorage
+ * scope, so reading the active tenant would miss every non-DEFAULT_TENANT
+ * bucket. Each task carries its owning tenantId so fire callbacks can
+ * re-enter the correct scope.
+ */
+export function getAllSessionCronTasks(): readonly SessionCronTask[] {
+  const out: SessionCronTask[] = []
+  for (const bucket of STATE.sessionCronTasksByTenant.values()) {
+    for (const t of bucket) out.push(t)
+  }
+  return out
+}
+
+export function addSessionCronTask(
+  task: Omit<SessionCronTask, 'tenantId'> & { tenantId?: string },
+): void {
+  const tenantId = task.tenantId ?? currentTenantContext().id
+  getSessionCronBucket(tenantId).push({ ...task, tenantId })
+}
+
+/**
+ * Returns the number of tasks actually removed. Walks every tenant bucket
+ * because the scheduler's fire loop (cronScheduler.ts:check) runs outside
+ * any tenant scope, and CronDeleteTool's ids are 8-hex UUID slices where
+ * a cross-tenant collision is astronomically unlikely. Callers use the
+ * return value to skip downstream work (the disk read in removeCronTasks)
+ * when every id was accounted for in session state.
  */
 export function removeSessionCronTasks(ids: readonly string[]): number {
   if (ids.length === 0) return 0
   const idSet = new Set(ids)
-  const remaining = STATE.sessionCronTasks.filter(t => !idSet.has(t.id))
-  const removed = STATE.sessionCronTasks.length - remaining.length
-  if (removed === 0) return 0
-  STATE.sessionCronTasks = remaining
+  let removed = 0
+  for (const [tenantId, bucket] of STATE.sessionCronTasksByTenant.entries()) {
+    const remaining = bucket.filter(t => !idSet.has(t.id))
+    const dropped = bucket.length - remaining.length
+    if (dropped === 0) continue
+    removed += dropped
+    STATE.sessionCronTasksByTenant.set(tenantId, remaining)
+  }
   return removed
+}
+
+/**
+ * Wipe every tenant bucket. Test-only seam and a safety valve for the
+ * daemon shutdown path — neither scheduler fires nor CronDelete paths
+ * should need this.
+ */
+export function clearAllSessionCronTasks(): void {
+  STATE.sessionCronTasksByTenant.clear()
 }
 
 export function setSessionTrustAccepted(accepted: boolean): void {
