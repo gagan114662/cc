@@ -105,10 +105,16 @@ import type { Terminal, Continue } from './query/transitions.js'
 import { feature } from 'bun:bundle'
 import {
   getCurrentTurnTokenBudget,
+  getTotalCostUSD,
   getTurnOutputTokens,
   incrementBudgetContinuationCount,
 } from './bootstrap/state.js'
-import { createBudgetTracker, checkTokenBudget } from './query/tokenBudget.js'
+import {
+  type DutyBudgetContext,
+  checkTokenBudget,
+  createBudgetTracker,
+  enforceDutyHardStop,
+} from './query/tokenBudget.js'
 import { count } from './utils/array.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
@@ -119,6 +125,40 @@ const taskSummaryModule = feature('BG_SESSIONS')
   ? (require('./utils/taskSummary.js') as typeof import('./utils/taskSummary.js'))
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
+
+function parsePositiveEnvNumber(name: string): number | undefined {
+  const raw = process.env[name]?.trim()
+  if (!raw) return undefined
+  const parsed = Number(raw)
+  return Number.isFinite(parsed) && parsed > 0 ? parsed : undefined
+}
+
+function getDutyBudgetContext(maxBudgetUsd?: number): DutyBudgetContext | undefined {
+  const dutyId = process.env.CC_DUTY_ID?.trim() || undefined
+  const assignmentId = process.env.CC_ASSIGNMENT_ID?.trim() || undefined
+  const maxTokens = parsePositiveEnvNumber('CC_DUTY_TOKEN_BUDGET')
+  const maxCostUSD =
+    parsePositiveEnvNumber('CC_DUTY_COST_CAP_USD') ??
+    parsePositiveEnvNumber('CC_DUTY_COST_CAP') ??
+    (dutyId || assignmentId ? maxBudgetUsd : undefined)
+
+  if (
+    dutyId === undefined &&
+    assignmentId === undefined &&
+    maxTokens === undefined &&
+    maxCostUSD === undefined
+  ) {
+    return undefined
+  }
+
+  return {
+    dutyId,
+    assignmentId,
+    maxTokens,
+    maxCostUSD,
+    currentCostUSD: getTotalCostUSD(),
+  }
+}
 
 function* yieldMissingToolResultBlocks(
   assistantMessages: AssistantMessage[],
@@ -1316,12 +1356,20 @@ async function* queryLoop(
         continue
       }
 
+      const dutyBudgetContext = getDutyBudgetContext(
+        toolUseContext.options.maxBudgetUsd,
+      )
+      if (dutyBudgetContext) {
+        enforceDutyHardStop(getTurnOutputTokens(), dutyBudgetContext)
+      }
+
       if (feature('TOKEN_BUDGET')) {
         const decision = checkTokenBudget(
           budgetTracker!,
           toolUseContext.agentId,
           getCurrentTurnTokenBudget(),
           getTurnOutputTokens(),
+          dutyBudgetContext,
         )
 
         if (decision.action === 'continue') {

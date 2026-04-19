@@ -169,14 +169,37 @@ async function runDutySubprocess(
     throw new Error(`cli_bundle_missing: ${state.args.cliBundlePath}`)
   }
 
+  const cmd = ['bun', state.args.cliBundlePath, '-p', scheduled.duty.prompt]
+  if (
+    typeof scheduled.duty.costCap === 'number' &&
+    Number.isFinite(scheduled.duty.costCap) &&
+    scheduled.duty.costCap > 0
+  ) {
+    cmd.push('--max-budget-usd', String(scheduled.duty.costCap))
+  }
+
   const child = spawn({
-    cmd: ['bun', state.args.cliBundlePath, '-p', scheduled.duty.prompt],
+    cmd,
     cwd: state.args.projectRoot,
     env: {
       ...process.env,
       CLAUDE_CODE_REMOTE: 'true',
       CC_DUTY_ID: scheduled.duty.id,
       CC_DUTY_TITLE: scheduled.duty.title,
+      ...(typeof scheduled.duty.tokenBudget === 'number' &&
+      Number.isFinite(scheduled.duty.tokenBudget) &&
+      scheduled.duty.tokenBudget > 0
+        ? {
+            CC_DUTY_TOKEN_BUDGET: String(scheduled.duty.tokenBudget),
+          }
+        : {}),
+      ...(typeof scheduled.duty.costCap === 'number' &&
+      Number.isFinite(scheduled.duty.costCap) &&
+      scheduled.duty.costCap > 0
+        ? {
+            CC_DUTY_COST_CAP_USD: String(scheduled.duty.costCap),
+          }
+        : {}),
     },
     stdin: 'ignore',
     stdout: 'pipe',

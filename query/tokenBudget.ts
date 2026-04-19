@@ -87,7 +87,7 @@ export class DutyBudgetExceededError extends Error {
   }
 }
 
-function enforceDutyHardStop(
+export function enforceDutyHardStop(
   globalTurnTokens: number,
   dutyContext: DutyBudgetContext | undefined,
 ): void {
