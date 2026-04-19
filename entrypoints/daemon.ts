@@ -53,6 +53,10 @@ import {
 } from '../services/webhooks/slackRoute.js'
 import { getQueueBackend } from '../services/assignmentQueue/backend.js'
 import type { AssignmentRunner } from '../services/assignmentQueue/backend.js'
+import {
+  getEmployeeStore,
+  getEmployeeBackendKind,
+} from '../services/employeeStore/store.js'
 import type { EmployeeDuty } from '../types/employee.js'
 
 type DaemonArgs = {
@@ -655,6 +659,18 @@ export async function stopDaemon(
     })
   }
 
+  // Close employee store after HTTP is down. Postgres releases the
+  // pool here; JSON is a noop. Same order-of-operations rationale
+  // as the queue backend above.
+  try {
+    const store = await getEmployeeStore()
+    await store.close()
+  } catch (err) {
+    log('error', 'employee_store_close_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+
   log('info', 'shutdown_complete', {})
 }
 
@@ -679,6 +695,31 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
 
   state.httpServer = startHttp(state)
   await listenHttp(state.httpServer, state)
+
+  // Postgres backend: materialize each tenant's config to disk so the
+  // synchronous reader in engineeringLeadAgent.ts (which cannot
+  // `await`) sees a non-stale snapshot when the first duty subprocess
+  // spawns. No-op for the JSON backend (disk is already the source
+  // of truth).
+  if (getEmployeeBackendKind() === 'postgres') {
+    try {
+      const store = await getEmployeeStore()
+      const mod = await import(
+        '../services/employeeStore/backends/postgres.js'
+      )
+      const count = await mod.materializePostgresTenants(
+        args.projectRoot,
+        store,
+      )
+      log('info', 'postgres_employee_materialized', {
+        tenants: count,
+      })
+    } catch (err) {
+      log('error', 'postgres_employee_materialize_failed', {
+        error: err instanceof Error ? err.message : String(err),
+      })
+    }
+  }
 
   const tenantDuties = await loadConfig(args.projectRoot)
   let dutyCount = 0
