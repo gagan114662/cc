@@ -57,6 +57,14 @@ type CodeModeCapabilitySnapshot = {
     capabilityCount: number
     families: CapabilityFamily[]
   }
+  github: {
+    workflows: CapabilityDescriptor[]
+    repoCapabilities: CapabilityDescriptor[]
+  }
+  docs: {
+    workflows: CapabilityDescriptor[]
+    docCapabilities: CapabilityDescriptor[]
+  }
   browser: {
     status: BrowserHarnessStatus
     workflows: CapabilityDescriptor[]
@@ -138,6 +146,18 @@ type CodeModeBrowserApi = {
   hasWorkflow(name: string): boolean
 }
 
+type CodeModeGitHubApi = {
+  listWorkflows(): CapabilityDescriptor[]
+  hasWorkflow(name: string): boolean
+  listRepoCapabilities(): CapabilityDescriptor[]
+}
+
+type CodeModeDocsApi = {
+  listWorkflows(): CapabilityDescriptor[]
+  hasWorkflow(name: string): boolean
+  listDocCapabilities(): CapabilityDescriptor[]
+}
+
 type CodeModeWorkspaceApi = {
   root(): string
   sessionId(): string
@@ -169,6 +189,8 @@ type CodeModeProgramApi = {
   state: CodeModeStateApi
   workflow: CodeModeWorkflowApi
   browser: CodeModeBrowserApi
+  github: CodeModeGitHubApi
+  docs: CodeModeDocsApi
   cli: CodeModeCliApi
   mcp: CodeModeMcpApi
   workspace: CodeModeWorkspaceApi
@@ -252,17 +274,7 @@ function buildAllCommands(context: ToolUseContext, commands: Command[]): Command
 }
 
 function looksBrowserBackedCapability(command: Command): boolean {
-  const text = [
-    command.name,
-    command.description,
-    command.whenToUse,
-    ...(command.verbs ?? []),
-    ...(command.outputs ?? []),
-    ...(command.artifactKinds ?? []),
-  ]
-    .filter(Boolean)
-    .join(' ')
-    .toLowerCase()
+  const text = collectCommandText(command)
 
   return (
     getCapabilityFamily(command) === 'browser' ||
@@ -270,6 +282,86 @@ function looksBrowserBackedCapability(command: Command): boolean {
     text.includes('funnel') ||
     text.includes('website')
   )
+}
+
+function collectCommandText(command: Command): string {
+  return [
+    command.name,
+    command.userFacingName?.(),
+    command.description,
+    command.whenToUse,
+    ...(command.aliases ?? []),
+    ...(command.verbs ?? []),
+    ...(command.inputs ?? []),
+    ...(command.outputs ?? []),
+    ...(command.artifactKinds ?? []),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+}
+
+function matchesAnyKeyword(text: string, keywords: string[]): boolean {
+  return keywords.some(keyword => text.includes(keyword))
+}
+
+const GITHUB_DOMAIN_KEYWORDS = [
+  'github',
+  'pull request',
+  'pull-request',
+  'pull_request',
+  'repository',
+  'issues',
+  'issue',
+  'workflow run',
+]
+
+const DOCS_DOMAIN_KEYWORDS = [
+  'google docs',
+  'google-docs',
+  'google docs',
+  'google drive',
+  'google-drive',
+  'google_drive',
+  'document',
+  'documents',
+  'spreadsheet',
+  'spreadsheets',
+  'sheet',
+  'slides',
+  'deck',
+  'docs',
+  'drive',
+]
+
+function looksGitHubCapability(command: Command): boolean {
+  const text = collectCommandText(command)
+  return (
+    command.name.startsWith('github:') ||
+    command.name.includes('mcp__github__') ||
+    matchesAnyKeyword(text, GITHUB_DOMAIN_KEYWORDS)
+  )
+}
+
+function looksDocsCapability(command: Command): boolean {
+  const text = collectCommandText(command)
+  return (
+    command.name.startsWith('google-drive:') ||
+    command.name.startsWith('google-docs:') ||
+    command.name.includes('google_drive') ||
+    matchesAnyKeyword(text, DOCS_DOMAIN_KEYWORDS)
+  )
+}
+
+function cloneCapabilityDescriptor(
+  descriptor: CapabilityDescriptor,
+): CapabilityDescriptor {
+  return {
+    ...descriptor,
+    verbs: [...descriptor.verbs],
+    outputs: [...descriptor.outputs],
+    artifactKinds: [...descriptor.artifactKinds],
+  }
 }
 
 function buildCapabilitySnapshot(
@@ -280,9 +372,20 @@ function buildCapabilitySnapshot(
   statePath: string,
   transcriptSubdir: string,
 ): CodeModeCapabilitySnapshot {
+  const promptCommands = allCommands.filter(
+    (item): item is Extract<Command, { type: 'prompt' }> => item.type === 'prompt',
+  )
   const browserWorkflows = allCommands.filter(
     item => item.type === 'prompt' && looksBrowserBackedCapability(item),
   )
+  const githubCommands = promptCommands.filter(looksGitHubCapability)
+  const docsCommands = promptCommands.filter(looksDocsCapability)
+  const githubWorkflows = githubCommands.filter(item => item.kind === 'workflow')
+  const githubRepoCapabilities = githubCommands.filter(
+    item => item.kind !== 'workflow',
+  )
+  const docsWorkflows = docsCommands.filter(item => item.kind === 'workflow')
+  const docsCapabilities = docsCommands.filter(item => item.kind !== 'workflow')
   const mcpCommands = allCommands.filter(item => item.loadedFrom === 'mcp')
   const mcpWorkflows = mcpCommands.filter(item => item.kind === 'workflow')
   const mcpSkills = mcpCommands.filter(item => item.kind !== 'workflow')
@@ -320,6 +423,14 @@ function buildCapabilitySnapshot(
     discovery: {
       capabilityCount: allCommands.filter(item => item.type === 'prompt').length,
       families: [...CAPABILITY_FAMILIES],
+    },
+    github: {
+      workflows: githubWorkflows.map(summarizeCommand),
+      repoCapabilities: githubRepoCapabilities.map(summarizeCommand),
+    },
+    docs: {
+      workflows: docsWorkflows.map(summarizeCommand),
+      docCapabilities: docsCapabilities.map(summarizeCommand),
     },
     browser: {
       status: browserStatus,
@@ -635,16 +746,39 @@ export class CodeModeExecutor {
     const browserApi: CodeModeBrowserApi = Object.freeze({
       status: () => ({ ...this.capabilitySnapshot.browser.status }),
       listWorkflows: () =>
-        this.capabilitySnapshot.browser.workflows.map(workflow => ({
-          ...workflow,
-          verbs: [...workflow.verbs],
-          outputs: [...workflow.outputs],
-          artifactKinds: [...workflow.artifactKinds],
-        })),
+        this.capabilitySnapshot.browser.workflows.map(cloneCapabilityDescriptor),
       hasWorkflow: name =>
         this.capabilitySnapshot.browser.workflows.some(
           workflow =>
             workflow.name === name || workflow.displayName === name,
+        ),
+    })
+
+    const githubApi: CodeModeGitHubApi = Object.freeze({
+      listWorkflows: () =>
+        this.capabilitySnapshot.github.workflows.map(cloneCapabilityDescriptor),
+      hasWorkflow: name =>
+        this.capabilitySnapshot.github.workflows.some(
+          workflow =>
+            workflow.name === name || workflow.displayName === name,
+        ),
+      listRepoCapabilities: () =>
+        this.capabilitySnapshot.github.repoCapabilities.map(
+          cloneCapabilityDescriptor,
+        ),
+    })
+
+    const docsApi: CodeModeDocsApi = Object.freeze({
+      listWorkflows: () =>
+        this.capabilitySnapshot.docs.workflows.map(cloneCapabilityDescriptor),
+      hasWorkflow: name =>
+        this.capabilitySnapshot.docs.workflows.some(
+          workflow =>
+            workflow.name === name || workflow.displayName === name,
+        ),
+      listDocCapabilities: () =>
+        this.capabilitySnapshot.docs.docCapabilities.map(
+          cloneCapabilityDescriptor,
         ),
     })
 
@@ -722,6 +856,8 @@ export class CodeModeExecutor {
       state: stateApi,
       workflow: workflowApi,
       browser: browserApi,
+      github: githubApi,
+      docs: docsApi,
       cli: cliApi,
       mcp: mcpApi,
       workspace: workspaceApi,

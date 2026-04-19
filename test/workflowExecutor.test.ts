@@ -107,6 +107,55 @@ function makeCodeModeContext(extraCommands: Array<Record<string, unknown>> = [])
   } as any
 }
 
+function makeGitHubDocsCapabilities(): Array<Record<string, unknown>> {
+  return [
+    {
+      type: 'prompt',
+      name: 'github:workflow:review-pr',
+      description: 'Review a pull request and summarize the next changes',
+      kind: 'workflow',
+      verbs: ['review pull request'],
+      outputs: ['PR review brief'],
+      artifactKinds: ['review brief'],
+      loadedFrom: 'plugin',
+      source: 'plugin',
+      userFacingName: () => 'PR Review',
+    },
+    {
+      type: 'prompt',
+      name: 'github:gh-fix-ci',
+      description: 'Debug failing GitHub Actions checks for the current PR',
+      verbs: ['fix ci'],
+      outputs: ['CI fix plan'],
+      loadedFrom: 'plugin',
+      source: 'plugin',
+      userFacingName: () => 'GitHub CI Fix',
+    },
+    {
+      type: 'prompt',
+      name: 'google-drive:workflow:publish-draft',
+      description: 'Prepare a Google Doc for publishing and summarize the next edits',
+      kind: 'workflow',
+      verbs: ['publish draft'],
+      outputs: ['Publishing brief'],
+      artifactKinds: ['publishing brief'],
+      loadedFrom: 'plugin',
+      source: 'plugin',
+      userFacingName: () => 'Publish Draft',
+    },
+    {
+      type: 'prompt',
+      name: 'google-drive:google-docs',
+      description: 'Inspect and edit Google Docs documents with range precision',
+      verbs: ['rewrite document'],
+      outputs: ['Document update plan'],
+      loadedFrom: 'plugin',
+      source: 'plugin',
+      userFacingName: () => 'Google Docs',
+    },
+  ]
+}
+
 describe('executeForkedWorkflow', () => {
   test('runs declared steps sequentially before final synthesis', async () => {
     const calls: Array<{
@@ -688,6 +737,134 @@ async ({ workflow, state, browser, cli, mcp, workspace, discovery }) => {
       >
       expect(persisted.phase).toBe('failed')
       expect(String(persisted.error)).toContain('process is not defined')
+    } finally {
+      await rm(stateDir, { recursive: true, force: true })
+    }
+  })
+
+  test('exposes typed github and docs capability metadata inside code mode', async () => {
+    const calls: Array<{
+      stageKind: 'codegen' | 'step' | 'synthesis'
+      stageIndex: number
+      prompt: string
+    }> = []
+    const command = {
+      ...makeWorkflowCommand(),
+      workflowRuntime: 'code' as const,
+    }
+    const stateDir = await mkdtemp(join(tmpdir(), 'cc-code-mode-gh-docs-'))
+    const statePath = join(stateDir, 'code-mode-state.json')
+
+    try {
+      const result = await executeForkedWorkflow({
+        command,
+        commandName: command.name,
+        args: 'refresh supporting materials',
+        context: makeCodeModeContext(makeGitHubDocsCapabilities()),
+        canUseTool: (() => ({ behavior: 'allow' })) as any,
+        parentMessage: { message: { id: 'parent' } } as any,
+        modifiedGetAppState: (() => ({})) as any,
+        agentDefinition: { agentType: 'general-purpose' } as any,
+        skillContent: '# Refresh the pipeline',
+        codeModeStatePath: statePath,
+        stageRunner: async stage => {
+          calls.push(stage)
+          if (stage.stageKind === 'codegen') {
+            return `\`\`\`js
+async ({ workflow, state, github, docs }) => {
+  await state.set('githubWorkflowCount', github.listWorkflows().length)
+  await state.set('githubHasReviewWorkflow', github.hasWorkflow('PR Review'))
+  await state.set('githubFirstCapability', github.listRepoCapabilities()[0]?.name ?? null)
+  await state.set('docsWorkflowCount', docs.listWorkflows().length)
+  await state.set('docsHasPublishWorkflow', docs.hasWorkflow('Publish Draft'))
+  await state.set('docsFirstCapability', docs.listDocCapabilities()[0]?.name ?? null)
+
+  await workflow.runStep(0)
+  await workflow.skipStep(1, 'Typed capability smoke only')
+  await workflow.skipStep(2, 'Typed capability smoke only')
+}
+\`\`\``
+          }
+
+          if (stage.stageKind === 'synthesis') {
+            return JSON.stringify({
+              summary: 'Validated typed GitHub and Docs capabilities',
+              completionStatus: 'completed',
+              outputs: [
+                {
+                  name: 'Updated pipeline brief',
+                  status: 'produced',
+                  evidence: 'Typed capability metadata was available during orchestration',
+                },
+                {
+                  name: 'Prioritized outreach backlog',
+                  status: 'produced',
+                  evidence: 'Workflow still completed the first structured step',
+                },
+              ],
+              artifacts: [
+                {
+                  kind: 'pipeline brief',
+                  status: 'produced',
+                  evidence: 'Capability smoke artifact',
+                },
+                {
+                  kind: 'outreach backlog',
+                  status: 'produced',
+                  evidence: 'Capability smoke backlog',
+                },
+              ],
+              successCriteria: [
+                {
+                  criterion: 'Calls out stale assumptions',
+                  status: 'met',
+                  evidence: 'Typed capability smoke path completed',
+                },
+                {
+                  criterion: 'Produces the next highest-leverage actions',
+                  status: 'met',
+                  evidence: 'Capability discovery completed inside code mode',
+                },
+              ],
+              missingInputs: [],
+              unresolvedRisks: [],
+            })
+          }
+
+          return JSON.stringify({
+            summary: 'Gathered evidence for typed capability smoke',
+            artifacts: ['Capability evidence'],
+            risks: [],
+            handoff: {
+              stale_assumptions: 'Smoke only',
+              priority_segment: 'refresh supporting materials',
+            },
+          })
+        },
+      })
+
+      expect(calls[0]?.prompt).toContain('github`: typed GitHub capability helpers')
+      expect(calls[0]?.prompt).toContain('docs`: typed document capability helpers')
+      expect(result.data.result).toContain(
+        'Validated typed GitHub and Docs capabilities',
+      )
+
+      const persisted = JSON.parse(await readFile(statePath, 'utf-8')) as Record<
+        string,
+        any
+      >
+      expect(persisted.userState.githubWorkflowCount).toBe(1)
+      expect(persisted.userState.githubHasReviewWorkflow).toBe(true)
+      expect(persisted.userState.githubFirstCapability).toBe('github:gh-fix-ci')
+      expect(persisted.userState.docsWorkflowCount).toBe(1)
+      expect(persisted.userState.docsHasPublishWorkflow).toBe(true)
+      expect(persisted.userState.docsFirstCapability).toBe(
+        'google-drive:google-docs',
+      )
+      expect(persisted.capabilities.github.workflows).toHaveLength(1)
+      expect(persisted.capabilities.github.repoCapabilities).toHaveLength(1)
+      expect(persisted.capabilities.docs.workflows).toHaveLength(1)
+      expect(persisted.capabilities.docs.docCapabilities).toHaveLength(1)
     } finally {
       await rm(stateDir, { recursive: true, force: true })
     }
