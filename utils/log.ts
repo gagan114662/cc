@@ -14,6 +14,7 @@ import {
   type SerializedMessage,
   sortLogs,
 } from '../types/logs.js'
+import { writeAuditEntry } from '../services/audit/durableAuditLog.js'
 import { CACHE_PATHS } from './cachePaths.js'
 import { stripDisplayTags, stripDisplayTagsAllowEmpty } from './displayTags.js'
 import { isEnvTruthy } from './envUtils.js'
@@ -185,6 +186,19 @@ export function logError(error: unknown): void {
 
     // Always add to in-memory log (no dependencies needed)
     addToInMemoryErrorLog(errorInfo)
+
+    // Durably persist to the append-only audit log so the trail survives
+    // CLI / daemon exit. See services/audit/durableAuditLog.ts.
+    try {
+      writeAuditEntry({
+        ts: errorInfo.timestamp,
+        kind: 'error',
+        message: err.message,
+        stack: err.stack,
+      })
+    } catch {
+      // Audit write must never mask the original error path.
+    }
 
     // If sink not attached, queue the event
     if (errorLogSink === null) {
