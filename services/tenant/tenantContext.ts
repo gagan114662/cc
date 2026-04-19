@@ -96,6 +96,32 @@ export function resolveTenantContext(
   return { id, name, role }
 }
 
+// Header-first resolution for the HTTP API path. Node's IncomingHttpHeaders
+// lowercases header names and multi-valued headers arrive as string[]; we
+// accept both shapes. Returns undefined (not DEFAULT_TENANT) when
+// X-Tenant-Id is absent so callers can explicitly distinguish "client
+// didn't authenticate" from "client sent a valid DEFAULT_TENANT header"
+// — the HTTP route falls back to resolveTenantContext() in the former case
+// so daemon-local/CLI-style invocations still work.
+export function resolveTenantFromHeaders(
+  headers: Record<string, string | string[] | undefined>,
+): TenantContext | undefined {
+  const pick = (key: string): string | undefined => {
+    const raw = headers[key] ?? headers[key.toLowerCase()]
+    if (Array.isArray(raw)) return raw[0]
+    return raw
+  }
+  const rawId = pick('x-tenant-id')
+  if (!rawId) return undefined
+  const id = sanitizeId(rawId)
+  const name = pick('x-tenant-name')?.trim() || id
+  // Default role for header-auth matches env-auth: developer when the
+  // id is explicit but role is absent. Admin must be opted-in explicitly
+  // — we will not grant it silently.
+  const role = parseRole(pick('x-tenant-role')) ?? 'developer'
+  return { id, name, role }
+}
+
 // Throws TenantRoleDeniedError when the context's role doesn't meet
 // the minimum. `required` is the *minimum* rank — "admin" means admin
 // only; "developer" means developer or admin; "viewer" accepts any.

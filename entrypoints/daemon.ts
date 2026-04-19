@@ -35,6 +35,10 @@ import {
   type TenantContext,
 } from '../services/tenant/tenantContext.js'
 import { runWithTenantScope } from '../services/tenant/tenantScope.js'
+import {
+  EMPLOYEE_ASSIGN_ROUTE,
+  handleEmployeeAssignRequest,
+} from '../services/http/employeeAssignRoute.js'
 import type { EmployeeDuty } from '../types/employee.js'
 
 type DaemonArgs = {
@@ -43,6 +47,10 @@ type DaemonArgs = {
   graceMs: number
   cliBundlePath: string
   once: boolean
+  // Optional override for the audit-log dir. In production the handler
+  // falls through to CACHE_PATHS.audit() (process-cwd-keyed). Tests set
+  // this via CC_DAEMON_AUDIT_DIR so assertions don't touch the host cache.
+  auditDir?: string
 }
 
 type ScheduledDuty = {
@@ -97,7 +105,11 @@ function parseArgs(argv: string[]): DaemonArgs {
   if (!Number.isFinite(port) || port <= 0) port = 8181
   if (!Number.isFinite(graceMs) || graceMs < 0) graceMs = 10_000
 
-  return { projectRoot, port, graceMs, cliBundlePath, once }
+  const auditDir = process.env.CC_DAEMON_AUDIT_DIR
+    ? path.resolve(process.env.CC_DAEMON_AUDIT_DIR)
+    : undefined
+
+  return { projectRoot, port, graceMs, cliBundlePath, once, auditDir }
 }
 
 function log(level: 'info' | 'warn' | 'error', msg: string, extra?: object): void {
@@ -309,12 +321,60 @@ function startHttp(state: DaemonState): Server {
       res.end(JSON.stringify({ ready }))
       return
     }
+    if (req.url === EMPLOYEE_ASSIGN_ROUTE) {
+      // While draining, refuse new work so callers retry against a
+      // different replica (future Phase 3 concern) instead of racing
+      // into an audit write the daemon may not finish.
+      if (state.shuttingDown) {
+        res.writeHead(503, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: 'draining' }))
+        return
+      }
+      void handleEmployeeAssignRequest(
+        req,
+        res,
+        state.args.auditDir ? { auditDir: state.args.auditDir } : {},
+      ).catch(err => {
+        log('error', 'assign_route_failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+        if (!res.headersSent) {
+          res.writeHead(500, { 'content-type': 'application/json' })
+          res.end(JSON.stringify({ error: 'internal_error' }))
+        }
+      })
+      return
+    }
     res.writeHead(404).end()
   })
-  server.listen(state.args.port, '0.0.0.0', () => {
-    log('info', 'http_listening', { port: state.args.port })
-  })
   return server
+}
+
+// Listen on the configured port and resolve once the OS has actually
+// bound the socket. Port 0 asks the kernel for a free port — we then
+// rewrite state.args.port to the real number so callers (tests, /health)
+// see the port they can actually reach. Without this, the previous
+// fire-and-forget listen() combined with random pickEphemeralPort()
+// produced Linux-CI port collisions — see test/employeeAssignApi.test.ts.
+async function listenHttp(server: Server, state: DaemonState): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const onError = (err: Error): void => {
+      server.off('listening', onListening)
+      reject(err)
+    }
+    const onListening = (): void => {
+      server.off('error', onError)
+      const address = server.address()
+      if (address && typeof address === 'object') {
+        state.args.port = address.port
+      }
+      log('info', 'http_listening', { port: state.args.port })
+      resolve()
+    }
+    server.once('error', onError)
+    server.once('listening', onListening)
+    server.listen(state.args.port, '0.0.0.0')
+  })
 }
 
 export async function stopDaemon(
@@ -368,6 +428,7 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
   }
 
   state.httpServer = startHttp(state)
+  await listenHttp(state.httpServer, state)
 
   const duties = await loadConfig(args.projectRoot)
   for (const duty of duties) {
