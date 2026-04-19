@@ -69,8 +69,9 @@ state will leak into tenant B's view.
 |---|---|---|
 | `inMemoryErrorLog` | ✅ migrated | `utils/log.ts` partitions by tenant — see `test/scopeSingletons1b.test.ts` |
 | OTel counter attributes | ✅ 1b done | All 8 counters now stamp `tenant.id` on `.add()` — this PR |
-| `scheduledTasksEnabled`, `sessionCronTasks` | 🟡 partial | `sessionCronTasks.agentId` exists; tenant pending — blocks multi-tenant daemon cron |
-| `sessionCreatedTeams` | 🟡 partial | Tenant key needed for `TeamCreate`/`TeamDelete` gating on shared daemon |
+| `scheduledTasksEnabled` | ✅ keep global | Bootstrap latch, identical for every tenant on the process |
+| `sessionCronTasks` | ✅ migrated | `Map<tenantId, SessionCronTask[]>`; scheduler reads via `getAllSessionCronTasks()` — see `test/sessionCronTasksTenantScope.test.ts` |
+| `sessionCreatedTeams` | ✅ migrated | `Map<tenantId, Set<string>>`; `cleanupSessionTeams()` walks every bucket — see `test/sessionTeamsTenantScope.test.ts` |
 
 ### Category D — Test-only seams (leave alone)
 
@@ -85,16 +86,16 @@ state will leak into tenant B's view.
 Each slice below is independently reviewable. The sequence is chosen so
 later slices don't require rewriting earlier ones.
 
-1. **Session cron tasks → tenant-keyed lookup.** Extend
-   `SessionCronTask` with `tenantId: string`; update
-   `addSessionCronTask` / `removeSessionCronTasks` / cron scheduler
-   fires to respect the active scope's tenant. Unblocks: per-tenant
-   duty scheduling on the shared daemon. ~2 days.
+1. ~~**Session cron tasks → tenant-keyed lookup.**~~ ✅ shipped — see
+   `test/sessionCronTasksTenantScope.test.ts`. `SessionCronTask` now
+   carries `tenantId`; `addSessionCronTask` stamps from the active
+   scope; `removeSessionCronTasks` sweeps every bucket; scheduler
+   reads all tasks via `getAllSessionCronTasks()`.
 
-2. **`sessionCreatedTeams` → tenant-keyed set.** `TeamCreate` already
-   lives inside a tenant scope via the HTTP gate; move the dedup set
-   into a `Map<tenantId, Set<string>>`. Unblocks: parallel team
-   churn across tenants without cleanup cross-contamination. ~1 day.
+2. ~~**`sessionCreatedTeams` → tenant-keyed set.**~~ ✅ shipped — see
+   `test/sessionTeamsTenantScope.test.ts`. `cleanupSessionTeams()`
+   walks every tenant bucket because shutdown runs outside any
+   AsyncLocalStorage scope.
 
 3. **Extract session-scoped state (Category B) behind an
    `AsyncLocalStorage<SessionContext>` wrapper.** Replace every

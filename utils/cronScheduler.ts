@@ -8,8 +8,8 @@
 
 import type { FSWatcher } from 'chokidar'
 import {
+  getAllSessionCronTasks,
   getScheduledTasksEnabled,
-  getSessionCronTasks,
   removeSessionCronTasks,
   setScheduledTasksEnabled,
 } from '../bootstrap/state.js'
@@ -373,8 +373,14 @@ export function createCronScheduler(
     // fresh from bootstrap state every tick (no chokidar, no load()). This
     // is skipped on the daemon path (`dir !== undefined`) which never
     // touches bootstrap state.
+    //
+    // The scheduler tick runs outside any AsyncLocalStorage tenant scope,
+    // so getSessionCronTasks() (active-tenant-only) would silently skip
+    // every non-DEFAULT_TENANT bucket on a multi-tenant daemon. Walk all
+    // buckets via getAllSessionCronTasks(); each task carries tenantId so
+    // onFireTask callers can re-enter the owning scope.
     if (dir === undefined) {
-      for (const t of getSessionCronTasks()) process(t, true)
+      for (const t of getAllSessionCronTasks()) process(t, true)
     }
 
     if (seen.size === 0) {
