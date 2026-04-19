@@ -1,4 +1,5 @@
 import { randomUUID } from 'crypto'
+import { Script, createContext } from 'node:vm'
 import type {
   SkillToolProgress,
   ToolCallProgress,
@@ -11,11 +12,13 @@ import { logForDebugging } from '../../utils/debug.js'
 import { extractResultText } from '../../utils/forkedAgent.js'
 import { createUserMessage, normalizeMessages } from '../../utils/messages.js'
 import {
+  buildWorkflowCodeModePrompt,
   buildWorkflowStepExecutionPrompt,
   buildWorkflowSynthesisRepairPrompt,
   buildWorkflowSynthesisPrompt,
   createWorkflowFailureState,
   createWorkflowSkippedState,
+  extractWorkflowProgramSource,
   formatWorkflowFinalResult,
   parseWorkflowFinalState,
   parseWorkflowStepState,
@@ -38,7 +41,7 @@ type ForkedWorkflowOutput = {
   result: string
 }
 
-type WorkflowStageKind = 'step' | 'synthesis'
+type WorkflowStageKind = 'codegen' | 'step' | 'synthesis'
 
 export type WorkflowStageRunner = (args: {
   prompt: string
@@ -51,6 +54,29 @@ export type WorkflowStageRunner = (args: {
 type WorkflowSynthesisResult = {
   rawResult: string
   finalState: WorkflowFinalState
+}
+
+type WorkflowOutcomeMap = Map<number, WorkflowStepOutcome>
+
+type WorkflowProgramApi = {
+  workflow: Readonly<{
+    name: string
+    steps: ReadonlyArray<
+      Readonly<NonNullable<WorkflowCommand['workflowSteps']>[number]>
+    >
+    inputs: ReadonlyArray<string>
+    outputs: ReadonlyArray<string>
+    artifactKinds: ReadonlyArray<string>
+    successCriteria: ReadonlyArray<string>
+    handoffFields: ReadonlyArray<string>
+  }>
+  args: string
+  state: Record<string, unknown>
+  runStep: (stepIndex: number) => Promise<WorkflowStepOutcome>
+  skipStep: (stepIndex: number, reason?: string) => Promise<WorkflowStepOutcome>
+  getHandoff: () => Record<string, string>
+  getOutcomes: () => WorkflowStepOutcome[]
+  hasOutcome: (stepIndex: number) => boolean
 }
 
 type ExecuteForkedWorkflowArgs = {
@@ -77,6 +103,21 @@ function summarizeError(error: unknown): string {
   return error instanceof Error ? error.message : String(error)
 }
 
+function assertValidWorkflowStepIndex(
+  workflowSteps: NonNullable<WorkflowCommand['workflowSteps']>,
+  stepIndex: number,
+): void {
+  if (!Number.isInteger(stepIndex)) {
+    throw new Error(`Workflow step index must be an integer, got ${stepIndex}`)
+  }
+
+  if (stepIndex < 0 || stepIndex >= workflowSteps.length) {
+    throw new Error(
+      `Workflow step index ${stepIndex} is out of bounds for ${workflowSteps.length} workflow steps`,
+    )
+  }
+}
+
 function hasRequiredHandoff(
   requiredFields: string[] | undefined,
   handoff: Record<string, string>,
@@ -86,6 +127,47 @@ function hasRequiredHandoff(
   }
 
   return requiredFields.every(field => Boolean(handoff[field]))
+}
+
+function materializeWorkflowOutcomes(
+  workflowSteps: NonNullable<WorkflowCommand['workflowSteps']>,
+  outcomeMap: WorkflowOutcomeMap,
+): WorkflowStepOutcome[] {
+  return workflowSteps.flatMap((_, stepIndex) => {
+    const outcome = outcomeMap.get(stepIndex)
+    return outcome ? [outcome] : []
+  })
+}
+
+function buildSkippedWorkflowSummary(args: {
+  step: NonNullable<WorkflowCommand['workflowSteps']>[number]
+  stepOutcomes: WorkflowStepOutcome[]
+  explicitReason?: string
+}): string {
+  const explicitReason = args.explicitReason?.trim()
+  if (explicitReason) {
+    return `Skipped: ${explicitReason}`
+  }
+
+  const combinedHandoff = buildCombinedHandoff(args.stepOutcomes)
+  if (!hasRequiredHandoff(args.step.requiresHandoff, combinedHandoff)) {
+    const missingFields =
+      args.step.requiresHandoff?.filter(field => !combinedHandoff[field]) ?? []
+    return `Skipped: missing required handoff fields (${missingFields.join(', ')})`
+  }
+
+  return 'Skipped: workflow program did not invoke this step'
+}
+
+function createSkippedWorkflowOutcome(
+  step: NonNullable<WorkflowCommand['workflowSteps']>[number],
+  summary: string,
+): WorkflowStepOutcome {
+  return {
+    step,
+    result: summary,
+    state: createWorkflowSkippedState(summary),
+  }
 }
 
 async function runWorkflowStepWithRetries(args: {
@@ -157,6 +239,224 @@ async function runWorkflowStepWithRetries(args: {
   }
 
   throw new Error('Unreachable workflow retry state')
+}
+
+async function runWorkflowStepByIndex(args: {
+  command: WorkflowCommand
+  workflowSteps: NonNullable<WorkflowCommand['workflowSteps']>
+  outcomeMap: WorkflowOutcomeMap
+  skillContent: string
+  stepIndex: number
+  argsText: string
+  runStage: WorkflowStageRunner
+  transcriptSubdir: string
+}): Promise<WorkflowStepOutcome> {
+  const {
+    command,
+    workflowSteps,
+    outcomeMap,
+    skillContent,
+    stepIndex,
+    argsText,
+    runStage,
+    transcriptSubdir,
+  } = args
+
+  assertValidWorkflowStepIndex(workflowSteps, stepIndex)
+
+  const existingOutcome = outcomeMap.get(stepIndex)
+  if (existingOutcome) {
+    return existingOutcome
+  }
+
+  const step = workflowSteps[stepIndex]!
+  const stepOutcomes = materializeWorkflowOutcomes(workflowSteps, outcomeMap)
+  const combinedHandoff = buildCombinedHandoff(stepOutcomes)
+  if (!hasRequiredHandoff(step.requiresHandoff, combinedHandoff)) {
+    const summary = buildSkippedWorkflowSummary({
+      step,
+      stepOutcomes,
+    })
+    const skippedOutcome = createSkippedWorkflowOutcome(step, summary)
+    outcomeMap.set(stepIndex, skippedOutcome)
+    return skippedOutcome
+  }
+
+  try {
+    const { result, state } = await runWorkflowStepWithRetries({
+      command,
+      skillContent,
+      stepOutcomes,
+      stepIndex,
+      argsText,
+      runStage,
+      transcriptSubdir,
+    })
+
+    const outcome = {
+      step,
+      result,
+      state,
+    }
+    outcomeMap.set(stepIndex, outcome)
+    return outcome
+  } catch (error) {
+    const summary = `Step failed: ${summarizeError(error)}`
+    if (step.onFailure === 'continue') {
+      const failureOutcome = {
+        step,
+        result: summary,
+        state: createWorkflowFailureState(summary),
+      }
+      outcomeMap.set(stepIndex, failureOutcome)
+      return failureOutcome
+    }
+
+    throw error
+  }
+}
+
+function compileWorkflowProgram(source: string): (api: WorkflowProgramApi) => unknown {
+  let program: unknown
+
+  try {
+    program = new Script(`(${source.trim()})`, {
+      filename: 'workflow-code-mode.js',
+    }).runInContext(createContext({}), { timeout: 1000 })
+  } catch (error) {
+    throw new Error(`Workflow code program could not be compiled: ${summarizeError(error)}`)
+  }
+
+  if (typeof program !== 'function') {
+    throw new Error(
+      'Workflow code mode must return a JavaScript function of the form async (api) => { ... }',
+    )
+  }
+
+  return program as (api: WorkflowProgramApi) => unknown
+}
+
+async function runWorkflowProgram(
+  program: (api: WorkflowProgramApi) => unknown,
+  api: WorkflowProgramApi,
+): Promise<void> {
+  const timeoutMs = 5000
+  let timeout: ReturnType<typeof setTimeout> | undefined
+
+  try {
+    await Promise.race([
+      Promise.resolve()
+        .then(() => program(api))
+        .then(() => undefined),
+      new Promise<never>((_, reject) => {
+        timeout = setTimeout(() => {
+          reject(
+            new Error(`Workflow code program timed out after ${timeoutMs}ms`),
+          )
+        }, timeoutMs)
+      }),
+    ])
+  } finally {
+    if (timeout !== undefined) {
+      clearTimeout(timeout)
+    }
+  }
+}
+
+async function executeCodeModeWorkflow(args: {
+  command: WorkflowCommand
+  workflowSteps: NonNullable<WorkflowCommand['workflowSteps']>
+  skillContent: string
+  argsText: string
+  runStage: WorkflowStageRunner
+  transcriptSubdir: string
+}): Promise<WorkflowStepOutcome[]> {
+  const { command, workflowSteps, skillContent, argsText, runStage, transcriptSubdir } = args
+
+  const codePrompt = buildWorkflowCodeModePrompt(command, skillContent, argsText)
+  const rawProgram = await runStage({
+    prompt: codePrompt,
+    stageKind: 'codegen',
+    stageIndex: 0,
+    agentId: createAgentId(),
+    transcriptSubdir,
+  })
+  const source = extractWorkflowProgramSource(rawProgram)
+  if (!source) {
+    throw new Error('Workflow code mode did not return any JavaScript source')
+  }
+
+  const workflowMetadata = Object.freeze({
+    name: command.userFacingName?.() ?? command.name,
+    steps: Object.freeze(workflowSteps.map(step => Object.freeze({ ...step }))),
+    inputs: Object.freeze([...(command.inputs ?? [])]),
+    outputs: Object.freeze([...(command.outputs ?? [])]),
+    artifactKinds: Object.freeze([...(command.artifactKinds ?? [])]),
+    successCriteria: Object.freeze([...(command.successCriteria ?? [])]),
+    handoffFields: Object.freeze([...(command.handoffFields ?? [])]),
+  })
+  const outcomeMap: WorkflowOutcomeMap = new Map()
+  const executionState: Record<string, unknown> = {}
+
+  const api: WorkflowProgramApi = {
+    workflow: workflowMetadata,
+    args: argsText,
+    state: executionState,
+    runStep: async stepIndex =>
+      runWorkflowStepByIndex({
+        command,
+        workflowSteps,
+        outcomeMap,
+        skillContent,
+        stepIndex,
+        argsText,
+        runStage,
+        transcriptSubdir,
+      }),
+    skipStep: async (stepIndex, reason) => {
+      assertValidWorkflowStepIndex(workflowSteps, stepIndex)
+      const existingOutcome = outcomeMap.get(stepIndex)
+      if (existingOutcome) {
+        return existingOutcome
+      }
+
+      const stepOutcomes = materializeWorkflowOutcomes(workflowSteps, outcomeMap)
+      const step = workflowSteps[stepIndex]!
+      const summary = buildSkippedWorkflowSummary({
+        step,
+        stepOutcomes,
+        explicitReason: reason,
+      })
+      const skippedOutcome = createSkippedWorkflowOutcome(step, summary)
+      outcomeMap.set(stepIndex, skippedOutcome)
+      return skippedOutcome
+    },
+    getHandoff: () =>
+      buildCombinedHandoff(materializeWorkflowOutcomes(workflowSteps, outcomeMap)),
+    getOutcomes: () => materializeWorkflowOutcomes(workflowSteps, outcomeMap),
+    hasOutcome: stepIndex => {
+      assertValidWorkflowStepIndex(workflowSteps, stepIndex)
+      return outcomeMap.has(stepIndex)
+    },
+  }
+
+  const program = compileWorkflowProgram(source)
+  await runWorkflowProgram(program, api)
+
+  for (const [stepIndex, step] of workflowSteps.entries()) {
+    if (outcomeMap.has(stepIndex)) {
+      continue
+    }
+
+    const stepOutcomes = materializeWorkflowOutcomes(workflowSteps, outcomeMap)
+    const summary = buildSkippedWorkflowSummary({
+      step,
+      stepOutcomes,
+    })
+    outcomeMap.set(stepIndex, createSkippedWorkflowOutcome(step, summary))
+  }
+
+  return materializeWorkflowOutcomes(workflowSteps, outcomeMap)
 }
 
 async function runWorkflowSynthesisWithValidation(args: {
@@ -304,7 +604,7 @@ function createDefaultWorkflowStageRunner({
 
       return extractResultText(
         agentMessages,
-        `${stageKind === 'step' ? 'Workflow step' : 'Workflow synthesis'} completed`,
+        `${stageKind === 'step' ? 'Workflow step' : stageKind === 'codegen' ? 'Workflow code generation' : 'Workflow synthesis'} completed`,
       )
     } finally {
       clearInvokedSkillsForAgent(agentId)
@@ -344,52 +644,33 @@ export async function executeForkedWorkflow({
       command,
     })
 
-  const stepOutcomes: WorkflowStepOutcome[] = []
-
-  for (const [stepIndex, step] of workflowSteps.entries()) {
-    const combinedHandoff = buildCombinedHandoff(stepOutcomes)
-    if (!hasRequiredHandoff(step.requiresHandoff, combinedHandoff)) {
-      const missingFields =
-        step.requiresHandoff?.filter(field => !combinedHandoff[field]) ?? []
-      const summary = `Skipped: missing required handoff fields (${missingFields.join(', ')})`
-      stepOutcomes.push({
-        step,
-        result: summary,
-        state: createWorkflowSkippedState(summary),
-      })
-      continue
-    }
-
-    try {
-      const { result, state } = await runWorkflowStepWithRetries({
-        command,
-        skillContent,
-        stepOutcomes,
-        stepIndex,
-        argsText: args,
-        runStage,
-        transcriptSubdir,
-      })
-
-      stepOutcomes.push({
-        step,
-        result,
-        state,
-      })
-    } catch (error) {
-      const summary = `Step failed: ${summarizeError(error)}`
-      if (step.onFailure === 'continue') {
-        stepOutcomes.push({
-          step,
-          result: summary,
-          state: createWorkflowFailureState(summary),
+  const stepOutcomes =
+    command.workflowRuntime === 'code'
+      ? await executeCodeModeWorkflow({
+          command,
+          workflowSteps,
+          skillContent,
+          argsText: args,
+          runStage,
+          transcriptSubdir,
         })
-        continue
-      }
+      : await (async (): Promise<WorkflowStepOutcome[]> => {
+          const outcomeMap: WorkflowOutcomeMap = new Map()
+          for (const [stepIndex] of workflowSteps.entries()) {
+            await runWorkflowStepByIndex({
+              command,
+              workflowSteps,
+              outcomeMap,
+              skillContent,
+              stepIndex,
+              argsText: args,
+              runStage,
+              transcriptSubdir,
+            })
+          }
 
-      throw error
-    }
-  }
+          return materializeWorkflowOutcomes(workflowSteps, outcomeMap)
+        })()
 
   const synthesisAgentId = createAgentId()
   const { finalState } = await runWorkflowSynthesisWithValidation({

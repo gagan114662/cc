@@ -3,7 +3,11 @@ import { constants as fsConstants } from 'fs'
 import { mkdir, open } from 'fs/promises'
 import { dirname, isAbsolute, join, normalize, sep as pathSep } from 'path'
 import type { ToolUseContext } from '../Tool.js'
-import type { Command, WorkflowStep } from '../types/command.js'
+import type {
+  Command,
+  WorkflowRuntime,
+  WorkflowStep,
+} from '../types/command.js'
 import { logForDebugging } from '../utils/debug.js'
 import { getBundledSkillsRoot } from '../utils/permissions/filesystem.js'
 import type { HooksSettings } from '../utils/settings/types.js'
@@ -24,6 +28,7 @@ export type BundledSkillDefinition = {
   successCriteria?: string[]
   handoffFields?: string[]
   workflowSteps?: WorkflowStep[]
+  workflowRuntime?: WorkflowRuntime
   argumentHint?: string
   allowedTools?: string[]
   model?: string
@@ -95,6 +100,7 @@ export function registerBundledSkill(definition: BundledSkillDefinition): void {
     successCriteria: definition.successCriteria,
     handoffFields: definition.handoffFields,
     workflowSteps: definition.workflowSteps,
+    workflowRuntime: definition.workflowRuntime,
     kind:
       definition.workflowSteps && definition.workflowSteps.length > 0
         ? 'workflow'
