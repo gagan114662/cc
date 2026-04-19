@@ -33,6 +33,7 @@ import {
   withDutySpan,
 } from '../services/observability/dutySpans.js'
 import {
+  DEFAULT_TENANT,
   resolveTenantContext,
   tenantEnv,
   type TenantContext,
@@ -42,6 +43,11 @@ import {
   EMPLOYEE_ASSIGN_ROUTE,
   handleEmployeeAssignRequest,
 } from '../services/http/employeeAssignRoute.js'
+import {
+  drainOnce,
+  type AssignmentRunner,
+} from '../services/assignmentQueue/drainer.js'
+import { recoverCrashedAssignments } from '../services/assignmentQueue/storage.js'
 import type { EmployeeDuty } from '../types/employee.js'
 
 type DaemonArgs = {
@@ -54,6 +60,16 @@ type DaemonArgs = {
   // falls through to CACHE_PATHS.audit() (process-cwd-keyed). Tests set
   // this via CC_DAEMON_AUDIT_DIR so assertions don't touch the host cache.
   auditDir?: string
+  // Ms between assignment-queue drain ticks. Each tenant drainer ticks
+  // independently on this interval. Tests pass a small value (or 0 +
+  // disableDrainer) to drive drains deterministically via drainOnce.
+  drainIntervalMs?: number
+  // Disable the automatic per-tenant drain loop entirely. Tests that
+  // drive drainOnce directly set this so the daemon doesn't race them.
+  disableDrainer?: boolean
+  // Override the subprocess-based runner with a caller-supplied one
+  // (tests use a fake). Defaults to the subprocess runner below.
+  assignmentRunner?: AssignmentRunner
 }
 
 type ScheduledDuty = {
@@ -84,12 +100,102 @@ type DaemonState = {
   // Key is `${tenantId}:${dutyId}` — tenants may legitimately use the
   // same duty id, and a flat `dutyId` key would silently overwrite.
   duties: Map<string, ScheduledDuty>
+  // Per-tenant drainer timer handles. One polling timer per tenant so
+  // an expensive runner on tenant A can't block draining for tenant B.
+  drainerTimers: Map<string, ReturnType<typeof setTimeout>>
+  // Tenants this daemon is actively draining assignment queues for —
+  // tracked separately from duties because a tenant with no recurring
+  // duties may still receive assignments through the HTTP API.
+  drainerTenants: TenantContext[]
+  // True while any tenant's drain tick is mid-flight. Shutdown waits
+  // for this to be false before closing the HTTP server, so the
+  // subprocess-spawning runner finishes cleanly.
+  drainInFlight: Set<string>
   httpServer: Server | null
   shuttingDown: boolean
 }
 
 function dutyKey(tenantId: string, dutyId: string): string {
   return `${tenantId}:${dutyId}`
+}
+
+// Spawn a subprocess to execute an accepted assignment. Shape matches
+// runDutySubprocess so the daemon has one code path per execution
+// model — the difference is the prompt source (duty vs assignment) and
+// the env stamp (CC_ASSIGNMENT_ID vs CC_DUTY_ID).
+function defaultAssignmentRunner(state: DaemonState): AssignmentRunner {
+  return async input => {
+    if (!existsSync(state.args.cliBundlePath)) {
+      throw new Error(`cli_bundle_missing: ${state.args.cliBundlePath}`)
+    }
+    const child = spawn({
+      cmd: ['bun', state.args.cliBundlePath, '-p', input.assignment],
+      cwd: state.args.projectRoot,
+      env: {
+        ...process.env,
+        CLAUDE_CODE_REMOTE: 'true',
+        CC_ASSIGNMENT_ID: input.id,
+        ...tenantEnv(input.tenant),
+      },
+      stdin: 'ignore',
+      stdout: 'pipe',
+      stderr: 'pipe',
+    })
+    const exitCode = await child.exited
+    if (exitCode !== 0) {
+      throw new Error(`assignment_subprocess_exit_${exitCode}`)
+    }
+  }
+}
+
+function scheduleDrainTick(
+  state: DaemonState,
+  tenant: TenantContext,
+): void {
+  if (state.shuttingDown) return
+  const intervalMs = state.args.drainIntervalMs ?? 2_000
+  const timer = setTimeout(() => {
+    void drainTick(state, tenant)
+  }, intervalMs)
+  state.drainerTimers.set(tenant.id, timer)
+}
+
+async function drainTick(
+  state: DaemonState,
+  tenant: TenantContext,
+): Promise<void> {
+  if (state.shuttingDown) return
+  state.drainInFlight.add(tenant.id)
+  try {
+    await drainOnce({
+      projectRoot: state.args.projectRoot,
+      tenant,
+      runner: state.args.assignmentRunner ?? defaultAssignmentRunner(state),
+    })
+  } catch (err) {
+    log('error', 'drain_failed', {
+      tenantId: tenant.id,
+      error: err instanceof Error ? err.message : String(err),
+    })
+  } finally {
+    state.drainInFlight.delete(tenant.id)
+    if (!state.shuttingDown) scheduleDrainTick(state, tenant)
+  }
+}
+
+// Compose the list of tenants we open drainers for. Always includes
+// DEFAULT_TENANT so the legacy single-operator flow works without any
+// .claude/tenants/ setup; then any named tenant that has either an
+// employee.json or a queue already on disk. The queue check matters
+// on a brand-new tenant whose first assignment has already landed
+// but who has no employee.json yet.
+function resolveDrainerTenants(
+  tenantDuties: TenantDuties[],
+): TenantContext[] {
+  const byId = new Map<string, TenantContext>()
+  byId.set(DEFAULT_TENANT.id, DEFAULT_TENANT)
+  for (const { tenant } of tenantDuties) byId.set(tenant.id, tenant)
+  return Array.from(byId.values())
 }
 
 function parseArgs(argv: string[]): DaemonArgs {
@@ -338,6 +444,7 @@ function buildHealthBody(state: DaemonState): string {
         role: state.tenant.role,
       },
       duties,
+      drainerTenantIds: state.drainerTenants.map(t => t.id),
     },
     null,
     2,
@@ -372,11 +479,10 @@ function startHttp(state: DaemonState): Server {
         res.end(JSON.stringify({ error: 'draining' }))
         return
       }
-      void handleEmployeeAssignRequest(
-        req,
-        res,
-        state.args.auditDir ? { auditDir: state.args.auditDir } : {},
-      ).catch(err => {
+      void handleEmployeeAssignRequest(req, res, {
+        projectRoot: state.args.projectRoot,
+        ...(state.args.auditDir ? { auditDir: state.args.auditDir } : {}),
+      }).catch(err => {
         log('error', 'assign_route_failed', {
           error: err instanceof Error ? err.message : String(err),
         })
@@ -430,12 +536,22 @@ export async function stopDaemon(
   for (const scheduled of state.duties.values()) {
     if (scheduled.timer) clearTimeout(scheduled.timer)
   }
+  for (const timer of state.drainerTimers.values()) {
+    clearTimeout(timer)
+  }
+  state.drainerTimers.clear()
 
   const deadline = Date.now() + state.args.graceMs
   const inFlight = () =>
     Array.from(state.duties.values()).flatMap(s => Array.from(s.inFlight))
 
-  while (inFlight().length > 0 && Date.now() < deadline) {
+  // Wait for either subprocess children OR an in-flight drain tick to
+  // settle before closing the server — otherwise a runner mid-subprocess
+  // could be orphaned.
+  while (
+    (inFlight().length > 0 || state.drainInFlight.size > 0) &&
+    Date.now() < deadline
+  ) {
     await new Promise(resolve => setTimeout(resolve, 100))
   }
   for (const child of inFlight()) {
@@ -465,6 +581,9 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
     tenant: resolveTenantContext(),
     configLoaded: false,
     duties: new Map(),
+    drainerTimers: new Map(),
+    drainerTenants: [],
+    drainInFlight: new Set(),
     httpServer: null,
     shuttingDown: false,
   }
@@ -492,12 +611,41 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
       dutyCount += 1
     }
   }
+
+  // Queue recovery + drainer boot. Any assignment stuck in 'running'
+  // from a prior daemon crash is re-pended here; the drainer picks it
+  // up on the next tick. Recovery runs for every drainer tenant, not
+  // just those with duties, because an assignment-only tenant can
+  // also crash mid-drain.
+  state.drainerTenants = resolveDrainerTenants(tenantDuties)
+  let recoveredTotal = 0
+  for (const tenant of state.drainerTenants) {
+    const recovered = await recoverCrashedAssignments(
+      args.projectRoot,
+      tenant.id,
+    )
+    if (recovered.length > 0) {
+      recoveredTotal += recovered.length
+      log('info', 'queue_recovered', {
+        tenantId: tenant.id,
+        assignmentIds: recovered,
+      })
+    }
+  }
+  if (!args.disableDrainer) {
+    for (const tenant of state.drainerTenants) {
+      scheduleDrainTick(state, tenant)
+    }
+  }
+
   state.configLoaded = true
 
   log('info', 'daemon_ready', {
     projectRoot: args.projectRoot,
     tenantCount: tenantDuties.length,
     dutyCount,
+    drainerTenantCount: state.drainerTenants.length,
+    recoveredAssignments: recoveredTotal,
     port: args.port,
   })
 
