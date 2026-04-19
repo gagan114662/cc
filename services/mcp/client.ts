@@ -124,6 +124,11 @@ const fetchMcpSkillsForClient = feature('MCP_SKILLS')
       require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
     ).fetchMcpSkillsForClient
   : null
+const fetchMcpWorkflowsForClient = feature('MCP_SKILLS')
+  ? (
+      require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
+    ).fetchMcpWorkflowsForClient
+  : null
 
 import { UnauthorizedError } from '@modelcontextprotocol/sdk/client/auth.js'
 import type { AssistantMessage } from 'src/types/message.js'
@@ -1396,6 +1401,7 @@ export const connectToServer = memoize(
         fetchCommandsForClient.cache.delete(name)
         if (feature('MCP_SKILLS')) {
           fetchMcpSkillsForClient!.cache.delete(name)
+          fetchMcpWorkflowsForClient!.cache.delete(name)
         }
 
         connectToServer.cache.delete(key)
@@ -1674,6 +1680,7 @@ export async function clearServerCache(
   fetchCommandsForClient.cache.delete(name)
   if (feature('MCP_SKILLS')) {
     fetchMcpSkillsForClient!.cache.delete(name)
+    fetchMcpWorkflowsForClient!.cache.delete(name)
   }
 }
 
@@ -2173,15 +2180,18 @@ export async function reconnectMcpServerImpl(
 
     const supportsResources = !!client.capabilities?.resources
 
-    const [tools, mcpCommands, mcpSkills, resources] = await Promise.all([
+    const [tools, mcpCommands, mcpResources, resources] = await Promise.all([
       fetchToolsForClient(client),
       fetchCommandsForClient(client),
       feature('MCP_SKILLS') && supportsResources
-        ? fetchMcpSkillsForClient!(client)
+        ? Promise.all([
+            fetchMcpSkillsForClient!(client),
+            fetchMcpWorkflowsForClient!(client),
+          ]).then(([skills, workflows]) => [...skills, ...workflows])
         : Promise.resolve([]),
       supportsResources ? fetchResourcesForClient(client) : Promise.resolve([]),
     ])
-    const commands = [...mcpCommands, ...mcpSkills]
+    const commands = [...mcpCommands, ...mcpResources]
 
     // Check if we need to add resource tools
     const resourceTools: Tool[] = []
@@ -2346,19 +2356,22 @@ export async function getMcpToolsCommandsAndResources(
 
       const supportsResources = !!client.capabilities?.resources
 
-      const [tools, mcpCommands, mcpSkills, resources] = await Promise.all([
+      const [tools, mcpCommands, mcpResources, resources] = await Promise.all([
         fetchToolsForClient(client),
         fetchCommandsForClient(client),
-        // Discover skills from skill:// resources
+        // Discover higher-level resource-delivered commands
         feature('MCP_SKILLS') && supportsResources
-          ? fetchMcpSkillsForClient!(client)
+          ? Promise.all([
+              fetchMcpSkillsForClient!(client),
+              fetchMcpWorkflowsForClient!(client),
+            ]).then(([skills, workflows]) => [...skills, ...workflows])
           : Promise.resolve([]),
         // Fetch resources if supported
         supportsResources
           ? fetchResourcesForClient(client)
           : Promise.resolve([]),
       ])
-      const commands = [...mcpCommands, ...mcpSkills]
+      const commands = [...mcpCommands, ...mcpResources]
 
       // If this server resources and we haven't added resource tools yet,
       // include our resource tools with this client's tools

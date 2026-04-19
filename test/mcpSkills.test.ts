@@ -1,6 +1,9 @@
 import { beforeEach, describe, expect, test } from 'bun:test'
 import 'src/skills/loadSkillsDir.js'
-import { fetchMcpSkillsForClient } from 'src/skills/mcpSkills.js'
+import {
+  fetchMcpSkillsForClient,
+  fetchMcpWorkflowsForClient,
+} from 'src/skills/mcpSkills.js'
 
 type ResourceShape = {
   uri: string
@@ -45,6 +48,7 @@ function makeConnectedClient(options?: {
 
 beforeEach(() => {
   fetchMcpSkillsForClient.cache.clear()
+  fetchMcpWorkflowsForClient.cache.clear()
 })
 
 describe('fetchMcpSkillsForClient', () => {
@@ -134,6 +138,74 @@ Use the public surface and identify the biggest GTM gaps.`,
 
     fetchMcpSkillsForClient.cache.delete(client.name)
     await fetchMcpSkillsForClient(client)
+    expect(counts()).toEqual({ requestCount: 2, readCount: 2 })
+  })
+})
+
+describe('fetchMcpWorkflowsForClient', () => {
+  test('turns workflow:// text resources into MCP-loaded workflow commands', async () => {
+    const { client } = makeConnectedClient({
+      name: 'browser harness',
+      resources: [
+        {
+          uri: 'workflow://growth/pipeline-refresh',
+          name: 'Pipeline Refresh',
+        },
+      ],
+      readResults: {
+        'workflow://growth/pipeline-refresh': {
+          contents: [
+            {
+              text: `---
+name: Pipeline Refresh
+description: Rebuild the pipeline from the current public surface
+allowed-tools:
+  - Read
+---
+# Refresh the pipeline
+Review the current state, identify stale assumptions, and return the next
+highest-leverage GTM actions.`,
+            },
+          ],
+        },
+      },
+    })
+
+    const workflows = await fetchMcpWorkflowsForClient(client)
+
+    expect(workflows).toHaveLength(1)
+    const workflow = workflows[0]!
+    expect(workflow.name).toBe('browser_harness:workflow:growth:pipeline-refresh')
+    expect(workflow.kind).toBe('workflow')
+    expect(workflow.source).toBe('mcp')
+    expect(workflow.loadedFrom).toBe('mcp')
+    expect(workflow.userFacingName?.()).toBe('Pipeline Refresh')
+
+    const prompt = await workflow.getPromptForCommand('', {} as any)
+    expect(prompt).toHaveLength(1)
+    expect(prompt[0]).toMatchObject({ type: 'text' })
+    expect((prompt[0] as { text: string }).text).toContain(
+      '# Refresh the pipeline',
+    )
+    expect((prompt[0] as { text: string }).text).not.toContain('allowed-tools')
+  })
+
+  test('caches workflow resources by server name and supports invalidation', async () => {
+    const { client, counts } = makeConnectedClient({
+      resources: [{ uri: 'workflow://ops/site-refresh', name: 'Site Refresh' }],
+      readResults: {
+        'workflow://ops/site-refresh': {
+          contents: [{ text: '# Refresh the public site backlog' }],
+        },
+      },
+    })
+
+    await fetchMcpWorkflowsForClient(client)
+    await fetchMcpWorkflowsForClient(client)
+    expect(counts()).toEqual({ requestCount: 1, readCount: 1 })
+
+    fetchMcpWorkflowsForClient.cache.delete(client.name)
+    await fetchMcpWorkflowsForClient(client)
     expect(counts()).toEqual({ requestCount: 2, readCount: 2 })
   })
 })

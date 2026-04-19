@@ -24,6 +24,11 @@ const fetchMcpSkillsForClient = feature('MCP_SKILLS')
       require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
     ).fetchMcpSkillsForClient
   : null
+const fetchMcpWorkflowsForClient = feature('MCP_SKILLS')
+  ? (
+      require('../../skills/mcpSkills.js') as typeof import('../../skills/mcpSkills.js')
+    ).fetchMcpWorkflowsForClient
+  : null
 const clearSkillIndexCache = feature('EXPERIMENTAL_SKILL_SEARCH')
   ? (
       require('../skillSearch/localSearch.js') as typeof import('../skillSearch/localSearch.js')
@@ -676,21 +681,29 @@ export function useManageMCPConnections(
                   type: 'prompts' as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
                 })
                 try {
-                  // Skills come from resources, not prompts — don't invalidate their
-                  // cache here. fetchMcpSkillsForClient returns the cached result.
+                  // Resource-delivered skills/workflows come from resources, not
+                  // prompts — don't invalidate their caches here. The fetchers
+                  // return cached results.
                   fetchCommandsForClient.cache.delete(client.name)
-                  const [mcpPrompts, mcpSkills] = await Promise.all([
+                  const [mcpPrompts, mcpResources] = await Promise.all([
                     fetchCommandsForClient(client),
                     feature('MCP_SKILLS')
-                      ? fetchMcpSkillsForClient!(client)
+                      ? Promise.all([
+                          fetchMcpSkillsForClient!(client),
+                          fetchMcpWorkflowsForClient!(client),
+                        ]).then(([skills, workflows]) => [
+                          ...skills,
+                          ...workflows,
+                        ])
                       : Promise.resolve([]),
                   ])
                   updateServer({
                     ...client,
-                    commands: [...mcpPrompts, ...mcpSkills],
+                    commands: [...mcpPrompts, ...mcpResources],
                   })
-                  // MCP skills changed — invalidate skill-search index so
-                  // next discovery rebuilds with the new set.
+                  // Resource-delivered MCP commands changed — invalidate the
+                  // skill-search index so next discovery rebuilds with the
+                  // new set.
                   clearSkillIndexCache?.()
                 } catch (error) {
                   logMCPError(
@@ -716,25 +729,34 @@ export function useManageMCPConnections(
                 try {
                   fetchResourcesForClient.cache.delete(client.name)
                   if (feature('MCP_SKILLS')) {
-                    // Skills are discovered from resources, so refresh them too.
-                    // Invalidate prompts cache as well: we write commands here,
-                    // and a concurrent prompts/list_changed could otherwise have
-                    // us stomp its fresh result with our cached stale one.
+                    // Skills/workflows are discovered from resources, so refresh
+                    // them too. Invalidate prompts cache as well: we write
+                    // commands here, and a concurrent prompts/list_changed could
+                    // otherwise have us stomp its fresh result with our cached
+                    // stale one.
                     fetchMcpSkillsForClient!.cache.delete(client.name)
+                    fetchMcpWorkflowsForClient!.cache.delete(client.name)
                     fetchCommandsForClient.cache.delete(client.name)
-                    const [newResources, mcpPrompts, mcpSkills] =
+                    const [newResources, mcpPrompts, mcpResources] =
                       await Promise.all([
                         fetchResourcesForClient(client),
                         fetchCommandsForClient(client),
-                        fetchMcpSkillsForClient!(client),
+                        Promise.all([
+                          fetchMcpSkillsForClient!(client),
+                          fetchMcpWorkflowsForClient!(client),
+                        ]).then(([skills, workflows]) => [
+                          ...skills,
+                          ...workflows,
+                        ]),
                       ])
                     updateServer({
                       ...client,
                       resources: newResources,
-                      commands: [...mcpPrompts, ...mcpSkills],
+                      commands: [...mcpPrompts, ...mcpResources],
                     })
-                    // MCP skills changed — invalidate skill-search index so
-                    // next discovery rebuilds with the new set.
+                    // Resource-delivered MCP commands changed — invalidate the
+                    // skill-search index so next discovery rebuilds with the
+                    // new set.
                     clearSkillIndexCache?.()
                   } else {
                     const newResources = await fetchResourcesForClient(client)
