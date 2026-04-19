@@ -495,6 +495,7 @@ export type GlobalConfig = {
   hasCompletedClaudeInChromeOnboarding?: boolean // Whether Claude in Chrome onboarding has been shown
   claudeInChromeDefaultEnabled?: boolean // Whether Claude in Chrome is enabled by default (undefined means platform default)
   cachedChromeExtensionInstalled?: boolean // Cached result of whether Chrome extension is installed
+  browserHarnessDefaultEnabled?: boolean // Whether browser-harness should be exposed by default when installed
 
   // Chrome extension pairing state (persisted across sessions)
   chromeExtension?: {
@@ -652,6 +653,7 @@ export const GLOBAL_CONFIG_KEYS = [
   'inputNeededNotifEnabled',
   'agentPushNotifEnabled',
   'respectGitignore',
+  'browserHarnessDefaultEnabled',
   'claudeInChromeDefaultEnabled',
   'hasCompletedClaudeInChromeOnboarding',
   'lspRecommendationDisabled',
