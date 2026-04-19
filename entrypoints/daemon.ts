@@ -44,6 +44,10 @@ import {
   handleEmployeeAssignRequest,
 } from '../services/http/employeeAssignRoute.js'
 import {
+  GITHUB_WEBHOOK_ROUTE,
+  handleGithubWebhookRequest,
+} from '../services/webhooks/githubRoute.js'
+import {
   drainOnce,
   type AssignmentRunner,
 } from '../services/assignmentQueue/drainer.js'
@@ -70,6 +74,10 @@ type DaemonArgs = {
   // Override the subprocess-based runner with a caller-supplied one
   // (tests use a fake). Defaults to the subprocess runner below.
   assignmentRunner?: AssignmentRunner
+  // Shared secret for verifying inbound GitHub webhook signatures. If
+  // unset, POST /v1/webhooks/github returns 503 — better than silently
+  // accepting any payload because the operator forgot to configure it.
+  githubWebhookSecret?: string
 }
 
 type ScheduledDuty = {
@@ -230,7 +238,17 @@ function parseArgs(argv: string[]): DaemonArgs {
     ? path.resolve(process.env.CC_DAEMON_AUDIT_DIR)
     : undefined
 
-  return { projectRoot, port, graceMs, cliBundlePath, once, auditDir }
+  const githubWebhookSecret = process.env.CC_GITHUB_WEBHOOK_SECRET
+
+  return {
+    projectRoot,
+    port,
+    graceMs,
+    cliBundlePath,
+    once,
+    auditDir,
+    ...(githubWebhookSecret ? { githubWebhookSecret } : {}),
+  }
 }
 
 function log(level: 'info' | 'warn' | 'error', msg: string, extra?: object): void {
@@ -484,6 +502,34 @@ function startHttp(state: DaemonState): Server {
         ...(state.args.auditDir ? { auditDir: state.args.auditDir } : {}),
       }).catch(err => {
         log('error', 'assign_route_failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+        if (!res.headersSent) {
+          res.writeHead(500, { 'content-type': 'application/json' })
+          res.end(JSON.stringify({ error: 'internal_error' }))
+        }
+      })
+      return
+    }
+    if (req.url === GITHUB_WEBHOOK_ROUTE) {
+      if (state.shuttingDown) {
+        res.writeHead(503, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: 'draining' }))
+        return
+      }
+      if (!state.args.githubWebhookSecret) {
+        // Fail loud — a webhook endpoint without a configured secret
+        // would happily enqueue anything. 503 (not 401) because the
+        // fault is on our side, not the sender's.
+        res.writeHead(503, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: 'github_webhook_secret_unset' }))
+        return
+      }
+      void handleGithubWebhookRequest(req, res, {
+        projectRoot: state.args.projectRoot,
+        secret: state.args.githubWebhookSecret,
+      }).catch(err => {
+        log('error', 'github_webhook_failed', {
           error: err instanceof Error ? err.message : String(err),
         })
         if (!res.headersSent) {
