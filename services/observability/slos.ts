@@ -12,6 +12,10 @@ export type SLODefinition = {
   // Predicate over spans, expressed as a human-readable Honeycomb query. The
   // runtime doesn't execute this; the dashboard does.
   query: string
+  // Honeycomb derived-column expression that evaluates to 1 for a good
+  // event and 0 otherwise. Deploy script emits this as the SLI attached
+  // to the SLO. Keep pure — no side effects, no aggregates.
+  sli: string
   // Target as a fraction of the good-event ratio (e.g. 0.99 = 99%).
   target: number
   // Rolling window the target is evaluated over.
@@ -26,6 +30,8 @@ export const EMPLOYEE_DUTY_SUCCESS_RATE: SLODefinition = {
   description:
     'Share of recurring-duty ticks that completed without throwing or hitting the hard-stop.',
   query: 'SELECT rate_of(employee.duty.status = "ok") WHERE name = "employee.duty.tick"',
+  sli:
+    'IF(AND(EQUALS($name,"employee.duty.tick"),EQUALS($employee.duty.status,"ok")),1,0)',
   target: 0.98,
   windowDays: 28,
   burnAlerts: { fast: 14.4, slow: 6 },
@@ -37,6 +43,10 @@ export const ASSIGNMENT_LATENCY_P95: SLODefinition = {
   description:
     'p95 wall time of /employee assign end-to-end spans. Catches runaway assignments before they pile up in the queue.',
   query: 'SELECT HEATMAP(duration_ms) WHERE name = "employee.assignment.run"',
+  // Good event = p95-fast assignment run (<= 30s wall time). Tune the
+  // 30_000 ms threshold in PRs as p95 improves.
+  sli:
+    'IF(AND(EQUALS($name,"employee.assignment.run"),LT($duration_ms,30000)),1,0)',
   target: 0.95,
   windowDays: 14,
   burnAlerts: { fast: 14.4, slow: 6 },
@@ -49,6 +59,8 @@ export const API_ERROR_RATE: SLODefinition = {
     'Share of API calls (post-withRetry) that did not return a successful response. Complements the per-turn nudge signal.',
   query:
     'SELECT rate_of(http.response.status_code < 400) WHERE name = "anthropic.api.request"',
+  sli:
+    'IF(AND(EQUALS($name,"anthropic.api.request"),LT($http.response.status_code,400)),1,0)',
   target: 0.995,
   windowDays: 7,
   burnAlerts: { fast: 14.4, slow: 6 },
