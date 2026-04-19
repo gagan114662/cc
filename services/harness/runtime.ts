@@ -1,4 +1,5 @@
 import { randomUUID } from 'node:crypto'
+import { existsSync } from 'node:fs'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { extractTextContent } from 'src/utils/messages.js'
@@ -88,6 +89,7 @@ const DEFAULT_REMOTE_POLL_INTERVAL_MS = 3_000
 const RUNNER_HEARTBEAT_STALE_MS = 120_000
 const TELEMETRY_EXPORT_STALE_MS = 120_000
 const WORKER_HEARTBEAT_RETENTION_MS = 10 * RUNNER_HEARTBEAT_STALE_MS
+const POLL_SNAPSHOT_KEEPALIVE_INTERVAL = 8
 
 type WorkerExecutionResult = {
   success: boolean
@@ -103,6 +105,108 @@ type WorkerExecutionResult = {
   toolCallCount?: number
 }
 
+const WORKER_TRANSCRIPT_ROLE_MARKERS = new Set(['codex', 'claude', 'assistant'])
+
+function stripAnsi(value: string): string {
+  return value.replace(/\u001b\[[0-9;]*m/g, '')
+}
+
+function isWorkerTranscriptNoiseLine(line: string): boolean {
+  const trimmed = line.trim()
+  if (!trimmed) {
+    return false
+  }
+  return (
+    /^20\d\d-\d\d-\d\dT\d\d:\d\d:\d\d/.test(trimmed) ||
+    /^OpenAI Codex v/i.test(trimmed) ||
+    /^Claude Code/i.test(trimmed) ||
+    /^-+$/.test(trimmed) ||
+    /^(workdir|model|provider|approval|sandbox|reasoning effort|reasoning summaries|session id):/i.test(trimmed) ||
+    trimmed === 'user' ||
+    trimmed === 'exec' ||
+    trimmed === 'mcp startup: no servers' ||
+    /^succeeded in \d+ms:?$/i.test(trimmed) ||
+    /^tokens used$/i.test(trimmed)
+  )
+}
+
+export function extractLastAgentNarrative(text: string): string | null {
+  const lines = stripAnsi(text).split(/\r?\n/)
+  const blocks: string[] = []
+  let current: string[] | null = null
+
+  const flush = (): void => {
+    if (!current) {
+      return
+    }
+    const value = current.join(' ').replace(/\s+/g, ' ').trim()
+    if (value) {
+      blocks.push(value)
+    }
+    current = null
+  }
+
+  for (const line of lines) {
+    const trimmed = line.trim()
+    const lowered = trimmed.toLowerCase()
+    if (WORKER_TRANSCRIPT_ROLE_MARKERS.has(lowered)) {
+      flush()
+      current = []
+      continue
+    }
+    if (!current) {
+      continue
+    }
+    if (
+      trimmed === 'exec' ||
+      trimmed === 'user' ||
+      trimmed === 'tool' ||
+      /^\/bin\//.test(trimmed) ||
+      /^\$ /.test(trimmed)
+    ) {
+      flush()
+      continue
+    }
+    if (isWorkerTranscriptNoiseLine(trimmed)) {
+      continue
+    }
+    current.push(trimmed)
+  }
+
+  flush()
+  return blocks.at(-1) ?? null
+}
+
+export function wasWorkerTranscriptInterrupted(text: string): boolean {
+  return /\btask interrupted\b/i.test(text)
+}
+
+export function deriveWorkerExecutionSummary(input: {
+  stdout: string
+  stderr: string
+  exitCode: number
+}): string {
+  const combined = [input.stdout, input.stderr].filter(Boolean).join('\n')
+  const narrative = extractLastAgentNarrative(combined)
+  if (wasWorkerTranscriptInterrupted(combined)) {
+    return narrative
+      ? `${truncateText(narrative, 220)} | task interrupted before completion`
+      : 'worker transcript was interrupted before completion'
+  }
+  if (narrative) {
+    return truncateText(narrative, 280)
+  }
+
+  const cleaned = stripAnsi(combined)
+    .split(/\r?\n/)
+    .map(line => line.trim())
+    .filter(line => line && !isWorkerTranscriptNoiseLine(line))
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+  return truncateText(cleaned || `worker exit ${input.exitCode}`, 280)
+}
+
 export type HarnessWorkerExecutor = (input: {
   repoRoot: string
   config: HarnessConfig
@@ -112,6 +216,11 @@ export type HarnessWorkerExecutor = (input: {
   runnerId: string
   workerId: string
 }) => Promise<WorkerExecutionResult>
+
+function resolveHarnessWorkerCliEntrypoint(repoRoot: string): string {
+  const bundledCli = path.join(repoRoot, 'dist', 'cli.js')
+  return existsSync(bundledCli) ? bundledCli : process.argv[1]!
+}
 
 export type HarnessDependencies = {
   commandRunner: ShellCommandRunner
@@ -151,6 +260,13 @@ type RunnerExecutionContext = {
   slotCapacity: number
   labels: string[]
 }
+
+type PollSnapshotEmissionState = {
+  signature: string
+  emissionCount: number
+}
+
+const pollSnapshotEmissionState = new Map<string, PollSnapshotEmissionState>()
 
 function getHarnessDaemonControlPath(repoRoot: string): string {
   const repoId = buildHarnessRepoId(repoRoot)
@@ -295,6 +411,7 @@ function createDefaultWorkerExecutor(
 
     const commandOptions = {
       cwd: repoRoot,
+      stdin: 'ignore' as const,
       timeout: Math.min(
         DEFAULT_EXECUTION_TIMEOUT_MS,
         jobSpec.timeoutSeconds * 1000,
@@ -325,7 +442,7 @@ function createDefaultWorkerExecutor(
         : await runner(
             process.execPath,
             [
-              process.argv[1]!,
+              resolveHarnessWorkerCliEntrypoint(repoRoot),
               '-p',
               '--agent',
               jobSpec.targetAgent,
@@ -359,14 +476,16 @@ function createDefaultWorkerExecutor(
       'utf-8',
     )
 
+    const transcript = [result.stdout, result.stderr].filter(Boolean).join('\n')
     return {
-      success: result.code === 0,
+      success: result.code === 0 && !wasWorkerTranscriptInterrupted(transcript),
       stdout: result.stdout,
       stderr: result.stderr,
-      summary: truncateText(
-        result.stdout.trim() || result.stderr.trim() || `worker exit ${result.code}`,
-        280,
-      ),
+      summary: deriveWorkerExecutionSummary({
+        stdout: result.stdout,
+        stderr: result.stderr,
+        exitCode: result.code,
+      }),
       outputPath,
       humanTouchCount: 0,
       totalCostUsd: 0,
@@ -406,7 +525,11 @@ function shouldRunHarnessDiscovery(workerId?: string): boolean {
   if (!workerId) {
     return true
   }
-  return workerId === 'foreground-worker' || workerId.endsWith('-worker-1')
+  return (
+    workerId === 'foreground-worker' ||
+    workerId.endsWith('-foreground-worker') ||
+    workerId.endsWith('-worker-1')
+  )
 }
 
 function isAgentKindRunnableOnRunner(
@@ -556,6 +679,58 @@ export function buildNextWorkerHeartbeat(
     repoId: input.repoId,
     lastHeartbeatAt: input.lastHeartbeatAt,
   }
+}
+
+function shouldEmitPollSnapshotTelemetry(input: {
+  repoId: string
+  workerId: string
+  state: HarnessRuntimeState
+  leasedCount: number
+  discoveryPullRequestCount: number
+  remoteEventCount: number
+  defaultBranchRed: boolean
+}): boolean {
+  const key = `${input.repoId}:${input.workerId}`
+  const signature = JSON.stringify({
+    queueCount: input.state.queue.filter(
+      instanceId => input.state.jobs[instanceId]?.repoId === input.repoId,
+    ).length,
+    activeCount: Object.values(input.state.jobs).filter(
+      job =>
+        job.repoId === input.repoId &&
+        (job.status === 'leased' || job.status === 'running'),
+    ).length,
+    leasedCount: input.leasedCount,
+    defaultBranchRed: input.defaultBranchRed,
+    discoveryPullRequestCount: input.discoveryPullRequestCount,
+    remoteEventCount: input.remoteEventCount,
+    repoHealth: input.state.repoHealth[input.repoId]?.status ?? 'healthy',
+    exportFresh: input.state.observability.exportFresh,
+    staleTelemetryWorkers: input.state.observability.telemetryStaleWorkers.length,
+  })
+
+  const previous = pollSnapshotEmissionState.get(key)
+  if (
+    !previous ||
+    previous.signature !== signature ||
+    input.leasedCount > 0 ||
+    input.discoveryPullRequestCount > 0 ||
+    input.remoteEventCount > 0 ||
+    input.defaultBranchRed
+  ) {
+    pollSnapshotEmissionState.set(key, {
+      signature,
+      emissionCount: 1,
+    })
+    return true
+  }
+
+  const nextCount = previous.emissionCount + 1
+  pollSnapshotEmissionState.set(key, {
+    signature,
+    emissionCount: nextCount,
+  })
+  return nextCount % POLL_SNAPSHOT_KEEPALIVE_INTERVAL === 0
 }
 
 function refreshObservabilityHealth(state: HarnessRuntimeState, now: Date): void {
@@ -870,6 +1045,17 @@ function namespaceCursor(repoId: string, key: string): string {
   return `${repoId}:${key}`
 }
 
+export function shouldBypassRemotePrimaryLeadSession(
+  jobSpec: JobSpec,
+  job: QueuedHarnessJob,
+): boolean {
+  return (
+    jobSpec.id === 'pm-company-research' ||
+    jobSpec.id === 'pm-executive-brief' ||
+    typeof job.metadata.companyId === 'string'
+  )
+}
+
 function enqueueJob(
   state: HarnessRuntimeState,
   repoId: string,
@@ -924,6 +1110,73 @@ function enqueueJob(
   }
 }
 
+export async function enqueueHarnessJob(
+  repoRoot: string,
+  input: {
+    jobId: string
+    sourceKind?: QueuedHarnessJob['sourceKind']
+    promptVariables?: Record<string, string>
+    metadata?: Record<string, unknown>
+    dedupeKey?: string
+  },
+  injectedDeps?: Partial<HarnessDependencies>,
+): Promise<{
+  state: HarnessRuntimeState
+  instanceId: string
+}> {
+  const config = await readEffectiveHarnessConfig(repoRoot)
+  const jobSpec = findJobSpec(config, input.jobId)
+  if (!jobSpec) {
+    throw new Error(`Unknown harness job: ${input.jobId}`)
+  }
+  const now = injectedDeps?.now?.() ?? new Date()
+  const repoId = await withHostedHarnessState(state =>
+    ensureHostedRepoRegistration(state, {
+      repoRoot,
+      config,
+      now,
+    }),
+  )
+
+  const dedupeKey =
+    input.dedupeKey ??
+    createStableId(
+      input.jobId,
+      input.sourceKind ?? 'manual',
+      JSON.stringify(input.promptVariables ?? {}),
+      JSON.stringify(input.metadata ?? {}),
+    )
+
+  const instanceId = await withHostedHarnessState(state => {
+    const enqueued = enqueueJob(
+      state,
+      repoId,
+      jobSpec,
+      input.sourceKind ?? 'manual',
+      dedupeKey,
+      buildPromptVariables(repoRoot, input.promptVariables ?? {}),
+      input.metadata ?? {},
+      now,
+    )
+    if (!enqueued.instanceId) {
+      const existing = Object.values(state.jobs).find(
+        job => job.repoId === repoId && job.dedupeKey === dedupeKey,
+      )
+      if (existing) {
+        return existing.instanceId
+      }
+      throw new Error(`Failed to enqueue harness job: ${input.jobId}`)
+    }
+    return enqueued.instanceId
+  })
+
+  const state = await readHostedHarnessState(repoRoot)
+  return {
+    state,
+    instanceId,
+  }
+}
+
 function isJobRunnable(job: QueuedHarnessJob, now: Date): boolean {
   if (job.status !== 'queued') {
     return false
@@ -957,6 +1210,31 @@ function recoverExpiredLeases(
       job.failureTags = [...new Set([...job.failureTags, 'lease_expired'])]
     }
     delete state.leases[lease.instanceId]
+  }
+}
+
+function refreshLeasesForWorker(
+  state: HarnessRuntimeState,
+  workerId: string,
+  now: Date,
+): void {
+  const heartbeatAt = now.toISOString()
+  for (const lease of Object.values(state.leases)) {
+    if (lease.workerId !== workerId) {
+      continue
+    }
+    const job = state.jobs[lease.instanceId]
+    const timeoutMs = Math.max(
+      60_000,
+      (job?.timeoutSeconds ?? DEFAULT_EXECUTION_TIMEOUT_MS / 1000) * 1000,
+    )
+    lease.heartbeatAt = heartbeatAt
+    lease.expiresAt = new Date(now.getTime() + timeoutMs).toISOString()
+    if (job && (job.status === 'leased' || job.status === 'queued')) {
+      job.status = 'running'
+      job.startedAt ??= heartbeatAt
+      job.updatedAt = heartbeatAt
+    }
   }
 }
 
@@ -1340,6 +1618,40 @@ function buildFailureTags(
   return [...tags]
 }
 
+export function buildExecutionFailureTags(input: {
+  remoteDispatchSummary?: string
+  workerSummary?: string
+  workerStderr?: string
+}): string[] {
+  const tags = new Set<string>()
+  const combined = [
+    input.remoteDispatchSummary,
+    input.workerSummary,
+    input.workerStderr,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase()
+
+  if (!combined) {
+    return []
+  }
+
+  if (combined.includes('remote shadow dispatch unavailable')) {
+    tags.add('remote_dispatch_failed')
+  }
+  if (
+    combined.includes('failed to fetch environments') ||
+    combined.includes('status code 401') ||
+    combined.includes('401 unauthorized') ||
+    combined.includes('authentication failed')
+  ) {
+    tags.add('remote_auth_failed')
+  }
+
+  return [...tags]
+}
+
 async function processLeasedJob(
   repoRoot: string,
   repoId: string,
@@ -1361,6 +1673,22 @@ async function processLeasedJob(
   if (lease) {
     lease.heartbeatAt = startedAt
   }
+  await withHostedHarnessState(persistedState => {
+    const persistedJob = persistedState.jobs[job.instanceId]
+    if (persistedJob) {
+      persistedJob.status = 'running'
+      persistedJob.startedAt ??= startedAt
+      persistedJob.updatedAt = startedAt
+    }
+    const persistedLease = persistedState.leases[job.instanceId]
+    if (persistedLease) {
+      persistedLease.heartbeatAt = startedAt
+      persistedLease.expiresAt = new Date(
+        deps.now().getTime() + Math.max(60_000, job.timeoutSeconds * 1000),
+      ).toISOString()
+    }
+    return filterHarnessStateForRepo(persistedState, repoId)
+  })
   const executionAgentKind =
     lease?.agentKind === 'claude' || lease?.agentKind === 'codex'
       ? lease.agentKind
@@ -1387,7 +1715,8 @@ async function processLeasedJob(
     if (
       executionAgentKind === 'claude' &&
       config.sources.remoteTriggers.enabled &&
-      config.sources.remoteTriggers.dispatchMode === 'primary'
+      config.sources.remoteTriggers.dispatchMode === 'primary' &&
+      !shouldBypassRemotePrimaryLeadSession(jobSpec, job)
     ) {
       const remotePrimary = await executeRemotePrimaryWorker(
         repoRoot,
@@ -1412,7 +1741,22 @@ async function processLeasedJob(
         job.remoteMirrorId = remotePrimary.triggerId
         state.remoteMirror[remoteMirrorKey] = remotePrimary.triggerId
       }
-      if (remotePrimary.completed && remotePrimary.workerResult) {
+      if (
+        remotePrimary.completed &&
+        remotePrimary.workerResult &&
+        (!remotePrimary.workerResult.success &&
+          config.sources.remoteTriggers.localFallback)
+      ) {
+        workerResult = await deps.workerExecutor({
+          repoRoot,
+          config,
+          jobSpec,
+          job,
+          agentKind: executionAgentKind,
+          runnerId,
+          workerId,
+        })
+      } else if (remotePrimary.completed && remotePrimary.workerResult) {
         workerResult = remotePrimary.workerResult
       } else if (!config.sources.remoteTriggers.localFallback) {
         workerResult = {
@@ -1522,11 +1866,20 @@ async function processLeasedJob(
   }
 
   const completedAt = nowIso(deps.now())
-  const failureTags = buildFailureTags(
-    reviewResult.decisions,
-    reviewResult.verificationResults,
-    mergeResult,
-  )
+  const failureTags = [
+    ...new Set([
+      ...buildFailureTags(
+        reviewResult.decisions,
+        reviewResult.verificationResults,
+        mergeResult,
+      ),
+      ...buildExecutionFailureTags({
+        remoteDispatchSummary,
+        workerSummary: workerResult.summary,
+        workerStderr: workerResult.stderr,
+      }),
+    ]),
+  ]
   const status =
     !workerResult.success
       ? 'failed'
@@ -2095,23 +2448,21 @@ export async function pollHarnessOnce(
 
       state.lastPolledAt = nowIso(now)
       refreshObservabilityHealth(state, now)
-      if (!injectedDeps?.workerId) {
-        state.workerHeartbeats[runnerContext.workerId] = buildNextWorkerHeartbeat(
-          state.workerHeartbeats[runnerContext.workerId],
-          {
-            workerId: runnerContext.workerId,
-            pid: process.pid,
-            runnerId: runnerContext.runnerId,
-            agentKind: runnerContext.agentKind,
-            labels: runnerContext.labels,
-            slotCapacity: runnerContext.slotCapacity,
-            repoId: scopedRepoId,
-            lastHeartbeatAt: nowIso(now),
-            observabilityEnvLoaded: isHarnessObservabilityEnvLoaded(),
-          },
-        )
-        upsertRunnerRegistration(state, runnerContext, now)
-      }
+      state.workerHeartbeats[runnerContext.workerId] = buildNextWorkerHeartbeat(
+        state.workerHeartbeats[runnerContext.workerId],
+        {
+          workerId: runnerContext.workerId,
+          pid: process.pid,
+          runnerId: runnerContext.runnerId,
+          agentKind: runnerContext.agentKind,
+          labels: runnerContext.labels,
+          slotCapacity: runnerContext.slotCapacity,
+          repoId: scopedRepoId,
+          lastHeartbeatAt: nowIso(now),
+          observabilityEnvLoaded: isHarnessObservabilityEnvLoaded(),
+        },
+      )
+      upsertRunnerRegistration(state, runnerContext, now)
       appendEventLedger(
         state,
         'cc_harness_poll_snapshot',
@@ -2148,26 +2499,39 @@ export async function pollHarnessOnce(
       }
     },
   )
-  await logHarnessWideEvent('cc_harness_poll_snapshot', {
-    repoRoot,
-    repoId,
-    config,
-    state: stateBeforeWork,
-    workerId,
-    metadata: {
-      'harness.runner_id': runnerId,
-      'harness.agent_kind': agentKind,
-      'harness.discovery_pull_request_count': discovery.pullRequests.length,
-      'harness.discovery_remote_event_count': remoteEvents.length,
-      'harness.discovery_default_branch': discovery.defaultBranch,
-      'harness.discovery_repo': discovery.repoNameWithOwner,
-      'harness.discovery_default_branch_red':
-        discovery.failingDefaultBranchRun != null,
-      'harness.discovery_worker': discoveryWorker,
-      'harness.leased_count': leasedJobs.length,
-      'harness.lease_limit': leaseLimit,
-    },
-  })
+  if (
+    shouldEmitPollSnapshotTelemetry({
+      repoId,
+      workerId,
+      state: stateBeforeWork,
+      leasedCount: leasedJobs.length,
+      discoveryPullRequestCount: discovery.pullRequests.length,
+      remoteEventCount: remoteEvents.length,
+      defaultBranchRed: discovery.failingDefaultBranchRun != null,
+    })
+  ) {
+    await logHarnessWideEvent('cc_harness_poll_snapshot', {
+      repoRoot,
+      repoId,
+      config,
+      state: stateBeforeWork,
+      workerId,
+      metadata: {
+        'harness.runner_id': runnerId,
+        'harness.agent_kind': agentKind,
+        'harness.discovery_pull_request_count': discovery.pullRequests.length,
+        'harness.discovery_remote_event_count': remoteEvents.length,
+        'harness.discovery_default_branch': discovery.defaultBranch,
+        'harness.discovery_repo': discovery.repoNameWithOwner,
+        'harness.discovery_default_branch_red':
+          discovery.failingDefaultBranchRun != null,
+        'harness.discovery_worker': discoveryWorker,
+        'harness.leased_count': leasedJobs.length,
+        'harness.lease_limit': leaseLimit,
+        'harness.poll_snapshot_sampled': true,
+      },
+    })
+  }
   await emitHarnessExportHeartbeat({
     repoId,
     runnerId,
@@ -2330,6 +2694,9 @@ export async function ingestGitHubWebhookEvent(
   repoRoot: string,
   eventName: string,
   payload: Record<string, unknown>,
+  options?: {
+    source?: 'github' | 'cli'
+  },
 ): Promise<{
   enqueued: string[]
   state: HarnessRuntimeState
@@ -2364,6 +2731,7 @@ export async function ingestGitHubWebhookEvent(
         }
       | undefined
     const action = typeof payload.action === 'string' ? payload.action : ''
+    const webhookSource = options?.source ?? 'github'
 
     const maybeEnqueue = (
       event: JobSpec['sourceBindings'][number] extends { event: infer T } ? T : string,
@@ -2420,6 +2788,7 @@ export async function ingestGitHubWebhookEvent(
           action,
           prNumber: pullRequest.number,
           headSha: pullRequest.head?.sha,
+          webhookSource,
         })
       } else if (action === 'synchronize') {
         maybeEnqueue('pull_request_push', commonVariables, {
@@ -2427,6 +2796,7 @@ export async function ingestGitHubWebhookEvent(
           action,
           prNumber: pullRequest.number,
           headSha: pullRequest.head?.sha,
+          webhookSource,
         })
       } else if (action === 'reopened') {
         maybeEnqueue('pull_request_reopened', commonVariables, {
@@ -2434,6 +2804,7 @@ export async function ingestGitHubWebhookEvent(
           action,
           prNumber: pullRequest.number,
           headSha: pullRequest.head?.sha,
+          webhookSource,
         })
       }
     }
@@ -2465,6 +2836,7 @@ export async function ingestGitHubWebhookEvent(
             prNumber: pullRequest.number,
             headSha: pullRequest.head?.sha,
             reviewState: review?.state,
+            webhookSource,
           },
         )
       }
@@ -2489,6 +2861,7 @@ export async function ingestGitHubWebhookEvent(
             action,
             label: label.name,
             prNumber: issue.number,
+            webhookSource,
           },
         )
       }
@@ -2528,6 +2901,7 @@ export async function ingestGitHubWebhookEvent(
             headSha: workflowRun.head_sha,
             workflowName: workflowRun.name,
             runUrl: workflowRun.html_url,
+            webhookSource,
           },
         )
         state.repoHealth[repoId] = {
@@ -2583,6 +2957,7 @@ export async function ingestGitHubWebhookEvent(
       'harness.webhook_action':
         typeof payload.action === 'string' ? payload.action : undefined,
       'harness.webhook_enqueued_count': result.enqueued.length,
+      'harness.webhook_source': options?.source ?? 'github',
     },
   })
 
@@ -2866,39 +3241,21 @@ export async function runHarnessJob(
   state: HarnessRuntimeState
   instanceId: string
 }> {
-  const config = await readEffectiveHarnessConfig(repoRoot)
-  const jobSpec = findJobSpec(config, jobId)
-  if (!jobSpec) {
-    throw new Error(`Unknown harness job: ${jobId}`)
-  }
   const now = injectedDeps?.now?.() ?? new Date()
-  const repoId = await withHostedHarnessState(state =>
-    ensureHostedRepoRegistration(state, {
-      repoRoot,
-      config,
-      now,
-    }),
-  )
-
-  const dedupeKey = createStableId(jobId, 'manual', now.toISOString())
-  const instanceId = await withHostedHarnessState(state => {
-    const enqueued = enqueueJob(
-      state,
-      repoId,
-      jobSpec,
-      'manual',
-      dedupeKey,
-      buildPromptVariables(repoRoot, {
+  const config = await readEffectiveHarnessConfig(repoRoot)
+  const { instanceId } = await enqueueHarnessJob(
+    repoRoot,
+    {
+      jobId,
+      sourceKind: 'manual',
+      promptVariables: {
         manualRunAt: now.toISOString(),
-      }),
-      { requestedBy: 'cli' },
-      now,
-    )
-    if (!enqueued.instanceId) {
-      throw new Error(`Failed to enqueue harness job: ${jobId}`)
-    }
-    return enqueued.instanceId
-  })
+      },
+      metadata: { requestedBy: 'cli' },
+      dedupeKey: createStableId(jobId, 'manual', now.toISOString()),
+    },
+    injectedDeps,
+  )
 
   const result = await pollHarnessOnce(repoRoot, injectedDeps)
   return {
@@ -2949,6 +3306,7 @@ export async function runHarnessDaemonWorker(
           observabilityEnvLoaded: isHarnessObservabilityEnvLoaded(),
         },
       )
+      refreshLeasesForWorker(state, runnerContext.workerId, deps.now())
       upsertRunnerRegistration(state, runnerContext, deps.now())
       appendEventLedger(
         state,

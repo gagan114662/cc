@@ -1,5 +1,10 @@
 import type { ChildProcess } from 'child_process'
 import { z } from 'zod/v4'
+import {
+  MissionControlActionResultSchema,
+  MissionControlActionSchema,
+  MissionControlSnapshotSchema,
+} from '../services/harness/types.js'
 import { lazySchema } from '../utils/lazySchema.js'
 
 export const connectResponseSchema = lazySchema(() =>
@@ -9,6 +14,10 @@ export const connectResponseSchema = lazySchema(() =>
     work_dir: z.string().optional(),
   }),
 )
+
+export const missionControlSnapshotSchema = MissionControlSnapshotSchema
+export const missionControlActionSchema = MissionControlActionSchema
+export const missionControlActionResultSchema = MissionControlActionResultSchema
 
 export type ServerConfig = {
   port: number

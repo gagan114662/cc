@@ -10,3 +10,4 @@ autoresearch.experiments/
 .claude/harness.control-plane.env
 .claude/harness.control-plane.shared.env
 .claude/harness.observability.env
+.gstack/

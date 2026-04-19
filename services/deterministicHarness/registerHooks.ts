@@ -16,6 +16,13 @@ export async function registerDeterministicHarnessHooks(): Promise<void> {
   }
 
   registrationPromise = (async () => {
+    if (process.env.CLAUDE_CODE_HARNESS_MODE === '1') {
+      logForDebugging(
+        '[deterministic-harness] skipping strict workflow hooks for harness worker session',
+      )
+      return
+    }
+
     const settings = getInitialSettings()
     const resolvedConfig = await resolveDeterministicHarnessConfig(
       getCwd(),

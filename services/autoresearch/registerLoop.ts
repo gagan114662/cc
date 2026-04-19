@@ -14,6 +14,13 @@ export async function registerAutoresearchLoop(): Promise<void> {
   }
 
   registrationPromise = (async () => {
+    if (process.env.CLAUDE_CODE_HARNESS_MODE === '1') {
+      logForDebugging(
+        '[autoresearch] skipping background loop for harness worker session',
+      )
+      return
+    }
+
     const settings = getInitialSettings()
     const resolvedConfig = await resolveAutoresearchConfig(
       getProjectRoot(),

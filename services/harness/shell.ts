@@ -13,6 +13,7 @@ export type ShellCommandOptions = {
   cwd?: string
   env?: NodeJS.ProcessEnv
   input?: string
+  stdin?: 'ignore' | 'inherit' | 'pipe'
   timeout?: number
   shell?: boolean | string
 }
@@ -67,6 +68,7 @@ export function createDefaultCommandRunner(
       cwd: options.cwd ?? repoRoot,
       env: buildHarnessCommandEnv(options.env),
       input: options.input,
+      stdin: options.stdin,
       timeout: options.timeout ?? DEFAULT_COMMAND_TIMEOUT_MS,
       shell: options.shell,
     })

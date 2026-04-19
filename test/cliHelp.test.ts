@@ -44,6 +44,7 @@ describe('cli help smoke', () => {
     expect(result.stdout).toContain('Usage:')
     expect(result.stdout).toContain('daemon')
     expect(result.stdout).toContain('harness')
+    expect(result.stdout).toContain('company')
   })
 
   test(
@@ -79,6 +80,24 @@ describe('cli help smoke', () => {
 
       expect(result.code).toBe(0)
       expect(result.stdout).toContain('control plane')
+    },
+  )
+
+  test(
+    'renders company status in non-interactive mode without auth',
+    { timeout: CLI_STATUS_TIMEOUT_MS },
+    async () => {
+      const result = await execFileNoThrowWithCwd(
+        process.execPath,
+        ['./entrypoints/cli.tsx', 'company', 'status'],
+        {
+          cwd: process.cwd(),
+          env: buildCliSmokeEnv(),
+        },
+      )
+
+      expect(result.code).toBe(0)
+      expect(result.stdout).toContain('No company is onboarded yet')
     },
   )
 })

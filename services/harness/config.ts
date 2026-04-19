@@ -279,6 +279,186 @@ const DEFAULT_JOBS: JobSpec[] = [
       },
     ],
   },
+  {
+    id: 'pm-company-research',
+    title: 'PM company research',
+    description:
+      'Let the PM turn public company context into strategy, prioritization, and next actions without waiting for the owner.',
+    kind: 'review',
+    agentKind: 'claude',
+    executionMode: 'lead-session',
+    codeChangePolicy: 'review-only',
+    promptTemplate:
+      'You are the owner-facing PM for {{companyName}} ({{websiteUrl}}). Lane: {{laneType}} on cadence {{cadence}}. Workstream: {{workstreamTitle}}. Goal: {{workstreamGoal}}. Operating model: {{operatingModelSummary}}. Expected artifact kinds: {{expectedArtifactKinds}}. Use the company brief, current org, and pack context to produce a concrete durable business artifact, move the lane forward, and note only true owner exceptions.',
+    targetAgent: 'engineering-lead',
+    concurrencyKey: 'company-workstream-{{companyId}}-{{workstreamId}}',
+    autoCommit: false,
+    autoMerge: false,
+    priority: 75,
+    timeoutSeconds: 1800,
+    maxParallelism: 12,
+    repoHealthImpact: 'safe',
+    retryPolicy: {
+      maxAttempts: 2,
+      backoffSeconds: 60,
+    },
+    budget: {
+      maxUsd: 12,
+      warnUsd: 9,
+      defaultAttemptUsd: 0.25,
+    },
+    escalationPolicy: {
+      onFailure: 'retry',
+      onBudgetExceeded: 'pause_repo',
+      notify: [],
+    },
+    verification: {
+      commands: [],
+      requirePassing: true,
+    },
+    reviewerSuites: ['scope', 'reliability'],
+    sourceBindings: [
+      {
+        type: 'manual',
+      },
+    ],
+  },
+  {
+    id: 'pm-company-implementation',
+    title: 'PM company implementation',
+    description:
+      'Let the PM route implementation-heavy business or technical work to Codex while keeping the owner out of the loop.',
+    kind: 'implementation',
+    agentKind: 'codex',
+    executionMode: 'lead-session',
+    codeChangePolicy: 'may-edit',
+    promptTemplate:
+      'You are a specialist implementer working for the PM of {{companyName}} ({{websiteUrl}}). Lane: {{laneType}} on cadence {{cadence}}. Workstream: {{workstreamTitle}}. Goal: {{workstreamGoal}}. Operating model: {{operatingModelSummary}}. Expected artifact kinds: {{expectedArtifactKinds}}. Implement the requested outcome as a structured business artifact, keep scope narrow, and surface only genuine platform or owner exceptions.',
+    targetAgent: 'engineering-lead',
+    concurrencyKey: 'company-workstream-{{companyId}}-{{workstreamId}}',
+    autoCommit: true,
+    autoMerge: false,
+    priority: 80,
+    timeoutSeconds: 3600,
+    maxParallelism: 12,
+    repoHealthImpact: 'serialized',
+    retryPolicy: {
+      maxAttempts: 2,
+      backoffSeconds: 120,
+    },
+    budget: {
+      maxUsd: 18,
+      warnUsd: 14,
+      defaultAttemptUsd: 0.4,
+    },
+    escalationPolicy: {
+      onFailure: 'pause_repo',
+      onBudgetExceeded: 'pause_repo',
+      notify: [],
+    },
+    verification: {
+      commands: ['bun run build'],
+      requirePassing: true,
+    },
+    reviewerSuites: ['scope', 'reliability', 'test-quality'],
+    sourceBindings: [
+      {
+        type: 'manual',
+      },
+    ],
+  },
+  {
+    id: 'pm-company-exception-response',
+    title: 'PM exception response',
+    description:
+      'Let the PM assess owner exceptions, platform gaps, and blocked workstreams and decide the next safe move.',
+    kind: 'maintenance',
+    agentKind: 'claude',
+    executionMode: 'lead-session',
+    codeChangePolicy: 'review-only',
+    promptTemplate:
+      'You are the PM for {{companyName}} ({{websiteUrl}}). Workstream: {{workstreamTitle}}. An exception or gap needs triage: {{exceptionSummary}}. Decide whether to work around it, create a platform gap, or ask the owner only if the decision truly requires them.',
+    targetAgent: 'engineering-lead',
+    concurrencyKey: 'company-exception-{{companyId}}-{{workstreamId}}',
+    autoCommit: false,
+    autoMerge: false,
+    priority: 90,
+    timeoutSeconds: 1200,
+    maxParallelism: 4,
+    repoHealthImpact: 'safe',
+    retryPolicy: {
+      maxAttempts: 2,
+      backoffSeconds: 90,
+    },
+    budget: {
+      maxUsd: 8,
+      warnUsd: 6,
+      defaultAttemptUsd: 0.15,
+    },
+    escalationPolicy: {
+      onFailure: 'retry',
+      onBudgetExceeded: 'pause_repo',
+      notify: [],
+    },
+    verification: {
+      commands: [],
+      requirePassing: true,
+    },
+    reviewerSuites: ['scope', 'reliability'],
+    sourceBindings: [
+      {
+        type: 'manual',
+      },
+    ],
+  },
+  {
+    id: 'pm-executive-brief',
+    title: 'PM executive brief',
+    description:
+      'Generate the PM-owned summary that keeps the owner informed without forcing them into the specialist swarm.',
+    kind: 'maintenance',
+    agentKind: 'claude',
+    executionMode: 'review-only',
+    codeChangePolicy: 'review-only',
+    promptTemplate:
+      'You are the PM for {{companyName}} ({{websiteUrl}}). Prepare the executive brief for the owner. Include progress, risks, exceptions, lane health, connector readiness, and the highest-leverage next moves while shielding the owner from specialist implementation details.',
+    targetAgent: 'engineering-lead',
+    concurrencyKey: 'company-brief-{{companyId}}',
+    autoCommit: false,
+    autoMerge: false,
+    priority: 45,
+    timeoutSeconds: 1200,
+    maxParallelism: 1,
+    repoHealthImpact: 'safe',
+    retryPolicy: {
+      maxAttempts: 1,
+      backoffSeconds: 0,
+    },
+    budget: {
+      maxUsd: 6,
+      warnUsd: 4,
+      defaultAttemptUsd: 0.1,
+    },
+    escalationPolicy: {
+      onFailure: 'retry',
+      onBudgetExceeded: 'pause_repo',
+      notify: [],
+    },
+    verification: {
+      commands: [],
+      requirePassing: true,
+    },
+    reviewerSuites: ['scope'],
+    sourceBindings: [
+      {
+        type: 'manual',
+      },
+      {
+        type: 'cron',
+        cron: '0 16 * * 1-5',
+      },
+    ],
+  },
 ]
 
 export function getHarnessConfigPath(projectRoot: string): string {

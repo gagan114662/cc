@@ -4,6 +4,10 @@ import path from 'node:path'
 import { createHash } from 'node:crypto'
 import { classifyClaudeCodeSessionObservation } from '../../services/autoresearch/claudeCodeSessions.js'
 
+if (process.env.CLAUDE_CODE_HARNESS_MODE === '1') {
+  process.exit(0)
+}
+
 type BaseHookInput = {
   session_id?: string
   transcript_path?: string

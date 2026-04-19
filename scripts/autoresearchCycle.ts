@@ -10,6 +10,11 @@ import {
   resolveAutoresearchConfig,
 } from 'src/services/autoresearch/runtime.js'
 
+if (process.env.CLAUDE_CODE_HARNESS_MODE === '1') {
+  console.log('autoresearch-cycle-skipped')
+  process.exit(0)
+}
+
 const repoRoot = path.resolve(import.meta.dir, '..')
 const localSettingsPath = path.join(repoRoot, '.claude', 'settings.local.json')
 const projectSettingsPath = path.join(repoRoot, '.claude', 'settings.json')

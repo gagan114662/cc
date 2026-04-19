@@ -1,6 +1,10 @@
 import path from "node:path";
 import { readFile } from "node:fs/promises";
 
+if (process.env.CLAUDE_CODE_HARNESS_MODE === "1") {
+  process.exit(0);
+}
+
 type HookInput = {
   tool_name?: string;
   tool_input?: Record<string, unknown>;

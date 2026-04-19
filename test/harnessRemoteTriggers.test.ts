@@ -322,6 +322,85 @@ describe('harness remote triggers', () => {
     expect(requests).toHaveLength(1)
   })
 
+  test('retries environment discovery once after an auth-like failure', async () => {
+    const runner: ShellCommandRunner = async (_file, args) => {
+      if (args[0] === 'remote' && args[1] === 'get-url' && args[2] === 'origin') {
+        return {
+          stdout: 'git@github.com:owner/repo.git\n',
+          stderr: '',
+          code: 0,
+        }
+      }
+      if (args[0] === 'rev-parse' && args[1] === '--abbrev-ref' && args[2] === 'HEAD') {
+        return {
+          stdout: 'main\n',
+          stderr: '',
+          code: 0,
+        }
+      }
+      throw new Error(`unexpected command: ${args.join(' ')}`)
+    }
+
+    let fetchAttempt = 0
+    let refreshCount = 0
+
+    const result = await dispatchHarnessJobToRemoteTrigger(
+      {
+        repoRoot: '/tmp/repo',
+        config: getDefaultHarnessConfig(),
+        jobSpec: leadJobSpec,
+        job: queuedJob,
+        commandRunner: runner,
+      },
+      {
+        request: async input => {
+          if (input.url.endsWith('/v1/sessions')) {
+            return {
+              status: 200,
+              data: { id: 'session-456', title: 'Harness shadow' },
+            }
+          }
+          throw new Error(`unexpected request: ${input.url}`)
+        },
+        refreshAuth: async () => {
+          refreshCount += 1
+        },
+        prepareApiRequest: async () => ({
+          accessToken: 'token-123',
+          orgUUID: 'org-123',
+        }),
+        isPolicyAllowed: () => true,
+        fetchEnvironments: async () => {
+          fetchAttempt += 1
+          if (fetchAttempt === 1) {
+            throw new Error(
+              'Failed to fetch environments: Request failed with status code 401',
+            )
+          }
+          return [
+            {
+              environment_id: 'env-123',
+              kind: 'anthropic_cloud',
+              name: 'default',
+              created_at: '2026-04-18T00:00:00.000Z',
+              state: 'active',
+            },
+          ]
+        },
+        createDefaultEnvironment: async () => {
+          throw new Error('should not create environment when one exists')
+        },
+        getDefaultEnvironmentId: () => 'env-123',
+        uuid: () => '00000000-0000-4000-8000-000000000000',
+      },
+    )
+
+    expect(result.ok).toBe(true)
+    expect(result.sessionId).toBe('session-456')
+    expect(fetchAttempt).toBe(2)
+    expect(refreshCount).toBeGreaterThanOrEqual(1)
+  })
+
   test('fails open when remote sessions are blocked by policy', async () => {
     const runner: ShellCommandRunner = async () => {
       throw new Error('runner should not be called when policy is off')

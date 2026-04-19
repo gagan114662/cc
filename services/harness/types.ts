@@ -667,6 +667,803 @@ export const HarnessObservabilityHealthSchema = lazySchema(() =>
     .strict(),
 )
 
+export const BusinessArchetypeValues = [
+  'saas',
+  'agency',
+  'ecommerce',
+  'services',
+  'media',
+  'marketplace',
+  'developer-tools',
+  'community',
+  'unknown',
+] as const
+export const BusinessArchetypeSchema = lazySchema(() =>
+  z.enum(BusinessArchetypeValues),
+)
+
+export const PackKindValues = [
+  'capability',
+  'composite',
+  'playbook',
+] as const
+export const PackKindSchema = lazySchema(() => z.enum(PackKindValues))
+
+export const CompanySignalKindValues = ['website', 'social'] as const
+export const CompanySignalKindSchema = lazySchema(() =>
+  z.enum(CompanySignalKindValues),
+)
+
+export const StandingLaneTypeValues = [
+  'GrowthLane',
+  'ContentLane',
+  'CustomerOpsLane',
+  'BusinessOpsLane',
+  'ExecutiveBriefLane',
+] as const
+export const StandingLaneTypeSchema = lazySchema(() =>
+  z.enum(StandingLaneTypeValues),
+)
+
+export const StandingLaneCadenceValues = ['on-demand', 'daily', 'weekly'] as const
+export const StandingLaneCadenceSchema = lazySchema(() =>
+  z.enum(StandingLaneCadenceValues),
+)
+
+export const StandingLaneStatusValues = ['active', 'paused', 'retired'] as const
+export const StandingLaneStatusSchema = lazySchema(() =>
+  z.enum(StandingLaneStatusValues),
+)
+
+export const UsefulArtifactKindValues = [
+  'company-brief',
+  'market-map',
+  'growth-plan',
+  'content-backlog',
+  'customer-ops-audit',
+  'ops-playbook',
+  'executive-brief',
+  'implementation-artifact',
+] as const
+export const UsefulArtifactKindSchema = lazySchema(() =>
+  z.enum(UsefulArtifactKindValues),
+)
+
+export const ConnectorPolicyStatusValues = [
+  'recommended',
+  'accepted',
+  'connected',
+  'dismissed',
+] as const
+export const ConnectorPolicyStatusSchema = lazySchema(() =>
+  z.enum(ConnectorPolicyStatusValues),
+)
+
+export const OwnerTouchSourceValues = [
+  'owner_message',
+  'exception_resolution',
+  'manual_override',
+] as const
+export const OwnerTouchSourceSchema = lazySchema(() =>
+  z.enum(OwnerTouchSourceValues),
+)
+
+export const SpecialistAgentVisibilityValues = ['owner', 'internal'] as const
+export const SpecialistAgentVisibilitySchema = lazySchema(() =>
+  z.enum(SpecialistAgentVisibilityValues),
+)
+
+export const SpecialistAgentStatusValues = ['active', 'retired'] as const
+export const SpecialistAgentStatusSchema = lazySchema(() =>
+  z.enum(SpecialistAgentStatusValues),
+)
+
+export const PMDecisionTypeValues = [
+  'onboard',
+  'org_synthesis',
+  'workstream_opened',
+  'connector_recommendation',
+  'owner_response',
+  'gap_classification',
+  'exception',
+  'dogfood_program',
+] as const
+export const PMDecisionTypeSchema = lazySchema(() =>
+  z.enum(PMDecisionTypeValues),
+)
+
+export const CompanyWorkstreamStatusValues = [
+  'planned',
+  'queued',
+  'active',
+  'blocked',
+  'completed',
+  'failed',
+] as const
+export const CompanyWorkstreamStatusSchema = lazySchema(() =>
+  z.enum(CompanyWorkstreamStatusValues),
+)
+
+export const CompanyWorkstreamDomainValues = [
+  'pm',
+  'gtm',
+  'content',
+  'support',
+  'ops',
+  'finance-ops',
+  'recruiting',
+  'product',
+  'engineering',
+  'market-intel',
+  'company-system',
+] as const
+export const CompanyWorkstreamDomainSchema = lazySchema(() =>
+  z.enum(CompanyWorkstreamDomainValues),
+)
+
+export const CompanyExceptionSeverityValues = [
+  'info',
+  'warn',
+  'high',
+  'critical',
+] as const
+export const CompanyExceptionSeveritySchema = lazySchema(() =>
+  z.enum(CompanyExceptionSeverityValues),
+)
+
+export const CompanyExceptionStatusValues = ['open', 'resolved'] as const
+export const CompanyExceptionStatusSchema = lazySchema(() =>
+  z.enum(CompanyExceptionStatusValues),
+)
+
+export const CompanyGapKindValues = ['product', 'pack', 'platform'] as const
+export const CompanyGapKindSchema = lazySchema(() =>
+  z.enum(CompanyGapKindValues),
+)
+
+export const CompanyGapStatusValues = ['open', 'resolved'] as const
+export const CompanyGapStatusSchema = lazySchema(() =>
+  z.enum(CompanyGapStatusValues),
+)
+
+export const ConnectorRecommendationStatusValues = [
+  'pending',
+  'accepted',
+  'dismissed',
+] as const
+export const ConnectorRecommendationStatusSchema = lazySchema(() =>
+  z.enum(ConnectorRecommendationStatusValues),
+)
+
+export const CompanySignalSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      kind: CompanySignalKindSchema(),
+      sourceUrl: z.string(),
+      title: z.string().optional(),
+      description: z.string().optional(),
+      contentPreview: z.string().optional(),
+      keywords: z.array(z.string()).default([]),
+      fetchedAt: z.string(),
+    })
+    .strict(),
+)
+
+export const CompanyGraphSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      repoId: z.string(),
+      websiteUrl: z.string(),
+      socialUrls: z.array(z.string()).default([]),
+      normalizedHost: z.string(),
+      companyName: z.string(),
+      businessArchetype: BusinessArchetypeSchema().default('unknown'),
+      summary: z.string().default(''),
+      valueProps: z.array(z.string()).default([]),
+      offers: z.array(z.string()).default([]),
+      icpRoles: z.array(z.string()).default([]),
+      demandChannels: z.array(z.string()).default([]),
+      supportSurfaces: z.array(z.string()).default([]),
+      operationalNeeds: z.array(z.string()).default([]),
+      technicalSignals: z.array(z.string()).default([]),
+      evidence: z.array(z.string()).default([]),
+      signals: z.array(CompanySignalSchema()).default([]),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const OperatingModelSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      businessArchetype: BusinessArchetypeSchema().default('unknown'),
+      offers: z.array(z.string()).default([]),
+      buyerRoles: z.array(z.string()).default([]),
+      coreChannels: z.array(z.string()).default([]),
+      operationalSurfaces: z.array(z.string()).default([]),
+      recurringLaneNeeds: z.array(StandingLaneTypeSchema()).default([]),
+      evidence: z.array(z.string()).default([]),
+      confidence: z
+        .object({
+          archetype: z.number().min(0).max(1).default(0.5),
+          offers: z.number().min(0).max(1).default(0.5),
+          buyers: z.number().min(0).max(1).default(0.5),
+          channels: z.number().min(0).max(1).default(0.5),
+          operations: z.number().min(0).max(1).default(0.5),
+          technical: z.number().min(0).max(1).default(0.5),
+        })
+        .strict()
+        .default({
+          archetype: 0.5,
+          offers: 0.5,
+          buyers: 0.5,
+          channels: 0.5,
+          operations: 0.5,
+          technical: 0.5,
+        }),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const PackManifestSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      title: z.string(),
+      kind: PackKindSchema(),
+      domain: CompanyWorkstreamDomainSchema(),
+      summary: z.string(),
+      supportedLaneTypes: z.array(StandingLaneTypeSchema()).default([]),
+      runtimeOwner: HarnessAgentKindSchema().default('claude'),
+      runtimeSupport: z.array(HarnessAgentKindSchema()).default(['claude']),
+      requiredConnectors: z.array(z.string()).default([]),
+      triggers: z.array(z.string()).default([]),
+      dependencies: z.array(z.string()).default([]),
+      expectedArtifactKinds: z.array(UsefulArtifactKindSchema()).default([]),
+      validationRules: z.array(z.string()).default([]),
+      qualityScore: z.number().min(0).max(1).default(0.7),
+      defaultObjective: z.string(),
+    })
+    .strict(),
+)
+
+export const StandingLaneSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      type: StandingLaneTypeSchema(),
+      title: z.string(),
+      domain: CompanyWorkstreamDomainSchema(),
+      objective: z.string(),
+      cadence: StandingLaneCadenceSchema().default('weekly'),
+      inputs: z.array(z.string()).default([]),
+      connectorIds: z.array(z.string()).default([]),
+      expectedArtifactKinds: z.array(UsefulArtifactKindSchema()).default([]),
+      escalationPolicy: z.string().default('exception-only'),
+      successCriteria: z.array(z.string()).default([]),
+      ownerAgentId: z.string(),
+      runtimeOwner: HarnessAgentKindSchema().default('claude'),
+      packIds: z.array(z.string()).default([]),
+      status: StandingLaneStatusSchema().default('active'),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const LaneRunSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      laneId: z.string(),
+      workstreamId: z.string(),
+      jobInstanceId: z.string().optional(),
+      status: z.enum(['queued', 'active', 'blocked', 'completed', 'failed']),
+      usefulArtifactId: z.string().optional(),
+      usefulOutput: z.boolean().default(false),
+      ownerTouchRequired: z.boolean().default(false),
+      startedAt: z.string(),
+      completedAt: z.string().optional(),
+      outcomeSummary: z.string().optional(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const UsefulArtifactSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      laneId: z.string(),
+      runId: z.string(),
+      workstreamId: z.string(),
+      artifactKind: UsefulArtifactKindSchema(),
+      title: z.string(),
+      summary: z.string(),
+      content: z.string().optional(),
+      outputPath: z.string().optional(),
+      usefulOutput: z.boolean().default(true),
+      ownerTouchRequired: z.boolean().default(false),
+      createdAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const SpecialistAgentRoleSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      name: z.string(),
+      title: z.string(),
+      domain: CompanyWorkstreamDomainSchema(),
+      objective: z.string(),
+      agentKind: HarnessAgentKindSchema().default('claude'),
+      visibility: SpecialistAgentVisibilitySchema().default('internal'),
+      status: SpecialistAgentStatusSchema().default('active'),
+      capabilities: z.array(z.string()).default([]),
+      packIds: z.array(z.string()).default([]),
+      createdBy: z.literal('pm').default('pm'),
+      createdAt: z.string(),
+      retiredAt: z.string().optional(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const DynamicOrgSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      pmAgentId: z.string(),
+      roles: z.array(SpecialistAgentRoleSchema()).default([]),
+      rationale: z.string().default(''),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+    })
+    .strict(),
+)
+
+export const CompanyMetricsSchema = lazySchema(() =>
+  z
+    .object({
+      ownerTouchCount: z.number().int().nonnegative().default(0),
+      pmCreatedAgentCount: z.number().int().nonnegative().default(0),
+      pmRetiredAgentCount: z.number().int().nonnegative().default(0),
+      activeLaneCount: z.number().int().nonnegative().default(0),
+      workstreamSuccessCount: z.number().int().nonnegative().default(0),
+      workstreamFailureCount: z.number().int().nonnegative().default(0),
+      usefulArtifactCount: z.number().int().nonnegative().default(0),
+      usefulArtifactsThisWeek: z.number().int().nonnegative().default(0),
+      recurringLaneCompletionRate: z.number().min(0).max(1).default(0),
+      firstUsefulOutputAt: z.string().optional(),
+      repeatedExceptionCount: z.number().int().nonnegative().default(0),
+      platformGapCount: z.number().int().nonnegative().default(0),
+      packGapCount: z.number().int().nonnegative().default(0),
+      productGapCount: z.number().int().nonnegative().default(0),
+      domainSuccessCounts: z.record(z.string(), z.number().int()).default({}),
+      executionFailureCountsByRuntime: z
+        .record(z.string(), z.number().int())
+        .default({}),
+    })
+    .strict(),
+)
+
+export const ConnectorUnlockRecommendationSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      connector: z.string(),
+      reason: z.string(),
+      unlocks: z.array(z.string()).default([]),
+      status: ConnectorRecommendationStatusSchema().default('pending'),
+      recommendedAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const ConnectorPolicySchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      connector: z.string(),
+      status: ConnectorPolicyStatusSchema().default('recommended'),
+      autonomyMode: z.literal('exception-only').default('exception-only'),
+      reason: z.string(),
+      laneTypes: z.array(StandingLaneTypeSchema()).default([]),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const OwnerTouchMetricSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      laneId: z.string().optional(),
+      workstreamId: z.string().optional(),
+      source: OwnerTouchSourceSchema(),
+      recordedAt: z.string(),
+      summary: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const PMDecisionSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      type: PMDecisionTypeSchema(),
+      summary: z.string(),
+      rationale: z.string().default(''),
+      linkedWorkstreamId: z.string().optional(),
+      linkedGapId: z.string().optional(),
+      linkedExceptionId: z.string().optional(),
+      createdAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const OwnerMessageSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      text: z.string(),
+      createdAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const WorkstreamSpecSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      title: z.string(),
+      domain: CompanyWorkstreamDomainSchema(),
+      objective: z.string(),
+      ownerAgentId: z.string(),
+      preferredAgentKind: HarnessAgentKindSchema().default('claude'),
+      status: CompanyWorkstreamStatusSchema().default('planned'),
+      packIds: z.array(z.string()).default([]),
+      laneId: z.string().optional(),
+      jobId: z.string(),
+      jobInstanceId: z.string().optional(),
+      summary: z.string().optional(),
+      lastOutcome: z.string().optional(),
+      latestArtifactId: z.string().optional(),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      completedAt: z.string().optional(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const OwnerExceptionSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      severity: CompanyExceptionSeveritySchema().default('warn'),
+      title: z.string(),
+      summary: z.string(),
+      status: CompanyExceptionStatusSchema().default('open'),
+      requiresOwner: z.boolean().default(true),
+      createdAt: z.string(),
+      resolvedAt: z.string().optional(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const ExecutionGapSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      companyId: z.string(),
+      laneId: z.string().optional(),
+      workstreamId: z.string().optional(),
+      kind: CompanyGapKindSchema(),
+      status: CompanyGapStatusSchema().default('open'),
+      summary: z.string(),
+      sourceJobInstanceId: z.string().optional(),
+      createdAt: z.string(),
+      resolvedAt: z.string().optional(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+export const CompanyGapSchema = ExecutionGapSchema
+
+export const CompanyRecordSchema = lazySchema(() =>
+  z
+    .object({
+      id: z.string(),
+      repoId: z.string(),
+      websiteUrl: z.string(),
+      socialUrls: z.array(z.string()).default([]),
+      companyName: z.string(),
+      businessArchetype: BusinessArchetypeSchema().default('unknown'),
+      pmAgentId: z.string(),
+      graph: CompanyGraphSchema(),
+      operatingModelId: z.string().optional(),
+      org: DynamicOrgSchema(),
+      activePackIds: z.array(z.string()).default([]),
+      standingLaneIds: z.array(z.string()).default([]),
+      laneRunIds: z.array(z.string()).default([]),
+      workstreamIds: z.array(z.string()).default([]),
+      usefulArtifactIds: z.array(z.string()).default([]),
+      exceptionIds: z.array(z.string()).default([]),
+      gapIds: z.array(z.string()).default([]),
+      ownerMessageIds: z.array(z.string()).default([]),
+      ownerTouchMetricIds: z.array(z.string()).default([]),
+      pmDecisionIds: z.array(z.string()).default([]),
+      connectorRecommendationIds: z.array(z.string()).default([]),
+      connectorPolicyIds: z.array(z.string()).default([]),
+      metrics: CompanyMetricsSchema().default({
+        ownerTouchCount: 0,
+        pmCreatedAgentCount: 0,
+        pmRetiredAgentCount: 0,
+        activeLaneCount: 0,
+        workstreamSuccessCount: 0,
+        workstreamFailureCount: 0,
+        usefulArtifactCount: 0,
+        usefulArtifactsThisWeek: 0,
+        recurringLaneCompletionRate: 0,
+        repeatedExceptionCount: 0,
+        platformGapCount: 0,
+        packGapCount: 0,
+        productGapCount: 0,
+        domainSuccessCounts: {},
+        executionFailureCountsByRuntime: {},
+      }),
+      createdAt: z.string(),
+      updatedAt: z.string(),
+      metadata: z.record(z.string(), z.unknown()).default({}),
+    })
+    .strict(),
+)
+
+export const CompanyOpsStateSchema = lazySchema(() =>
+  z
+    .object({
+      companies: z.record(z.string(), CompanyRecordSchema()).default({}),
+      operatingModels: z.record(z.string(), OperatingModelSchema()).default({}),
+      standingLanes: z.record(z.string(), StandingLaneSchema()).default({}),
+      laneRuns: z.record(z.string(), LaneRunSchema()).default({}),
+      workstreams: z.record(z.string(), WorkstreamSpecSchema()).default({}),
+      usefulArtifacts: z.record(z.string(), UsefulArtifactSchema()).default({}),
+      ownerMessages: z.record(z.string(), OwnerMessageSchema()).default({}),
+      ownerTouchMetrics: z.record(z.string(), OwnerTouchMetricSchema()).default({}),
+      pmDecisions: z.record(z.string(), PMDecisionSchema()).default({}),
+      exceptions: z.record(z.string(), OwnerExceptionSchema()).default({}),
+      connectorRecommendations: z
+        .record(z.string(), ConnectorUnlockRecommendationSchema())
+        .default({}),
+      connectorPolicies: z.record(z.string(), ConnectorPolicySchema()).default({}),
+      gaps: z.record(z.string(), CompanyGapSchema()).default({}),
+    })
+    .strict(),
+)
+
+export const MissionControlPackStatusValues = [
+  'active',
+  'available',
+  'deferred',
+] as const
+export const MissionControlPackStatusSchema = lazySchema(() =>
+  z.enum(MissionControlPackStatusValues),
+)
+
+export const MissionControlPackViewSchema = lazySchema(() =>
+  z
+    .object({
+      pack: PackManifestSchema(),
+      status: MissionControlPackStatusSchema(),
+      reason: z.string(),
+    })
+    .strict(),
+)
+
+export const MissionControlWorkstreamCardSchema = lazySchema(() =>
+  z
+    .object({
+      workstream: WorkstreamSpecSchema(),
+      ownerRole: SpecialistAgentRoleSchema().nullable(),
+      latestSummary: z.string().optional(),
+      linkedGapId: z.string().optional(),
+      linkedExceptionId: z.string().optional(),
+    })
+    .strict(),
+)
+
+export const PMSnapshotSchema = lazySchema(() =>
+  z
+    .object({
+      agent: SpecialistAgentRoleSchema().nullable(),
+      recentDecisions: z.array(PMDecisionSchema()).default([]),
+      recentMessages: z.array(OwnerMessageSchema()).default([]),
+    })
+    .strict(),
+)
+
+export const MissionControlMetricsSchema = lazySchema(() =>
+  z
+    .object({
+      ownerTouchCount: z.number().int().nonnegative().default(0),
+      pmCreatedAgentCount: z.number().int().nonnegative().default(0),
+      pmRetiredAgentCount: z.number().int().nonnegative().default(0),
+      standingLaneCount: z.number().int().nonnegative().default(0),
+      activeWorkstreamCount: z.number().int().nonnegative().default(0),
+      usefulArtifactCount: z.number().int().nonnegative().default(0),
+      usefulArtifactsThisWeek: z.number().int().nonnegative().default(0),
+      recurringLaneCompletionRate: z.number().min(0).max(1).default(0),
+      openExceptionCount: z.number().int().nonnegative().default(0),
+      firstUsefulOutputAt: z.string().optional(),
+      gapCounts: z
+        .object({
+          product: z.number().int().nonnegative().default(0),
+          pack: z.number().int().nonnegative().default(0),
+          platform: z.number().int().nonnegative().default(0),
+        })
+        .strict()
+        .default({
+          product: 0,
+          pack: 0,
+          platform: 0,
+        }),
+      successCountsByDomain: z.record(z.string(), z.number().int()).default({}),
+      executionFailureCountsByRuntime: z
+        .record(z.string(), z.number().int())
+        .default({}),
+    })
+    .strict(),
+)
+
+export const MissionControlStandingLaneCardSchema = lazySchema(() =>
+  z
+    .object({
+      lane: StandingLaneSchema(),
+      ownerRole: SpecialistAgentRoleSchema().nullable(),
+      latestArtifact: UsefulArtifactSchema().nullable(),
+      activeWorkstream: WorkstreamSpecSchema().nullable(),
+      nextScheduledAt: z.string().optional(),
+      connectorReadiness: z.enum(['ready', 'recommended', 'blocked']).default('ready'),
+    })
+    .strict(),
+)
+
+export const MissionControlSnapshotSchema = lazySchema(() =>
+  z
+    .object({
+      company: CompanyRecordSchema().nullable(),
+      operatingModel: OperatingModelSchema().nullable().default(null),
+      pm: PMSnapshotSchema().nullable(),
+      specialists: z.array(SpecialistAgentRoleSchema()).default([]),
+      standingLanes: z.array(MissionControlStandingLaneCardSchema()).default([]),
+      workstreams: z.array(MissionControlWorkstreamCardSchema()).default([]),
+      usefulArtifacts: z.array(UsefulArtifactSchema()).default([]),
+      exceptions: z.array(OwnerExceptionSchema()).default([]),
+      gaps: z.array(CompanyGapSchema()).default([]),
+      connectorRecommendations: z
+        .array(ConnectorUnlockRecommendationSchema())
+        .default([]),
+      connectorPolicies: z.array(ConnectorPolicySchema()).default([]),
+      packs: z.array(MissionControlPackViewSchema()).default([]),
+      metrics: MissionControlMetricsSchema(),
+      observability: HarnessObservabilityHealthSchema(),
+      summary: z.string().default(''),
+    })
+    .strict(),
+)
+
+export const LoadMissionControlActionSchema = lazySchema(() =>
+  z
+    .object({
+      type: z.literal('load_snapshot'),
+      companyId: z.string().optional(),
+    })
+    .strict(),
+)
+
+export const SendPmMessageActionSchema = lazySchema(() =>
+  z
+    .object({
+      type: z.literal('send_pm_message'),
+      companyId: z.string().optional(),
+      text: z.string().min(1),
+    })
+    .strict(),
+)
+
+export const RefreshCompanyBriefActionSchema = lazySchema(() =>
+  z
+    .object({
+      type: z.literal('refresh_brief'),
+      companyId: z.string().optional(),
+    })
+    .strict(),
+)
+
+export const ResolveOwnerExceptionActionSchema = lazySchema(() =>
+  z
+    .object({
+      type: z.literal('resolve_exception'),
+      companyId: z.string().optional(),
+      exceptionId: z.string(),
+      resolution: z.string().optional(),
+    })
+    .strict(),
+)
+
+export const UpdateConnectorRecommendationActionSchema = lazySchema(() =>
+  z
+    .object({
+      type: z.literal('update_connector_recommendation'),
+      companyId: z.string().optional(),
+      recommendationId: z.string(),
+      status: z.enum(['accepted', 'dismissed']),
+    })
+    .strict(),
+)
+
+export const MissionControlActionTypeSchema = lazySchema(() =>
+  z.enum([
+    'load_snapshot',
+    'send_pm_message',
+    'refresh_brief',
+    'resolve_exception',
+    'update_connector_recommendation',
+  ]),
+)
+
+export const MissionControlActionSchema = lazySchema(() =>
+  z.discriminatedUnion('type', [
+    LoadMissionControlActionSchema(),
+    SendPmMessageActionSchema(),
+    RefreshCompanyBriefActionSchema(),
+    ResolveOwnerExceptionActionSchema(),
+    UpdateConnectorRecommendationActionSchema(),
+  ]),
+)
+
+export const MissionControlActionResultSchema = lazySchema(() =>
+  z
+    .object({
+      actionType: MissionControlActionTypeSchema(),
+      snapshot: MissionControlSnapshotSchema(),
+      response: z.string().optional(),
+    })
+    .strict(),
+)
+
 export const HarnessQualitySeverityValues = [
   'low',
   'medium',
@@ -944,6 +1741,21 @@ export const HarnessRuntimeStateSchema = lazySchema(() =>
         observabilityEnvLoadedWorkers: [],
         telemetryStaleWorkers: [],
       }),
+      companyOps: CompanyOpsStateSchema().default({
+        companies: {},
+        operatingModels: {},
+        standingLanes: {},
+        laneRuns: {},
+        workstreams: {},
+        usefulArtifacts: {},
+        ownerMessages: {},
+        ownerTouchMetrics: {},
+        pmDecisions: {},
+        exceptions: {},
+        connectorRecommendations: {},
+        connectorPolicies: {},
+        gaps: {},
+      }),
       quality: HarnessQualityStateSchema().default({
         pullRequests: {},
         findings: {},
@@ -1038,6 +1850,58 @@ export type HarnessEventLedgerEntry = z.infer<
 >
 export type HarnessObservabilityHealth = z.infer<
   ReturnType<typeof HarnessObservabilityHealthSchema>
+>
+export type BusinessArchetype = z.infer<
+  ReturnType<typeof BusinessArchetypeSchema>
+>
+export type PackManifest = z.infer<ReturnType<typeof PackManifestSchema>>
+export type CompanySignal = z.infer<ReturnType<typeof CompanySignalSchema>>
+export type CompanyGraph = z.infer<ReturnType<typeof CompanyGraphSchema>>
+export type OperatingModel = z.infer<ReturnType<typeof OperatingModelSchema>>
+export type StandingLane = z.infer<ReturnType<typeof StandingLaneSchema>>
+export type LaneRun = z.infer<ReturnType<typeof LaneRunSchema>>
+export type UsefulArtifact = z.infer<ReturnType<typeof UsefulArtifactSchema>>
+export type SpecialistAgentRole = z.infer<
+  ReturnType<typeof SpecialistAgentRoleSchema>
+>
+export type DynamicOrg = z.infer<ReturnType<typeof DynamicOrgSchema>>
+export type CompanyMetrics = z.infer<ReturnType<typeof CompanyMetricsSchema>>
+export type ConnectorUnlockRecommendation = z.infer<
+  ReturnType<typeof ConnectorUnlockRecommendationSchema>
+>
+export type ConnectorPolicy = z.infer<ReturnType<typeof ConnectorPolicySchema>>
+export type PMDecision = z.infer<ReturnType<typeof PMDecisionSchema>>
+export type OwnerMessage = z.infer<ReturnType<typeof OwnerMessageSchema>>
+export type OwnerTouchMetric = z.infer<
+  ReturnType<typeof OwnerTouchMetricSchema>
+>
+export type WorkstreamSpec = z.infer<ReturnType<typeof WorkstreamSpecSchema>>
+export type OwnerException = z.infer<ReturnType<typeof OwnerExceptionSchema>>
+export type ExecutionGap = z.infer<ReturnType<typeof ExecutionGapSchema>>
+export type CompanyGap = z.infer<ReturnType<typeof CompanyGapSchema>>
+export type CompanyRecord = z.infer<ReturnType<typeof CompanyRecordSchema>>
+export type CompanyOpsState = z.infer<ReturnType<typeof CompanyOpsStateSchema>>
+export type MissionControlPackView = z.infer<
+  ReturnType<typeof MissionControlPackViewSchema>
+>
+export type MissionControlStandingLaneCard = z.infer<
+  ReturnType<typeof MissionControlStandingLaneCardSchema>
+>
+export type MissionControlWorkstreamCard = z.infer<
+  ReturnType<typeof MissionControlWorkstreamCardSchema>
+>
+export type PMSnapshot = z.infer<ReturnType<typeof PMSnapshotSchema>>
+export type MissionControlMetrics = z.infer<
+  ReturnType<typeof MissionControlMetricsSchema>
+>
+export type MissionControlSnapshot = z.infer<
+  ReturnType<typeof MissionControlSnapshotSchema>
+>
+export type MissionControlAction = z.infer<
+  ReturnType<typeof MissionControlActionSchema>
+>
+export type MissionControlActionResult = z.infer<
+  ReturnType<typeof MissionControlActionResultSchema>
 >
 export type PullRequestQualityRecord = z.infer<
   ReturnType<typeof PullRequestQualityRecordSchema>

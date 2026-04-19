@@ -21,6 +21,10 @@ export function redactIfDisabled(content: string): string {
 export async function logOTelEvent(
   eventName: string,
   metadata: { [key: string]: string | undefined } = {},
+  options?: {
+    severityText?: string
+    severityNumber?: number
+  },
 ): Promise<void> {
   const eventLogger = getEventLogger()
   if (!eventLogger) {
@@ -71,5 +75,7 @@ export async function logOTelEvent(
   eventLogger.emit({
     body: `claude_code.${eventName}`,
     attributes,
+    severityText: options?.severityText,
+    severityNumber: options?.severityNumber,
   })
 }

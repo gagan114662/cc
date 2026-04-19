@@ -211,6 +211,7 @@ export async function harnessMain(args: string[]): Promise<void> {
         process.cwd(),
         eventName,
         payload,
+        { source: 'cli' },
       )
       if (json) {
         console.log(JSON.stringify(result, null, 2))

@@ -468,6 +468,72 @@ export function filterHarnessStateForRepo(
       ([, snapshot]) => snapshot.repoId === repoId,
     ),
   )
+  const companies = Object.fromEntries(
+    Object.entries(state.companyOps.companies).filter(
+      ([, company]) => company.repoId === repoId,
+    ),
+  )
+  const companyIds = new Set(Object.keys(companies))
+  const operatingModels = Object.fromEntries(
+    Object.entries(state.companyOps.operatingModels).filter(([, operatingModel]) =>
+      companyIds.has(operatingModel.companyId),
+    ),
+  )
+  const standingLanes = Object.fromEntries(
+    Object.entries(state.companyOps.standingLanes).filter(([, lane]) =>
+      companyIds.has(lane.companyId),
+    ),
+  )
+  const laneRuns = Object.fromEntries(
+    Object.entries(state.companyOps.laneRuns).filter(([, laneRun]) =>
+      companyIds.has(laneRun.companyId),
+    ),
+  )
+  const workstreams = Object.fromEntries(
+    Object.entries(state.companyOps.workstreams).filter(([, workstream]) =>
+      companyIds.has(workstream.companyId),
+    ),
+  )
+  const usefulArtifacts = Object.fromEntries(
+    Object.entries(state.companyOps.usefulArtifacts).filter(([, artifact]) =>
+      companyIds.has(artifact.companyId),
+    ),
+  )
+  const ownerMessages = Object.fromEntries(
+    Object.entries(state.companyOps.ownerMessages).filter(([, message]) =>
+      companyIds.has(message.companyId),
+    ),
+  )
+  const ownerTouchMetrics = Object.fromEntries(
+    Object.entries(state.companyOps.ownerTouchMetrics).filter(([, metric]) =>
+      companyIds.has(metric.companyId),
+    ),
+  )
+  const pmDecisions = Object.fromEntries(
+    Object.entries(state.companyOps.pmDecisions).filter(([, decision]) =>
+      companyIds.has(decision.companyId),
+    ),
+  )
+  const exceptions = Object.fromEntries(
+    Object.entries(state.companyOps.exceptions).filter(([, exception]) =>
+      companyIds.has(exception.companyId),
+    ),
+  )
+  const connectorRecommendations = Object.fromEntries(
+    Object.entries(state.companyOps.connectorRecommendations).filter(
+      ([, recommendation]) => companyIds.has(recommendation.companyId),
+    ),
+  )
+  const connectorPolicies = Object.fromEntries(
+    Object.entries(state.companyOps.connectorPolicies).filter(([, policy]) =>
+      companyIds.has(policy.companyId),
+    ),
+  )
+  const gaps = Object.fromEntries(
+    Object.entries(state.companyOps.gaps).filter(([, gap]) =>
+      companyIds.has(gap.companyId),
+    ),
+  )
 
   return HarnessRuntimeStateSchema().parse({
     ...state,
@@ -486,6 +552,21 @@ export function filterHarnessStateForRepo(
     runners,
     workerHeartbeats,
     agentSessions,
+    companyOps: {
+      companies,
+      operatingModels,
+      standingLanes,
+      laneRuns,
+      workstreams,
+      usefulArtifacts,
+      ownerMessages,
+      ownerTouchMetrics,
+      pmDecisions,
+      exceptions,
+      connectorRecommendations,
+      connectorPolicies,
+      gaps,
+    },
     quality: {
       pullRequests: qualityPullRequests,
       findings: qualityFindings,

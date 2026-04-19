@@ -1,3 +1,5 @@
+import { existsSync } from 'node:fs'
+import path from 'node:path'
 import { execa } from 'execa'
 import {
   getHarnessStatus,
@@ -75,6 +77,11 @@ function readFlagValue(args: string[], flag: string): string | undefined {
   return index >= 0 ? args[index + 1] : undefined
 }
 
+function resolveDaemonCliEntrypoint(repoRoot: string): string {
+  const bundledCli = path.join(repoRoot, 'dist', 'cli.js')
+  return existsSync(bundledCli) ? bundledCli : process.argv[1]!
+}
+
 export async function daemonMain(args: string[]): Promise<void> {
   const subcommand = args[0] ?? 'status'
   const json = args.includes('--json')
@@ -108,7 +115,9 @@ export async function daemonMain(args: string[]): Promise<void> {
         .filter(Boolean)
       if (args.includes('--foreground')) {
         await runHarnessDaemonWorker(process.cwd(), {
-          workerId: 'foreground-worker',
+          workerId:
+            process.env.CLAUDE_CODE_HARNESS_WORKER_ID ??
+            `${runnerId}-foreground-worker`,
           runnerId,
           agentKind:
             agentKind === 'codex' ? 'codex' : 'claude',
@@ -121,7 +130,10 @@ export async function daemonMain(args: string[]): Promise<void> {
 
       const workerPids: number[] = []
       for (let index = 0; index < workerSlots; index += 1) {
-        const child = execa(process.execPath, [process.argv[1]!, '--daemon-worker', 'harness'], {
+        const child = execa(
+          process.execPath,
+          [resolveDaemonCliEntrypoint(process.cwd()), '--daemon-worker', 'harness'],
+          {
           cwd: process.cwd(),
           detached: true,
           stdin: 'ignore',
@@ -136,7 +148,8 @@ export async function daemonMain(args: string[]): Promise<void> {
             CLAUDE_CODE_HARNESS_RUNNER_LABELS: labels.join(','),
             CLAUDE_CODE_HARNESS_LEASE_LIMIT: '1',
           },
-        })
+          },
+        )
         child.unref?.()
         if (child.pid) {
           workerPids.push(child.pid)

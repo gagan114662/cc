@@ -80,6 +80,7 @@ Common commands:
   config
   daemon
   harness
+  company
   update
   memory
   session
@@ -275,6 +276,30 @@ Run 'claude <command> --help' for more information on a command.`);
     } = await import('../daemon/harnessCli.js');
     await harnessMain(args.slice(1));
     // Fast-path harness commands are non-interactive and should terminate even if
+    // telemetry or sink initialization leaves background handles behind.
+    // eslint-disable-next-line custom-rules/no-process-exit
+    process.exit(0);
+  }
+
+  if (args[0] === 'company') {
+    profileCheckpoint('cli_company_path');
+    const {
+      enableConfigs
+    } = await import('../utils/config.js');
+    enableConfigs();
+    const {
+      initSinks
+    } = await import('../utils/sinks.js');
+    initSinks();
+    const {
+      initializeTelemetry
+    } = await import('../utils/telemetry/instrumentation.js');
+    await initializeTelemetry();
+    const {
+      companyMain
+    } = await import('../daemon/companyCli.js');
+    await companyMain(args.slice(1));
+    // Fast-path company commands are non-interactive and should terminate even if
     // telemetry or sink initialization leaves background handles behind.
     // eslint-disable-next-line custom-rules/no-process-exit
     process.exit(0);

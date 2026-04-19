@@ -246,7 +246,21 @@ async function resolveEnvironmentId(
     config.sources.remoteTriggers.environmentId ??
     deps.getDefaultEnvironmentId()
 
-  const environments = await deps.fetchEnvironments()
+  let environments: EnvironmentResource[]
+  try {
+    environments = await deps.fetchEnvironments()
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error)
+    const looksAuthLike =
+      message.includes('401') ||
+      message.toLowerCase().includes('authentication') ||
+      message.toLowerCase().includes('unauthorized')
+    if (!looksAuthLike) {
+      throw error
+    }
+    await deps.refreshAuth()
+    environments = await deps.fetchEnvironments()
+  }
   if (preferredEnvironmentId) {
     const matched = environments.find(
       environment => environment.environment_id === preferredEnvironmentId,

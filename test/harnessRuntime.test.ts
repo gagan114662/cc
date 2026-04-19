@@ -328,6 +328,162 @@ describe('harness runtime', () => {
     }
   })
 
+  test('lead-session workers persist running status into hosted state before execution completes', async () => {
+    const repoRoot = await createTempRepo()
+    const config = {
+      ...getDefaultHarnessConfig(),
+      sources: {
+        github: {
+          enabled: false,
+          provider: 'gh',
+          pollIntervalSeconds: 300,
+          intake: {
+            mode: 'hybrid',
+            webhookEvents: [],
+          },
+          reviewOnPush: false,
+          trackDefaultBranch: false,
+        },
+        cron: {
+          enabled: false,
+          pollIntervalSeconds: 60,
+        },
+        remoteTriggers: {
+          enabled: false,
+          mirrorEnabled: false,
+          dispatchMode: 'shadow',
+          localFallback: true,
+          maxWorkers: 1,
+          pollIntervalSeconds: 300,
+          inboxPath: '.claude/harness/remote-events.json',
+          remoteApi: 'ccr',
+          model: 'claude-sonnet-4-6',
+        },
+      },
+      jobs: getDefaultHarnessConfig().jobs.filter(job => job.id === 'pm-company-research'),
+    }
+    await writeHarnessConfig(config, repoRoot)
+
+    const deps: Partial<HarnessDependencies> = {
+      commandRunner: async (_file, args) => {
+        if (args.at(-1) === 'command -v bun >/dev/null 2>&1') {
+          return { stdout: '/opt/homebrew/bin/bun\n', stderr: '', code: 0 }
+        }
+        if (args.at(-1) === 'bun run repo:bootstrap') {
+          return { stdout: 'bootstrapped', stderr: '', code: 0 }
+        }
+        return { stdout: '', stderr: '', code: 0 }
+      },
+      workerExecutor: async ({ job }) => {
+        const observed = await withHostedHarnessState(state => {
+          const persistedJob = state.jobs[job.instanceId]
+          const persistedLease = state.leases[job.instanceId]
+          return {
+            status: persistedJob?.status,
+            startedAt: persistedJob?.startedAt,
+            heartbeatAt: persistedLease?.heartbeatAt,
+            expiresAt: persistedLease?.expiresAt,
+          }
+        })
+
+        expect(observed.status).toBe('running')
+        expect(observed.startedAt).toBeDefined()
+        expect(observed.heartbeatAt).toBeDefined()
+        expect(observed.expiresAt).toBeDefined()
+        expect(
+          new Date(observed.expiresAt!).getTime(),
+        ).toBeGreaterThan(new Date(observed.heartbeatAt!).getTime())
+
+        return {
+          success: true,
+          stdout: 'delivered market map',
+          stderr: '',
+          summary: 'delivered market map',
+          humanTouchCount: 0,
+          totalCostUsd: 0.2,
+          executionBackend: 'local',
+        }
+      },
+      now: () => new Date('2026-04-19T12:00:00.000Z'),
+      sleep: async () => {},
+    }
+
+    const result = await runHarnessJob(repoRoot, 'pm-company-research', deps)
+    expect(result.instanceId).toBeDefined()
+    expect(result.state.history.length).toBeGreaterThan(0)
+  })
+
+  test('foreground-style runners still run discovery and register heartbeats', async () => {
+    const repoRoot = await createTempRepo()
+    const now = new Date()
+    await writeRunnerManifest(repoRoot)
+    const config = {
+      ...getDefaultHarnessConfig(),
+      sources: {
+        ...getDefaultHarnessConfig().sources,
+        cron: {
+          enabled: false,
+          pollIntervalSeconds: 60,
+        },
+        remoteTriggers: {
+          ...getDefaultHarnessConfig().sources.remoteTriggers,
+          enabled: false,
+          mirrorEnabled: false,
+        },
+      },
+    }
+    await writeHarnessConfig(config, repoRoot)
+
+    const commands: string[] = []
+    const runner: ShellCommandRunner = async (_file, args) => {
+      commands.push(args.join(' '))
+      if (args[0] === 'repo' && args[1] === 'view') {
+        return {
+          stdout: JSON.stringify({
+            nameWithOwner: 'owner/repo',
+            defaultBranchRef: { name: 'main' },
+          }),
+          stderr: '',
+          code: 0,
+        }
+      }
+      if (args[0] === 'pr' && args[1] === 'list') {
+        return {
+          stdout: JSON.stringify([]),
+          stderr: '',
+          code: 0,
+        }
+      }
+      if (args[0] === 'run' && args[1] === 'list') {
+        return {
+          stdout: JSON.stringify([]),
+          stderr: '',
+          code: 0,
+        }
+      }
+      throw new Error(`unexpected command: ${args.join(' ')}`)
+    }
+
+    const result = await pollHarnessOnce(repoRoot, {
+      commandRunner: runner,
+      workerId: 'claude-primary-foreground-worker',
+      runnerId: 'claude-primary',
+      agentKind: 'claude',
+      workerSlots: 1,
+      runnerLabels: ['pm', 'dogfood'],
+      leaseLimit: 1,
+      now: () => now,
+      sleep: async () => {},
+    })
+
+    const status = await getHarnessStatus(repoRoot)
+
+    expect(result.processedJobId).toBeUndefined()
+    expect(commands.some(command => command.startsWith('repo view'))).toBeTrue()
+    expect(status.runners.some(runner => runner.runnerId === 'claude-primary')).toBeTrue()
+    expect(status.state.workerHeartbeats['claude-primary-foreground-worker']).toBeDefined()
+  })
+
   test('ingests GitHub requested-changes webhooks into follow-up jobs', async () => {
     const repoRoot = await createTempRepo()
     const claudeConfigDir = await mkdtemp(path.join(os.tmpdir(), 'cc-harness-home-'))

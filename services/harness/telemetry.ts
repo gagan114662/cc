@@ -9,6 +9,112 @@ import type {
   QueuedHarnessJob,
 } from './types.js'
 
+type HarnessEventSeverity = 'INFO' | 'WARN' | 'ERROR'
+type HarnessSystemState =
+  | 'cold_start'
+  | 'warming'
+  | 'idle'
+  | 'busy'
+  | 'degraded'
+
+function getSeverityNumber(severity: HarnessEventSeverity): number {
+  switch (severity) {
+    case 'ERROR':
+      return 17
+    case 'WARN':
+      return 13
+    default:
+      return 9
+  }
+}
+
+function includesAnyToken(
+  value: string | undefined,
+  tokens: string[],
+): boolean {
+  if (!value) {
+    return false
+  }
+  const lower = value.toLowerCase()
+  return tokens.some(token => lower.includes(token))
+}
+
+export function classifyHarnessTrafficClass(input: {
+  job?: QueuedHarnessJob
+  metadata?: Record<string, unknown>
+}): 'system' | 'event-driven' | 'scheduled' | 'manual' | 'synthetic' {
+  const metadata = input.job?.metadata ?? {}
+  const requestedBy =
+    typeof metadata.requestedBy === 'string' ? metadata.requestedBy.toLowerCase() : ''
+  const webhookSource =
+    typeof metadata.webhookSource === 'string'
+      ? metadata.webhookSource.toLowerCase()
+      : typeof input.metadata?.['harness.webhook_source'] === 'string'
+        ? String(input.metadata['harness.webhook_source']).toLowerCase()
+        : ''
+  const explicitTrafficClass =
+    typeof metadata.trafficClass === 'string' ? metadata.trafficClass.toLowerCase() : ''
+
+  if (explicitTrafficClass === 'synthetic') {
+    return 'synthetic'
+  }
+  if (
+    includesAnyToken(requestedBy, ['smoke', 'demo', 'synthetic']) ||
+    webhookSource === 'cli'
+  ) {
+    return 'synthetic'
+  }
+
+  switch (input.job?.sourceKind) {
+    case 'webhook':
+    case 'github':
+      return 'event-driven'
+    case 'cron':
+      return 'scheduled'
+    case 'manual':
+      return requestedBy.startsWith('pm-') ? 'system' : 'manual'
+    case 'remoteTrigger':
+      return 'system'
+    default:
+      return 'system'
+  }
+}
+
+export function classifyHarnessEventSeverity(input: {
+  eventName: string
+  outcome?: JobOutcome
+  metadata?: Record<string, unknown>
+}): HarnessEventSeverity {
+  if (input.eventName === 'cc_harness_job_outcome') {
+    if (input.outcome?.status === 'failed') {
+      return 'ERROR'
+    }
+    if (input.outcome?.status === 'blocked') {
+      return 'WARN'
+    }
+  }
+
+  const failureCount = Number(input.metadata?.['cc.failure_count'] ?? '0')
+  if (Number.isFinite(failureCount) && failureCount > 0) {
+    return 'ERROR'
+  }
+
+  return 'INFO'
+}
+
+export function classifyAgentSessionSeverity(
+  observation: AgentSessionObservation,
+): HarnessEventSeverity {
+  switch (observation.result) {
+    case 'failure':
+      return 'ERROR'
+    case 'blocked':
+      return 'WARN'
+    default:
+      return 'INFO'
+  }
+}
+
 function stringifyValue(value: unknown): string | undefined {
   if (value == null) {
     return undefined
@@ -45,6 +151,47 @@ function countActive(state: HarnessRuntimeState, repoId: string): number {
   ).length
 }
 
+function countHealthyWorkers(state: HarnessRuntimeState): number {
+  return Object.values(state.workerHeartbeats).filter(heartbeat => heartbeat.healthy)
+    .length
+}
+
+function countHealthyRunners(state: HarnessRuntimeState): number {
+  return Object.values(state.runners).filter(runner => runner.healthy).length
+}
+
+export function classifyHarnessSystemState(input: {
+  state?: HarnessRuntimeState
+  repoId?: string
+}): HarnessSystemState {
+  if (!input.state || !input.repoId) {
+    return 'cold_start'
+  }
+
+  const healthyWorkers = countHealthyWorkers(input.state)
+  const healthyRunners = countHealthyRunners(input.state)
+  const queueCount = countQueued(input.state, input.repoId)
+  const activeCount = countActive(input.state, input.repoId)
+  const repoHealth = input.state.repoHealth[input.repoId]?.status
+  const exportFresh = input.state.observability.exportFresh
+  const staleTelemetryWorkers =
+    input.state.observability.telemetryStaleWorkers.length
+
+  if (healthyWorkers === 0 || healthyRunners === 0) {
+    return 'cold_start'
+  }
+  if (repoHealth === 'red' || repoHealth === 'paused' || staleTelemetryWorkers > 0) {
+    return 'degraded'
+  }
+  if (!exportFresh) {
+    return 'warming'
+  }
+  if (queueCount > 0 || activeCount > 0) {
+    return 'busy'
+  }
+  return 'idle'
+}
+
 export async function logHarnessWideEvent(
   eventName:
     | 'cc_harness_poll_snapshot'
@@ -53,7 +200,19 @@ export async function logHarnessWideEvent(
     | 'cc_harness_repo_state'
     | 'cc_harness_webhook_ingested'
     | 'cc_harness_worker_lifecycle'
-    | 'cc_harness_control_plane_doctor',
+    | 'cc_harness_control_plane_doctor'
+    | 'cc_company_onboarded'
+    | 'cc_company_graph_refreshed'
+    | 'cc_pm_decision_recorded'
+    | 'cc_company_workstream_opened'
+    | 'cc_company_workstream_updated'
+    | 'cc_company_workstream_completed'
+    | 'cc_company_exception_created'
+    | 'cc_company_exception_resolved'
+    | 'cc_company_gap_created'
+    | 'cc_company_owner_message'
+    | 'cc_company_connector_recommendation_updated'
+    | 'cc_company_mission_snapshot',
   input: {
     repoRoot?: string
     repoId?: string
@@ -65,8 +224,21 @@ export async function logHarnessWideEvent(
     metadata?: Record<string, unknown>
   },
 ): Promise<void> {
+  const trafficClass = classifyHarnessTrafficClass({
+    job: input.job,
+    metadata: input.metadata,
+  })
+  const severity = classifyHarnessEventSeverity({
+    eventName,
+    outcome: input.outcome,
+    metadata: input.metadata,
+  })
   const controlPlane = getHostedHarnessControlPlaneInfo()
   const repoId = input.repoId ?? input.job?.repoId
+  const systemState = classifyHarnessSystemState({
+    state: input.state,
+    repoId,
+  })
   const repo = repoId != null ? input.state?.repos[repoId] : undefined
   const repoHealth = repoId != null ? input.state?.repoHealth[repoId] : undefined
   const repoBudget = repoId != null ? input.state?.budgets[repoId] : undefined
@@ -110,6 +282,20 @@ export async function logHarnessWideEvent(
     'harness.fleet_target_slots': repo?.fleetTargetSlots,
     'harness.repo_health': repoHealth?.status ?? 'healthy',
     'harness.pause_reason': repoHealth?.pauseReason,
+    'harness.system_state': systemState,
+    'harness.cold_start': systemState === 'cold_start',
+    'harness.worker_count': input.state
+      ? Object.keys(input.state.workerHeartbeats).length
+      : undefined,
+    'harness.healthy_worker_count': input.state
+      ? countHealthyWorkers(input.state)
+      : undefined,
+    'harness.runner_count': input.state
+      ? Object.keys(input.state.runners).length
+      : undefined,
+    'harness.healthy_runner_count': input.state
+      ? countHealthyRunners(input.state)
+      : undefined,
     'harness.queue_count':
       repoId != null && input.state ? countQueued(input.state, repoId) : undefined,
     'harness.active_count':
@@ -129,8 +315,10 @@ export async function logHarnessWideEvent(
     'harness.job_instance_id': input.job?.instanceId,
     'harness.job_id': input.job?.jobId ?? input.outcome?.jobId,
     'harness.job_agent_kind': input.job?.agentKind,
-    'harness.job_status': input.job?.status ?? input.outcome?.status,
+    'harness.job_status': input.outcome?.status ?? input.job?.status,
     'harness.job_source_kind': input.job?.sourceKind,
+    'harness.traffic_class': trafficClass,
+    'harness.severity': severity,
     'harness.job_priority': input.job?.priority,
     'harness.job_attempt': input.job?.attempt ?? input.outcome?.attempt,
     'harness.job_concurrency_key': input.job?.concurrencyKey,
@@ -149,6 +337,8 @@ export async function logHarnessWideEvent(
     'harness.honeycomb_query_live': input.state?.observability.honeycombQueryLive,
     'harness.export_last_success_at': input.state?.observability.exportLastSuccessAt,
     'harness.export_fresh': input.state?.observability.exportFresh,
+    'harness.daemon_started_at': input.state?.daemon.startedAt,
+    'harness.last_polled_at': input.state?.lastPolledAt,
     'harness.observability_loaded_workers':
       input.state?.observability.observabilityEnvLoadedWorkers.length,
     'harness.telemetry_stale_workers':
@@ -163,12 +353,17 @@ export async function logHarnessWideEvent(
         .map(([key, value]) => [key, stringifyValue(value)])
         .filter(([, value]) => value !== undefined),
     ),
+    {
+      severityText: severity,
+      severityNumber: getSeverityNumber(severity),
+    },
   )
 }
 
 export async function logHarnessAgentSessionObservation(
   observation: AgentSessionObservation,
 ): Promise<void> {
+  const severity = classifyAgentSessionSeverity(observation)
   const basePayload = {
     'cc.agent_kind': observation.agentKind,
     'cc.session_id': observation.sessionId,
@@ -185,20 +380,31 @@ export async function logHarnessAgentSessionObservation(
     'cc.token_cost': stringifyValue(observation.tokenCost),
     'cc.recorded_at': observation.recordedAt,
     'cc.summary': observation.summary,
+    'cc.severity': severity,
   }
-  await logOTelEvent('cc_agent_session_observed', basePayload)
+  await logOTelEvent('cc_agent_session_observed', basePayload, {
+    severityText: severity,
+    severityNumber: getSeverityNumber(severity),
+  })
   if (observation.agentKind === 'codex') {
-    await logOTelEvent('autoresearch_codex_session_observed', {
-      'autoresearch.codex_session_id': observation.sessionId,
-      'autoresearch.codex_result': observation.result,
-      'autoresearch.codex_failure_tags': stringifyValue(observation.failureTags),
-      'autoresearch.codex_runtime_ms': stringifyValue(observation.runtimeMs),
-      'autoresearch.codex_token_cost': stringifyValue(observation.tokenCost),
-      'autoresearch.codex_summary': observation.summary,
-      'autoresearch.runner_id': observation.runnerId,
-      'autoresearch.worker_id': observation.workerId,
-      'autoresearch.recorded_at': observation.recordedAt,
-    })
+    await logOTelEvent(
+      'autoresearch_codex_session_observed',
+      {
+        'autoresearch.codex_session_id': observation.sessionId,
+        'autoresearch.codex_result': observation.result,
+        'autoresearch.codex_failure_tags': stringifyValue(observation.failureTags),
+        'autoresearch.codex_runtime_ms': stringifyValue(observation.runtimeMs),
+        'autoresearch.codex_token_cost': stringifyValue(observation.tokenCost),
+        'autoresearch.codex_summary': observation.summary,
+        'autoresearch.runner_id': observation.runnerId,
+        'autoresearch.worker_id': observation.workerId,
+        'autoresearch.recorded_at': observation.recordedAt,
+      },
+      {
+        severityText: severity,
+        severityNumber: getSeverityNumber(severity),
+      },
+    )
   }
 }
 
