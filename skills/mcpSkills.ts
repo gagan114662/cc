@@ -7,6 +7,7 @@ import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 import { parseFrontmatter } from '../utils/frontmatterParser.js'
 import { memoizeWithLRU } from '../utils/memoize.js'
+import { decorateWorkflowPromptCommand } from '../utils/workflowCommands.js'
 import { getMCPSkillBuilders } from './mcpSkillBuilders.js'
 
 const SKILL_URI_PREFIX = 'skill://'
@@ -131,7 +132,11 @@ function buildMcpResourceCommand(
     paths: undefined,
   })
 
-  return config.kind === 'workflow' ? { ...command, kind: 'workflow' } : command
+  if (config.kind === 'workflow') {
+    return decorateWorkflowPromptCommand({ ...command, kind: 'workflow' })
+  }
+
+  return command
 }
 
 function createMcpResourceCommandFetcher(config: McpResourceCommandConfig) {

@@ -1,3 +1,5 @@
+import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
+import type { ToolUseContext } from '../Tool.js'
 import type { Command, CommandBase, PromptCommand } from '../types/command.js'
 
 export type WorkflowCommand = CommandBase &
@@ -86,4 +88,54 @@ export function formatWorkflowCommandSummary(
   }
 
   return parts.join(' · ')
+}
+
+export function buildWorkflowExecutionContract(
+  cmd: WorkflowCommand,
+): string | null {
+  const sections = [
+    formatLabeledList('Inputs', cmd.inputs),
+    formatLabeledList('Expected outputs', cmd.outputs),
+    formatLabeledList('Success criteria', cmd.successCriteria),
+    formatLabeledList('Arguments', cmd.argNames),
+    formatLabeledList('Recommended tools', cmd.allowedTools),
+  ].filter((value): value is string => value !== null)
+
+  if (sections.length === 0 && !cmd.whenToUse) {
+    return null
+  }
+
+  const lines = ['Workflow contract:']
+
+  if (cmd.whenToUse) {
+    lines.push(`Use when: ${cmd.whenToUse}`)
+  }
+
+  lines.push(...sections)
+  lines.push(
+    'Treat the success criteria as the completion bar. If required inputs are missing, gather them or call out the gap before claiming the workflow is done.',
+  )
+
+  return lines.join('\n')
+}
+
+export function decorateWorkflowPromptCommand(
+  cmd: WorkflowCommand,
+): WorkflowCommand {
+  return {
+    ...cmd,
+    async getPromptForCommand(
+      args: string,
+      context: ToolUseContext,
+    ): Promise<ContentBlockParam[]> {
+      const blocks = await cmd.getPromptForCommand(args, context)
+      const contract = buildWorkflowExecutionContract(cmd)
+
+      if (!contract) {
+        return blocks
+      }
+
+      return [{ type: 'text', text: `${contract}\n\n` }, ...blocks]
+    },
+  }
 }

@@ -207,12 +207,26 @@ highest-leverage GTM actions.`,
     expect(workflow.argNames).toEqual(['segment'])
 
     const prompt = await workflow.getPromptForCommand('', {} as any)
-    expect(prompt).toHaveLength(1)
+    expect(prompt).toHaveLength(2)
     expect(prompt[0]).toMatchObject({ type: 'text' })
+    expect((prompt[0] as { text: string }).text).toContain('Workflow contract:')
     expect((prompt[0] as { text: string }).text).toContain(
+      'Expected outputs: Updated pipeline brief, Prioritized outreach backlog',
+    )
+    expect((prompt[0] as { text: string }).text).toContain(
+      'Success criteria: Identifies stale assumptions, Produces the next highest-leverage actions',
+    )
+    expect((prompt[0] as { text: string }).text).toContain(
+      'Arguments: segment',
+    )
+    expect((prompt[0] as { text: string }).text).toContain(
+      'Recommended tools: Read',
+    )
+    expect(prompt[1]).toMatchObject({ type: 'text' })
+    expect((prompt[1] as { text: string }).text).toContain(
       '# Refresh the pipeline',
     )
-    expect((prompt[0] as { text: string }).text).not.toContain('allowed-tools')
+    expect((prompt[1] as { text: string }).text).not.toContain('allowed-tools')
   })
 
   test('caches workflow resources by server name and supports invalidation', async () => {
