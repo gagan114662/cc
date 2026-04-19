@@ -34,6 +34,7 @@ import {
   tenantEnv,
   type TenantContext,
 } from '../services/tenant/tenantContext.js'
+import { runWithTenantScope } from '../services/tenant/tenantScope.js'
 import type { EmployeeDuty } from '../types/employee.js'
 
 type DaemonArgs = {
@@ -148,16 +149,27 @@ async function fireDuty(
   if (state.shuttingDown) return
   scheduled.lastStartedAt = new Date()
   scheduled.tickCount += 1
+  // runWithTenantScope pushes the daemon's tenant onto AsyncLocalStorage
+  // for this fire only — concurrent duties fired in parallel each see
+  // their own scope, so audit entries written deep in the subprocess
+  // orchestration (or the next migrated consumer) can't cross-contaminate.
+  // Phase 2 follow-up will turn this into a per-duty tenant lookup; the
+  // scope plumbing stays the same.
+  const correlationId = `${scheduled.duty.id}:${scheduled.tickCount}`
   try {
-    await withDutySpan(
-      {
-        dutyId: scheduled.duty.id,
-        title: scheduled.duty.title,
-        cron: scheduled.duty.cron,
-        attempt: scheduled.tickCount,
-        tenant: state.tenant,
-      },
-      async span => runDutySubprocess(state, scheduled, span),
+    await runWithTenantScope(
+      { tenant: state.tenant, correlationId },
+      async () =>
+        withDutySpan(
+          {
+            dutyId: scheduled.duty.id,
+            title: scheduled.duty.title,
+            cron: scheduled.duty.cron,
+            attempt: scheduled.tickCount,
+            tenant: state.tenant,
+          },
+          async span => runDutySubprocess(state, scheduled, span),
+        ),
     )
     scheduled.lastStatus = 'ok'
   } catch (err) {
