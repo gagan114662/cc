@@ -90,6 +90,41 @@ describe('capability discovery', () => {
     )
   })
 
+  test('prefers first-class browser workflows over generic executors when the verb matches', () => {
+    const browserHarness = makePromptCommand({
+      name: 'browser-harness',
+      description: 'General browser executor',
+      whenToUse: 'Use for screenshots and web actions',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+    })
+    const funnelAudit = makePromptCommand({
+      name: 'browser-funnel-audit',
+      description:
+        'Audit a live website funnel, capture friction, and recommend fixes',
+      whenToUse:
+        'Use when the user needs a browser-backed funnel audit with evidence',
+      verbs: ['audit funnel', 'capture friction', 'recommend fixes'],
+      outputs: ['Funnel audit summary', 'Prioritized fixes'],
+      artifactKinds: ['funnel audit', 'fix backlog'],
+      kind: 'workflow',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+      workflowSteps: [
+        { title: 'Open funnel' },
+        { title: 'Collect friction evidence' },
+        { title: 'Recommend fixes' },
+      ],
+    })
+
+    const ranked = rankCapabilities([browserHarness, funnelAudit], {
+      queryText:
+        'Audit the signup funnel in the browser and tell me the biggest friction points',
+    })
+
+    expect(ranked[0]?.name).toBe('browser-funnel-audit')
+  })
+
   test('ranks raw deferred capability names with the same intent model', () => {
     const ranked = rankCapabilityNames(
       [

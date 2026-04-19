@@ -3,6 +3,7 @@ import {
   BROWSER_HARNESS_INSTALL_SNIPPET,
   BROWSER_HARNESS_REFERENCE_FILES,
   browserHarnessRemoteConfiguredFromSources,
+  buildBrowserFunnelAuditWorkflowPrompt,
   buildBrowserHarnessSkillPrompt,
 } from 'src/utils/browserHarness.js'
 
@@ -49,5 +50,15 @@ describe('browser harness bundled prompt', () => {
     expect(BROWSER_HARNESS_REFERENCE_FILES['helpers-reference.md']).toContain(
       'upload_file(selector, path)',
     )
+  })
+
+  test('builds a browser-backed workflow prompt for funnel audits', () => {
+    const prompt = buildBrowserFunnelAuditWorkflowPrompt(
+      'Audit https://example.com signup flow',
+    )
+    expect(prompt).toContain('browser-harness')
+    expect(prompt).toContain('Audit https://example.com signup flow')
+    expect(prompt).toContain('Workflow deliverable requirements')
+    expect(prompt).toContain('top friction points')
   })
 })

@@ -79,7 +79,48 @@ describe('executeForkedWorkflow', () => {
       stageRunner: async stage => {
         calls.push(stage)
         if (stage.stageKind === 'synthesis') {
-          return 'Final workflow deliverable'
+          return JSON.stringify({
+            summary: 'Pipeline refreshed with the next outreach segment',
+            completionStatus: 'completed',
+            outputs: [
+              {
+                name: 'Updated pipeline brief',
+                status: 'produced',
+                evidence: 'Synthesized from the evidence and prioritization steps',
+              },
+              {
+                name: 'Prioritized outreach backlog',
+                status: 'produced',
+                evidence: 'Ordered by leverage for B2B SaaS',
+              },
+            ],
+            artifacts: [
+              {
+                kind: 'pipeline brief',
+                status: 'produced',
+                evidence: 'Artifact 1',
+              },
+              {
+                kind: 'outreach backlog',
+                status: 'produced',
+                evidence: 'Artifact 2',
+              },
+            ],
+            successCriteria: [
+              {
+                criterion: 'Calls out stale assumptions',
+                status: 'met',
+                evidence: 'Homepage ICP is outdated',
+              },
+              {
+                criterion: 'Produces the next highest-leverage actions',
+                status: 'met',
+                evidence: 'Priority segment set to B2B SaaS',
+              },
+            ],
+            missingInputs: [],
+            unresolvedRisks: ['Publish connector still needs setup'],
+          })
         }
         return JSON.stringify({
           summary: `Completed ${stage.stageIndex + 1}`,
@@ -131,13 +172,27 @@ describe('executeForkedWorkflow', () => {
       '3. Draft publish plan',
     )
     expect(calls[2]?.prompt).toContain('Status: skipped')
+    expect(calls[2]?.prompt).toContain('Return ONLY JSON')
+    expect(calls[2]?.prompt).toContain('"completionStatus": "completed | partial | blocked"')
 
     expect(result.data).toMatchObject({
       success: true,
       commandName: command.name,
       status: 'forked',
-      result: 'Final workflow deliverable',
     })
+    expect(result.data.result).toContain(
+      'Pipeline refreshed with the next outreach segment',
+    )
+    expect(result.data.result).toContain('Completion: completed')
+    expect(result.data.result).toContain('Outputs:')
+    expect(result.data.result).toContain(
+      '- Updated pipeline brief: produced',
+    )
+    expect(result.data.result).toContain('Artifacts:')
+    expect(result.data.result).toContain('Success criteria:')
+    expect(result.data.result).toContain(
+      'Open risks: Publish connector still needs setup',
+    )
   })
 
   test('retries structured step failures and continues past continue-on-error steps', async () => {
@@ -162,7 +217,48 @@ describe('executeForkedWorkflow', () => {
       stageRunner: async stage => {
         calls.push(stage)
         if (stage.stageKind === 'synthesis') {
-          return 'Recovered workflow deliverable'
+          return JSON.stringify({
+            summary: 'Recovered pipeline deliverable',
+            completionStatus: 'partial',
+            outputs: [
+              {
+                name: 'Updated pipeline brief',
+                status: 'produced',
+                evidence: 'Recovered after retry',
+              },
+              {
+                name: 'Prioritized outreach backlog',
+                status: 'produced',
+                evidence: 'Prioritized backlog',
+              },
+            ],
+            artifacts: [
+              {
+                kind: 'pipeline brief',
+                status: 'produced',
+                evidence: 'Evidence brief',
+              },
+              {
+                kind: 'outreach backlog',
+                status: 'produced',
+                evidence: 'Prioritized backlog',
+              },
+            ],
+            successCriteria: [
+              {
+                criterion: 'Calls out stale assumptions',
+                status: 'met',
+                evidence: 'Recovered evidence',
+              },
+              {
+                criterion: 'Produces the next highest-leverage actions',
+                status: 'met',
+                evidence: 'Prioritized backlog',
+              },
+            ],
+            missingInputs: [],
+            unresolvedRisks: ['Publishing connector unavailable'],
+          })
         }
         if (stage.stageIndex === 0) {
           stepOneAttempts += 1
@@ -203,6 +299,110 @@ describe('executeForkedWorkflow', () => {
     expect(calls.at(-1)?.prompt).toContain(
       'Summary: Step failed: Publishing connector unavailable',
     )
-    expect(result.data.result).toBe('Recovered workflow deliverable')
+    expect(result.data.result).toContain('Recovered pipeline deliverable')
+    expect(result.data.result).toContain('Completion: partial')
+  })
+
+  test('retries final synthesis when the artifact contract is invalid', async () => {
+    const calls: Array<{
+      stageKind: 'step' | 'synthesis'
+      stageIndex: number
+      prompt: string
+    }> = []
+    const command = makeWorkflowCommand()
+    let synthesisAttempts = 0
+
+    const result = await executeForkedWorkflow({
+      command,
+      commandName: command.name,
+      args: 'B2B SaaS',
+      context: { options: { tools: [] } } as any,
+      canUseTool: (() => ({ behavior: 'allow' })) as any,
+      parentMessage: { message: { id: 'parent' } } as any,
+      modifiedGetAppState: (() => ({})) as any,
+      agentDefinition: { agentType: 'general-purpose' } as any,
+      skillContent: '# Refresh the pipeline',
+      stageRunner: async stage => {
+        calls.push(stage)
+        if (stage.stageKind === 'step') {
+          return JSON.stringify({
+            summary: `Completed ${stage.stageIndex + 1}`,
+            artifacts: [`Artifact ${stage.stageIndex + 1}`],
+            risks: [],
+            handoff: {
+              stale_assumptions: 'Homepage ICP is outdated',
+              priority_segment: 'B2B SaaS',
+              publish_channel: 'linkedin',
+            },
+          })
+        }
+
+        synthesisAttempts += 1
+        if (synthesisAttempts === 1) {
+          return JSON.stringify({
+            summary: 'Looks good',
+            completionStatus: 'completed',
+            outputs: [],
+            artifacts: [],
+            successCriteria: [],
+            missingInputs: [],
+            unresolvedRisks: [],
+          })
+        }
+
+        return JSON.stringify({
+          summary: 'Validated workflow artifact contract',
+          completionStatus: 'completed',
+          outputs: [
+            {
+              name: 'Updated pipeline brief',
+              status: 'produced',
+              evidence: 'Evidence brief',
+            },
+            {
+              name: 'Prioritized outreach backlog',
+              status: 'produced',
+              evidence: 'Backlog ready',
+            },
+          ],
+          artifacts: [
+            {
+              kind: 'pipeline brief',
+              status: 'produced',
+              evidence: 'Evidence brief',
+            },
+            {
+              kind: 'outreach backlog',
+              status: 'produced',
+              evidence: 'Backlog ready',
+            },
+          ],
+          successCriteria: [
+            {
+              criterion: 'Calls out stale assumptions',
+              status: 'met',
+              evidence: 'Homepage ICP is outdated',
+            },
+            {
+              criterion: 'Produces the next highest-leverage actions',
+              status: 'met',
+              evidence: 'Backlog ready',
+            },
+          ],
+          missingInputs: [],
+          unresolvedRisks: [],
+        })
+      },
+    })
+
+    expect(synthesisAttempts).toBe(2)
+    expect(calls.filter(call => call.stageKind === 'synthesis')).toHaveLength(2)
+    expect(calls.at(-1)?.prompt).toContain(
+      'Your previous answer failed workflow artifact validation.',
+    )
+    expect(calls.at(-1)?.prompt).toContain(
+      'Missing output: Updated pipeline brief',
+    )
+    expect(result.data.result).toContain('Validated workflow artifact contract')
   })
 })
