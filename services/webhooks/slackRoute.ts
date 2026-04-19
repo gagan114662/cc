@@ -20,7 +20,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
-import { enqueueAssignment } from '../assignmentQueue/storage.js'
+import { getQueueBackend } from '../assignmentQueue/backend.js'
 import { DEFAULT_TENANT } from '../tenant/tenantContext.js'
 import { verifyHmacSignature } from './signatureVerification.js'
 
@@ -176,7 +176,8 @@ export async function handleSlackWebhookRequest(
   }
 
   const id = (opts.idFactory ?? randomUUID)()
-  await enqueueAssignment(
+  const backend = await getQueueBackend()
+  await backend.enqueue(
     { id, assignment: translation.assignment },
     { projectRoot: opts.projectRoot, tenantId: DEFAULT_TENANT.id },
   )
