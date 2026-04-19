@@ -347,10 +347,34 @@ function startHttp(state: DaemonState): Server {
     }
     res.writeHead(404).end()
   })
-  server.listen(state.args.port, '0.0.0.0', () => {
-    log('info', 'http_listening', { port: state.args.port })
-  })
   return server
+}
+
+// Listen on the configured port and resolve once the OS has actually
+// bound the socket. Port 0 asks the kernel for a free port — we then
+// rewrite state.args.port to the real number so callers (tests, /health)
+// see the port they can actually reach. Without this, the previous
+// fire-and-forget listen() combined with random pickEphemeralPort()
+// produced Linux-CI port collisions — see test/employeeAssignApi.test.ts.
+async function listenHttp(server: Server, state: DaemonState): Promise<void> {
+  await new Promise<void>((resolve, reject) => {
+    const onError = (err: Error): void => {
+      server.off('listening', onListening)
+      reject(err)
+    }
+    const onListening = (): void => {
+      server.off('error', onError)
+      const address = server.address()
+      if (address && typeof address === 'object') {
+        state.args.port = address.port
+      }
+      log('info', 'http_listening', { port: state.args.port })
+      resolve()
+    }
+    server.once('error', onError)
+    server.once('listening', onListening)
+    server.listen(state.args.port, '0.0.0.0')
+  })
 }
 
 export async function stopDaemon(
@@ -404,6 +428,7 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
   }
 
   state.httpServer = startHttp(state)
+  await listenHttp(state.httpServer, state)
 
   const duties = await loadConfig(args.projectRoot)
   for (const duty of duties) {

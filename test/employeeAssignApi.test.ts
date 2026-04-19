@@ -35,16 +35,13 @@ let projectRoot: string
 let auditDir: string
 let port: number
 let daemon: DaemonHandle | null = null
+let baseUrl: string
 
 const originalEnv = {
   CC_TENANT_ID: process.env.CC_TENANT_ID,
   CC_TENANT_NAME: process.env.CC_TENANT_NAME,
   CC_TENANT_ROLE: process.env.CC_TENANT_ROLE,
   CC_DAEMON_AUDIT_DIR: process.env.CC_DAEMON_AUDIT_DIR,
-}
-
-function pickEphemeralPort(): number {
-  return 40000 + Math.floor(Math.random() * 10000)
 }
 
 async function writeEmployeeConfig(root: string): Promise<void> {
@@ -115,20 +112,24 @@ beforeEach(async () => {
   const suffix = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   projectRoot = path.join(tmpdir(), `cc-assign-api-${suffix}`)
   auditDir = path.join(tmpdir(), `cc-assign-audit-${suffix}`)
-  port = pickEphemeralPort()
   await mkdir(projectRoot, { recursive: true })
   await mkdir(auditDir, { recursive: true })
   await writeEmployeeConfig(projectRoot)
   process.env.CC_DAEMON_AUDIT_DIR = auditDir
 
+  // port: 0 asks the kernel for a free port. startDaemon rewrites
+  // daemon.args.port to the real number after bind. Using a random
+  // port from a pool caused Linux-CI flakes — see PR #15.
   daemon = await startDaemon({
     projectRoot,
-    port,
+    port: 0,
     graceMs: 500,
     cliBundlePath: path.join(projectRoot, 'does-not-exist-cli.js'),
     once: false,
     auditDir,
   })
+  port = daemon.args.port
+  baseUrl = `http://127.0.0.1:${port}`
 })
 
 afterEach(async () => {
