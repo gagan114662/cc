@@ -1,8 +1,14 @@
 import { randomUUID } from 'crypto'
 import { readFileSync } from 'fs'
-import { mkdir, readFile, writeFile } from 'fs/promises'
-import { join } from 'path'
+import { mkdir, readdir, readFile, writeFile } from 'fs/promises'
+import { dirname, join } from 'path'
 import { getProjectRoot } from '../bootstrap/state.js'
+import {
+  DEFAULT_TENANT,
+  DEFAULT_TENANT_ID,
+  type TenantContext,
+} from '../services/tenant/tenantContext.js'
+import { currentTenantContext } from '../services/tenant/tenantScope.js'
 import { cronToHuman } from './cron.js'
 import { safeParseJSON } from './json.js'
 import { jsonStringify } from './slowOperations.js'
@@ -12,17 +18,49 @@ import {
   ENGINEERING_LEAD_AGENT_TYPE,
 } from '../types/employee.js'
 
-const EMPLOYEE_FILE_RELATIVE_PATH = join('.claude', 'employee.json')
+const EMPLOYEE_FILE_NAME = 'employee.json'
+const TENANTS_DIR_NAME = 'tenants'
 
-export function getEmployeeConfigPath(projectRoot?: string): string {
-  return join(projectRoot ?? getProjectRoot(), EMPLOYEE_FILE_RELATIVE_PATH)
+// Tenant-aware path resolution.
+//
+// DEFAULT_TENANT keeps reading/writing `.claude/employee.json` so a
+// single-operator install does not need to migrate any files. Named
+// tenants live under `.claude/tenants/<id>/employee.json`. The split
+// matters because this file is the hot path for `/employee` and the
+// daemon scheduler — both must see exactly the subset of duties owned
+// by the active tenant, even when other tenants are configured in the
+// same project root.
+//
+// Resolution order for the caller's tenant:
+//   1. explicit `tenantId` argument (daemon scheduler passes this)
+//   2. active AsyncLocalStorage scope (runWithTenantScope)
+//   3. env-derived context (legacy single-operator path)
+function resolveTenantId(tenantId?: string): string {
+  if (tenantId !== undefined) return tenantId
+  return currentTenantContext().id
+}
+
+export function getEmployeeConfigPath(
+  projectRoot?: string,
+  tenantId?: string,
+): string {
+  const root = projectRoot ?? getProjectRoot()
+  const resolved = resolveTenantId(tenantId)
+  if (resolved === DEFAULT_TENANT_ID) {
+    return join(root, '.claude', EMPLOYEE_FILE_NAME)
+  }
+  return join(root, '.claude', TENANTS_DIR_NAME, resolved, EMPLOYEE_FILE_NAME)
 }
 
 export async function readEmployeeConfig(
   projectRoot?: string,
+  tenantId?: string,
 ): Promise<EmployeeConfig | null> {
   try {
-    const raw = await readFile(getEmployeeConfigPath(projectRoot), 'utf-8')
+    const raw = await readFile(
+      getEmployeeConfigPath(projectRoot, tenantId),
+      'utf-8',
+    )
     return parseEmployeeConfig(raw)
   } catch {
     return null
@@ -31,9 +69,13 @@ export async function readEmployeeConfig(
 
 export function readEmployeeConfigSync(
   projectRoot?: string,
+  tenantId?: string,
 ): EmployeeConfig | null {
   try {
-    const raw = readFileSync(getEmployeeConfigPath(projectRoot), 'utf-8')
+    const raw = readFileSync(
+      getEmployeeConfigPath(projectRoot, tenantId),
+      'utf-8',
+    )
     return parseEmployeeConfig(raw)
   } catch {
     return null
@@ -43,11 +85,12 @@ export function readEmployeeConfigSync(
 export async function writeEmployeeConfig(
   config: EmployeeConfig,
   projectRoot?: string,
+  tenantId?: string,
 ): Promise<void> {
-  const root = projectRoot ?? getProjectRoot()
-  await mkdir(join(root, '.claude'), { recursive: true })
+  const filePath = getEmployeeConfigPath(projectRoot, tenantId)
+  await mkdir(dirname(filePath), { recursive: true })
   await writeFile(
-    getEmployeeConfigPath(root),
+    filePath,
     jsonStringify(config, null, 2) + '\n',
     'utf-8',
   )
@@ -56,10 +99,60 @@ export async function writeEmployeeConfig(
 export async function upsertEmployeeConfig(
   updater: (existing: EmployeeConfig | null) => EmployeeConfig,
   projectRoot?: string,
+  tenantId?: string,
 ): Promise<EmployeeConfig> {
-  const next = updater(await readEmployeeConfig(projectRoot))
-  await writeEmployeeConfig(next, projectRoot)
+  const next = updater(await readEmployeeConfig(projectRoot, tenantId))
+  await writeEmployeeConfig(next, projectRoot, tenantId)
   return next
+}
+
+// Enumerate the tenants that actually have an employee.json under the
+// given project root. Used by the daemon on boot to schedule duties
+// for every configured tenant — and by future Phase 2 code paths
+// (durable queue, audit aggregation) that need the same enumeration.
+//
+// Contract:
+//   - If `.claude/employee.json` exists, DEFAULT_TENANT is included.
+//   - Every subdirectory of `.claude/tenants/` that contains its own
+//     `employee.json` is returned as a TenantContext with role
+//     'developer' (the safe default — hosted deployments must opt a
+//     tenant up to admin through their own registry).
+//   - An empty `.claude/tenants/<id>/` directory (no employee.json) is
+//     skipped — plausibly leftover from a migration, not a configured
+//     tenant.
+export async function listConfiguredTenants(
+  projectRoot?: string,
+): Promise<TenantContext[]> {
+  const root = projectRoot ?? getProjectRoot()
+  const tenants: TenantContext[] = []
+
+  try {
+    await readFile(join(root, '.claude', EMPLOYEE_FILE_NAME), 'utf-8')
+    tenants.push(DEFAULT_TENANT)
+  } catch {
+    // No default employee.json — that's fine, the project may only
+    // have named tenants.
+  }
+
+  const tenantsDir = join(root, '.claude', TENANTS_DIR_NAME)
+  let entries: string[] = []
+  try {
+    entries = await readdir(tenantsDir)
+  } catch {
+    return tenants
+  }
+
+  for (const entry of entries) {
+    const configPath = join(tenantsDir, entry, EMPLOYEE_FILE_NAME)
+    try {
+      await readFile(configPath, 'utf-8')
+    } catch {
+      continue
+    }
+    tenants.push({ id: entry, name: entry, role: 'developer' })
+  }
+
+  return tenants
 }
 
 export function createEmployeeDutyId(): string {
