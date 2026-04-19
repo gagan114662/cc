@@ -22,7 +22,10 @@ import { spawn, type Subprocess } from 'bun'
 import { existsSync } from 'node:fs'
 import { createServer, type Server } from 'node:http'
 import path from 'node:path'
-import { readEmployeeConfig } from '../utils/employeeConfig.js'
+import {
+  listConfiguredTenants,
+  readEmployeeConfig,
+} from '../utils/employeeConfig.js'
 import { computeNextCronRun, parseCronExpression } from '../utils/cron.js'
 import {
   traceEnvForActiveContext,
@@ -55,6 +58,11 @@ type DaemonArgs = {
 
 type ScheduledDuty = {
   duty: EmployeeDuty
+  // Each duty carries the tenant it was loaded under so concurrent
+  // fires across tenants never cross-contaminate scope. The daemon's
+  // top-level `state.tenant` is the host/process tenant — it is NOT
+  // the right source of truth for a duty owned by a different tenant.
+  tenant: TenantContext
   nextRun: Date
   timer: ReturnType<typeof setTimeout> | null
   inFlight: Set<Subprocess<'ignore', 'pipe', 'pipe'>>
@@ -67,14 +75,21 @@ type ScheduledDuty = {
 type DaemonState = {
   args: DaemonArgs
   startedAt: Date
-  // Resolved once at boot. Phase 2 follow-ups will move this to a
-  // per-duty tenant lookup (different employees, different tenants);
-  // for now the whole daemon runs under one tenant.
+  // The daemon's host tenant — resolved once at boot from env. It
+  // remains the fallback used for process-level logging and the
+  // `/health` envelope, but per-duty execution uses ScheduledDuty.tenant
+  // so one daemon can legitimately schedule work for multiple tenants.
   tenant: TenantContext
   configLoaded: boolean
+  // Key is `${tenantId}:${dutyId}` — tenants may legitimately use the
+  // same duty id, and a flat `dutyId` key would silently overwrite.
   duties: Map<string, ScheduledDuty>
   httpServer: Server | null
   shuttingDown: boolean
+}
+
+function dutyKey(tenantId: string, dutyId: string): string {
+  return `${tenantId}:${dutyId}`
 }
 
 function parseArgs(argv: string[]): DaemonArgs {
@@ -123,13 +138,35 @@ function log(level: 'info' | 'warn' | 'error', msg: string, extra?: object): voi
   process.stderr.write(JSON.stringify(entry) + '\n')
 }
 
-async function loadConfig(root: string): Promise<EmployeeDuty[]> {
-  const config = await readEmployeeConfig(root)
-  if (!config) {
+type TenantDuties = {
+  tenant: TenantContext
+  duties: EmployeeDuty[]
+}
+
+// Enumerate every configured tenant and load its enabled duties.
+// Backs the daemon boot path: one daemon can legitimately schedule work
+// across tenants (DEFAULT_TENANT's legacy `.claude/employee.json` plus
+// any `.claude/tenants/<id>/employee.json`).
+async function loadConfig(root: string): Promise<TenantDuties[]> {
+  const tenants = await listConfiguredTenants(root)
+  if (tenants.length === 0) {
     log('warn', 'no_employee_config', { root })
     return []
   }
-  return config.recurringDuties.filter(d => d.enabled)
+
+  const out: TenantDuties[] = []
+  for (const tenant of tenants) {
+    const config = await readEmployeeConfig(root, tenant.id)
+    if (!config) {
+      log('warn', 'tenant_config_unreadable', { tenantId: tenant.id })
+      continue
+    }
+    out.push({
+      tenant,
+      duties: config.recurringDuties.filter(d => d.enabled),
+    })
+  }
+  return out
 }
 
 function scheduleNext(state: DaemonState, scheduled: ScheduledDuty): void {
@@ -161,16 +198,15 @@ async function fireDuty(
   if (state.shuttingDown) return
   scheduled.lastStartedAt = new Date()
   scheduled.tickCount += 1
-  // runWithTenantScope pushes the daemon's tenant onto AsyncLocalStorage
-  // for this fire only — concurrent duties fired in parallel each see
-  // their own scope, so audit entries written deep in the subprocess
-  // orchestration (or the next migrated consumer) can't cross-contaminate.
-  // Phase 2 follow-up will turn this into a per-duty tenant lookup; the
-  // scope plumbing stays the same.
+  // Use the duty's own tenant, not state.tenant — on a multi-tenant
+  // daemon these differ, and cross-contaminating would make spans,
+  // audit entries, and bypassPermissionsMode gates all attribute to
+  // the wrong tenant. The scope and span stamping must agree.
+  const dutyTenant = scheduled.tenant
   const correlationId = `${scheduled.duty.id}:${scheduled.tickCount}`
   try {
     await runWithTenantScope(
-      { tenant: state.tenant, correlationId },
+      { tenant: dutyTenant, correlationId },
       async () =>
         withDutySpan(
           {
@@ -178,7 +214,7 @@ async function fireDuty(
             title: scheduled.duty.title,
             cron: scheduled.duty.cron,
             attempt: scheduled.tickCount,
-            tenant: state.tenant,
+            tenant: dutyTenant,
           },
           async span => runDutySubprocess(state, scheduled, span),
         ),
@@ -188,6 +224,7 @@ async function fireDuty(
     scheduled.lastStatus = 'error'
     log('error', 'duty_failed', {
       dutyId: scheduled.duty.id,
+      tenantId: dutyTenant.id,
       error: err instanceof Error ? err.message : String(err),
     })
   } finally {
@@ -255,7 +292,11 @@ async function runDutySubprocess(
   const child = spawn({
     cmd,
     cwd: state.args.projectRoot,
-    env: buildDutySubprocessEnv(state, scheduled.duty, parentSpan),
+    env: buildDutySubprocessEnv(
+      { tenant: scheduled.tenant },
+      scheduled.duty,
+      parentSpan,
+    ),
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
@@ -274,6 +315,7 @@ async function runDutySubprocess(
 function buildHealthBody(state: DaemonState): string {
   const duties = Array.from(state.duties.values()).map(s => ({
     id: s.duty.id,
+    tenantId: s.tenant.id,
     title: s.duty.title,
     cron: s.duty.cron,
     nextRun: s.nextRun.toISOString(),
@@ -430,26 +472,32 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
   state.httpServer = startHttp(state)
   await listenHttp(state.httpServer, state)
 
-  const duties = await loadConfig(args.projectRoot)
-  for (const duty of duties) {
-    const scheduled: ScheduledDuty = {
-      duty,
-      nextRun: new Date(0),
-      timer: null,
-      inFlight: new Set(),
-      lastStartedAt: null,
-      lastFinishedAt: null,
-      lastStatus: null,
-      tickCount: 0,
+  const tenantDuties = await loadConfig(args.projectRoot)
+  let dutyCount = 0
+  for (const { tenant, duties } of tenantDuties) {
+    for (const duty of duties) {
+      const scheduled: ScheduledDuty = {
+        duty,
+        tenant,
+        nextRun: new Date(0),
+        timer: null,
+        inFlight: new Set(),
+        lastStartedAt: null,
+        lastFinishedAt: null,
+        lastStatus: null,
+        tickCount: 0,
+      }
+      state.duties.set(dutyKey(tenant.id, duty.id), scheduled)
+      scheduleNext(state, scheduled)
+      dutyCount += 1
     }
-    state.duties.set(duty.id, scheduled)
-    scheduleNext(state, scheduled)
   }
   state.configLoaded = true
 
   log('info', 'daemon_ready', {
     projectRoot: args.projectRoot,
-    dutyCount: duties.length,
+    tenantCount: tenantDuties.length,
+    dutyCount,
     port: args.port,
   })
 
