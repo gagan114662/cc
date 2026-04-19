@@ -172,6 +172,13 @@ export type CommandAvailability =
   // Console API key user (direct api.anthropic.com, not via claude.ai OAuth)
   | 'console'
 
+export type WorkflowStep = {
+  title: string
+  objective?: string
+  success?: string
+  tools?: string[]
+}
+
 export type CommandBase = {
   availability?: CommandAvailability[]
   description: string
@@ -188,6 +195,7 @@ export type CommandBase = {
   inputs?: string[] // Structured workflow/skill inputs for agent-facing discovery
   outputs?: string[] // Structured workflow/skill outputs for agent-facing discovery
   successCriteria?: string[] // Completion criteria for structured workflows/skills
+  workflowSteps?: WorkflowStep[] // Structured procedure for workflow-backed commands
   version?: string // Version of the command/skill
   disableModelInvocation?: boolean // Whether to disable this command from being invoked by models
   userInvocable?: boolean // Whether users can invoke this skill by typing /skill-name

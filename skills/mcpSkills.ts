@@ -133,7 +133,12 @@ function buildMcpResourceCommand(
   })
 
   if (config.kind === 'workflow') {
-    return decorateWorkflowPromptCommand({ ...command, kind: 'workflow' })
+    return decorateWorkflowPromptCommand({
+      ...command,
+      kind: 'workflow',
+      context: command.context ?? 'fork',
+      progressMessage: 'running workflow',
+    })
   }
 
   return command

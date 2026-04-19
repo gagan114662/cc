@@ -159,6 +159,7 @@ describe('fetchMcpWorkflowsForClient', () => {
               text: `---
 name: Pipeline Refresh
 description: Rebuild the pipeline from the current public surface
+context: fork
 when_to_use: Refresh the growth plan after market, messaging, or demand changes
 inputs:
   - Website and public positioning
@@ -169,6 +170,17 @@ outputs:
 success_criteria:
   - Identifies stale assumptions
   - Produces the next highest-leverage actions
+steps:
+  - title: Gather evidence
+    objective: Review the website and current positioning assumptions
+    success: You have a current fact base for the pipeline refresh
+    tools:
+      - Read
+  - title: Rebuild the backlog
+    objective: Turn the refreshed view into concrete GTM actions
+    success: The backlog is prioritized and ready to execute
+    tools:
+      - Read
 arguments:
   - segment
 allowed-tools:
@@ -192,6 +204,8 @@ highest-leverage GTM actions.`,
     expect(workflow.source).toBe('mcp')
     expect(workflow.loadedFrom).toBe('mcp')
     expect(workflow.userFacingName?.()).toBe('Pipeline Refresh')
+    expect(workflow.context).toBe('fork')
+    expect(workflow.progressMessage).toBe('running workflow')
     expect(workflow.inputs).toEqual([
       'Website and public positioning',
       'Current ICP assumptions',
@@ -204,6 +218,20 @@ highest-leverage GTM actions.`,
       'Identifies stale assumptions',
       'Produces the next highest-leverage actions',
     ])
+    expect(workflow.workflowSteps).toEqual([
+      {
+        title: 'Gather evidence',
+        objective: 'Review the website and current positioning assumptions',
+        success: 'You have a current fact base for the pipeline refresh',
+        tools: ['Read'],
+      },
+      {
+        title: 'Rebuild the backlog',
+        objective: 'Turn the refreshed view into concrete GTM actions',
+        success: 'The backlog is prioritized and ready to execute',
+        tools: ['Read'],
+      },
+    ])
     expect(workflow.argNames).toEqual(['segment'])
 
     const prompt = await workflow.getPromptForCommand('', {} as any)
@@ -215,6 +243,11 @@ highest-leverage GTM actions.`,
     )
     expect((prompt[0] as { text: string }).text).toContain(
       'Success criteria: Identifies stale assumptions, Produces the next highest-leverage actions',
+    )
+    expect((prompt[0] as { text: string }).text).toContain('Procedure:')
+    expect((prompt[0] as { text: string }).text).toContain('1. Gather evidence')
+    expect((prompt[0] as { text: string }).text).toContain(
+      '2. Rebuild the backlog',
     )
     expect((prompt[0] as { text: string }).text).toContain(
       'Arguments: segment',
@@ -246,5 +279,30 @@ highest-leverage GTM actions.`,
     fetchMcpWorkflowsForClient.cache.delete(client.name)
     await fetchMcpWorkflowsForClient(client)
     expect(counts()).toEqual({ requestCount: 2, readCount: 2 })
+  })
+
+  test('defaults MCP workflows to forked execution when context is not specified', async () => {
+    const { client } = makeConnectedClient({
+      resources: [
+        { uri: 'workflow://ops/site-refresh', name: 'Site Refresh' },
+      ],
+      readResults: {
+        'workflow://ops/site-refresh': {
+          contents: [
+            {
+              text: `---
+name: Site Refresh
+description: Refresh the site backlog
+---
+# Refresh the site`,
+            },
+          ],
+        },
+      },
+    })
+
+    const workflows = await fetchMcpWorkflowsForClient(client)
+    expect(workflows).toHaveLength(1)
+    expect(workflows[0]?.context).toBe('fork')
   })
 })

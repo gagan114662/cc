@@ -1,6 +1,11 @@
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { ToolUseContext } from '../Tool.js'
-import type { Command, CommandBase, PromptCommand } from '../types/command.js'
+import type {
+  Command,
+  CommandBase,
+  PromptCommand,
+  WorkflowStep,
+} from '../types/command.js'
 
 export type WorkflowCommand = CommandBase &
   PromptCommand & {
@@ -14,6 +19,7 @@ type WorkflowSummaryOptions = {
   includeSuccessCriteria?: boolean
   includeTools?: boolean
   includeArguments?: boolean
+  includeSteps?: boolean
 }
 
 export function isWorkflowCommand(
@@ -43,6 +49,15 @@ function formatLabeledList(
   return `${label}: ${summarizeList(normalized)}`
 }
 
+function summarizeWorkflowSteps(steps: WorkflowStep[] | undefined): string | null {
+  const normalized = steps?.map(step => step.title.trim()).filter(Boolean) ?? []
+  if (normalized.length === 0) {
+    return null
+  }
+
+  return `Procedure: ${summarizeList(normalized, 3)}`
+}
+
 export function formatWorkflowCommandSummary(
   cmd: WorkflowCommand,
   options: WorkflowSummaryOptions = {},
@@ -54,6 +69,7 @@ export function formatWorkflowCommandSummary(
     includeSuccessCriteria = true,
     includeTools = false,
     includeArguments = false,
+    includeSteps = true,
   } = options
 
   const parts = [cmd.description]
@@ -75,6 +91,11 @@ export function formatWorkflowCommandSummary(
   if (includeSuccessCriteria) {
     const success = formatLabeledList('Success', cmd.successCriteria)
     if (success) parts.push(success)
+  }
+
+  if (includeSteps) {
+    const procedure = summarizeWorkflowSteps(cmd.workflowSteps)
+    if (procedure) parts.push(procedure)
   }
 
   if (includeTools) {
@@ -112,11 +133,31 @@ export function buildWorkflowExecutionContract(
   }
 
   lines.push(...sections)
+  if (cmd.workflowSteps?.length) {
+    lines.push('Procedure:')
+    lines.push(...formatWorkflowSteps(cmd.workflowSteps))
+  }
   lines.push(
     'Treat the success criteria as the completion bar. If required inputs are missing, gather them or call out the gap before claiming the workflow is done.',
   )
 
   return lines.join('\n')
+}
+
+function formatWorkflowSteps(steps: WorkflowStep[]): string[] {
+  return steps.flatMap((step, index) => {
+    const stepLines = [`${index + 1}. ${step.title}`]
+    if (step.objective) {
+      stepLines.push(`   Objective: ${step.objective}`)
+    }
+    if (step.success) {
+      stepLines.push(`   Success: ${step.success}`)
+    }
+    if (step.tools?.length) {
+      stepLines.push(`   Tools: ${step.tools.join(', ')}`)
+    }
+    return stepLines
+  })
 }
 
 export function decorateWorkflowPromptCommand(

@@ -16,6 +16,16 @@ function makeWorkflowCommand(): Command {
       'Calls out stale assumptions',
       'Produces the next highest-leverage actions',
     ],
+    workflowSteps: [
+      {
+        title: 'Gather evidence',
+        objective: 'Review the current website and positioning',
+      },
+      {
+        title: 'Prioritize actions',
+        success: 'The next actions are ranked by leverage',
+      },
+    ],
     allowedTools: ['Read', 'WebFetch'],
     argNames: ['segment'],
     kind: 'workflow',
@@ -40,6 +50,7 @@ describe('workflow command metadata', () => {
     expect(rendered).toContain('Inputs:')
     expect(rendered).toContain('Outputs:')
     expect(rendered).toContain('Success:')
+    expect(rendered).toContain('Procedure:')
     expect(rendered).toContain('Tools:')
     expect(rendered).toContain('Arguments:')
   })
@@ -53,5 +64,6 @@ describe('workflow command metadata', () => {
     expect(suggestions[0]?.tag).toBe('workflow')
     expect(suggestions[0]?.description).toContain('Outputs:')
     expect(suggestions[0]?.description).toContain('Updated pipeline brief')
+    expect(suggestions[0]?.description).toContain('Procedure:')
   })
 })

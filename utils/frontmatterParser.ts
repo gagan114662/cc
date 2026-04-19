@@ -15,6 +15,7 @@ export type FrontmatterData = {
   outputs?: string | string[] | null
   success_criteria?: string | string[] | null
   'success-criteria'?: string | string[] | null
+  steps?: unknown
   // Memory type: 'user', 'feedback', 'project', or 'reference'
   // Only applicable to memory files; narrowed via parseMemoryType() in src/memdir/memoryTypes.ts
   type?: string | null
