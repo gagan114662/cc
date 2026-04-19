@@ -48,6 +48,10 @@ import {
   handleGithubWebhookRequest,
 } from '../services/webhooks/githubRoute.js'
 import {
+  SLACK_WEBHOOK_ROUTE,
+  handleSlackWebhookRequest,
+} from '../services/webhooks/slackRoute.js'
+import {
   drainOnce,
   type AssignmentRunner,
 } from '../services/assignmentQueue/drainer.js'
@@ -78,6 +82,9 @@ type DaemonArgs = {
   // unset, POST /v1/webhooks/github returns 503 — better than silently
   // accepting any payload because the operator forgot to configure it.
   githubWebhookSecret?: string
+  // Shared secret for verifying inbound Slack webhook signatures. Same
+  // 503-when-unset policy as the GitHub secret.
+  slackWebhookSecret?: string
 }
 
 type ScheduledDuty = {
@@ -239,6 +246,7 @@ function parseArgs(argv: string[]): DaemonArgs {
     : undefined
 
   const githubWebhookSecret = process.env.CC_GITHUB_WEBHOOK_SECRET
+  const slackWebhookSecret = process.env.CC_SLACK_WEBHOOK_SECRET
 
   return {
     projectRoot,
@@ -248,6 +256,7 @@ function parseArgs(argv: string[]): DaemonArgs {
     once,
     auditDir,
     ...(githubWebhookSecret ? { githubWebhookSecret } : {}),
+    ...(slackWebhookSecret ? { slackWebhookSecret } : {}),
   }
 }
 
@@ -530,6 +539,31 @@ function startHttp(state: DaemonState): Server {
         secret: state.args.githubWebhookSecret,
       }).catch(err => {
         log('error', 'github_webhook_failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+        if (!res.headersSent) {
+          res.writeHead(500, { 'content-type': 'application/json' })
+          res.end(JSON.stringify({ error: 'internal_error' }))
+        }
+      })
+      return
+    }
+    if (req.url === SLACK_WEBHOOK_ROUTE) {
+      if (state.shuttingDown) {
+        res.writeHead(503, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: 'draining' }))
+        return
+      }
+      if (!state.args.slackWebhookSecret) {
+        res.writeHead(503, { 'content-type': 'application/json' })
+        res.end(JSON.stringify({ error: 'slack_webhook_secret_unset' }))
+        return
+      }
+      void handleSlackWebhookRequest(req, res, {
+        projectRoot: state.args.projectRoot,
+        secret: state.args.slackWebhookSecret,
+      }).catch(err => {
+        log('error', 'slack_webhook_failed', {
           error: err instanceof Error ? err.message : String(err),
         })
         if (!res.headersSent) {
