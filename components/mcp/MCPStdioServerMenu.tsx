@@ -5,7 +5,7 @@ import { useExitOnCtrlCDWithKeybindings } from '../../hooks/useExitOnCtrlCDWithK
 import { Box, color, Text, useTheme } from '../../ink.js';
 import { getMcpConfigByName } from '../../services/mcp/config.js';
 import { useMcpReconnect, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js';
-import { describeMcpConfigFilePath, filterMcpPromptsByServer } from '../../services/mcp/utils.js';
+import { describeMcpConfigFilePath, filterMcpPromptsByServer, filterMcpSkillsByServer, filterMcpWorkflowsByServer } from '../../services/mcp/utils.js';
 import { useAppState } from '../../state/AppState.js';
 import { errorMessage } from '../../utils/errors.js';
 import { capitalize } from '../../utils/stringUtils.js';
@@ -54,8 +54,11 @@ export function MCPStdioServerMenu({
   }, [server.client.type, server.name, toggleMcpServer, onCancel, onComplete]);
   const capitalizedServerName = capitalize(String(server.name));
 
-  // Count MCP prompts for this server (skills are shown in /skills, not here)
+  // Count the MCP command surfaces for this server separately so the UI shows
+  // both protocol-level and agent-native capabilities.
   const serverCommandsCount = filterMcpPromptsByServer(mcp.commands, server.name).length;
+  const serverSkillsCount = filterMcpSkillsByServer(mcp.commands, server.name).length;
+  const serverWorkflowsCount = filterMcpWorkflowsByServer(mcp.commands, server.name).length;
   const menuOptions = [];
 
   // Only show "View tools" if server is not disabled and has tools
@@ -129,11 +132,23 @@ export function MCPStdioServerMenu({
             </Text>
           </Box>
 
-          {server.client.type === 'connected' && <CapabilitiesSection serverToolsCount={serverToolsCount} serverPromptsCount={serverCommandsCount} serverResourcesCount={mcp.resources[server.name]?.length || 0} />}
+          {server.client.type === 'connected' && <CapabilitiesSection serverToolsCount={serverToolsCount} serverPromptsCount={serverCommandsCount} serverSkillsCount={serverSkillsCount} serverWorkflowsCount={serverWorkflowsCount} serverResourcesCount={mcp.resources[server.name]?.length || 0} />}
 
           {server.client.type === 'connected' && serverToolsCount > 0 && <Box>
               <Text bold>Tools: </Text>
               <Text dimColor>{serverToolsCount} tools</Text>
+            </Box>}
+          {server.client.type === 'connected' && serverCommandsCount > 0 && <Box>
+              <Text bold>Prompts: </Text>
+              <Text dimColor>{serverCommandsCount} prompts</Text>
+            </Box>}
+          {server.client.type === 'connected' && serverSkillsCount > 0 && <Box>
+              <Text bold>Skills: </Text>
+              <Text dimColor>{serverSkillsCount} skills</Text>
+            </Box>}
+          {server.client.type === 'connected' && serverWorkflowsCount > 0 && <Box>
+              <Text bold>Workflows: </Text>
+              <Text dimColor>{serverWorkflowsCount} workflows</Text>
             </Box>}
         </Box>
 

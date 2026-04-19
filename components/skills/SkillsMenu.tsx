@@ -26,13 +26,14 @@ function getSourceTitle(source: SkillSource): string {
     return 'Plugin skills';
   }
   if (source === 'mcp') {
-    return 'MCP skills';
+    return 'MCP skills & workflows';
   }
   return `${capitalize(getSettingSourceName(source))} skills`;
 }
 function getSourceSubtitle(source: SkillSource, skills: SkillCommand[]): string | undefined {
-  // MCP skills show server names; file-based skills show filesystem paths.
-  // Skill names are `<server>:<skill>`, not `mcp__<server>__…`.
+  // MCP-delivered prompt commands show server names; file-based skills show
+  // filesystem paths. Names are `<server>:<skill>` / `<server>:workflow:…`,
+  // not `mcp__<server>__…`.
   if (source === 'mcp') {
     const servers = [...new Set(skills.map(s => {
       const idx = s.name.indexOf(':');

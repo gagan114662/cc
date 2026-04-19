@@ -7,9 +7,11 @@ import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 import { parseFrontmatter } from '../utils/frontmatterParser.js'
 import { memoizeWithLRU } from '../utils/memoize.js'
+import { decorateWorkflowPromptCommand } from '../utils/workflowCommands.js'
 import { getMCPSkillBuilders } from './mcpSkillBuilders.js'
 
 const SKILL_URI_PREFIX = 'skill://'
+const WORKFLOW_URI_PREFIX = 'workflow://'
 const MCP_SKILL_FETCH_CACHE_SIZE = 20
 
 type MappedServerResource = Pick<ServerResource, 'uri' | 'name'>
@@ -19,8 +21,21 @@ type TextResourceContent = {
   mimeType?: string
 }
 
-function isSkillResource(resource: Pick<ServerResource, 'uri'>): boolean {
-  return resource.uri.startsWith(SKILL_URI_PREFIX)
+type McpResourceCommandKind = 'skill' | 'workflow'
+
+type McpResourceCommandConfig = {
+  kind: McpResourceCommandKind
+  uriPrefix: string
+  uriProtocol: string
+  commandPrefix: string
+  descriptionFallbackLabel: 'Skill' | 'Custom command'
+}
+
+function hasResourcePrefix(
+  resource: Pick<ServerResource, 'uri'>,
+  prefix: string,
+): boolean {
+  return resource.uri.startsWith(prefix)
 }
 
 function isTextResourceContent(value: unknown): value is TextResourceContent {
@@ -39,10 +54,13 @@ function fallbackSkillSlugFromName(name?: string): string | null {
   return parts.length > 0 ? parts.join(':') : null
 }
 
-function getSkillSlug(resource: MappedServerResource): string | null {
+function getResourceSlug(
+  resource: MappedServerResource,
+  expectedProtocol: string,
+): string | null {
   try {
     const url = new URL(resource.uri)
-    if (url.protocol !== 'skill:') {
+    if (url.protocol !== expectedProtocol) {
       return fallbackSkillSlugFromName(resource.name)
     }
     const segments = normalizeSkillSegments([
@@ -73,22 +91,23 @@ function getSkillMarkdownFromReadResult(value: unknown): string | null {
   return textBlocks.join('\n\n')
 }
 
-function buildMcpSkillCommand(
+function buildMcpResourceCommand(
   client: MCPServerConnection,
   resource: MappedServerResource,
   rawMarkdown: string,
+  config: McpResourceCommandConfig,
 ): Command | null {
-  const skillSlug = getSkillSlug(resource)
+  const skillSlug = getResourceSlug(resource, config.uriProtocol)
   if (!skillSlug) {
     logForDebugging(
-      `[mcp-skills] Skipping ${resource.uri} from ${client.name}: unable to derive a stable skill name`,
+      `[mcp-${config.kind}s] Skipping ${resource.uri} from ${client.name}: unable to derive a stable ${config.kind} name`,
       { level: 'warn' },
     )
     return null
   }
 
-  const commandName = `${normalizeNameForMCP(client.name)}:${skillSlug}`
-  const resourceRef = `<mcp-skill:${client.name}:${resource.uri}>`
+  const commandName = `${normalizeNameForMCP(client.name)}:${config.commandPrefix}${skillSlug}`
+  const resourceRef = `<mcp-${config.kind}:${client.name}:${resource.uri}>`
   const { frontmatter, content: markdownContent } = parseFrontmatter(
     rawMarkdown,
     resourceRef,
@@ -99,9 +118,10 @@ function buildMcpSkillCommand(
     frontmatter,
     markdownContent,
     commandName,
+    config.descriptionFallbackLabel,
   )
 
-  return createSkillCommand({
+  const command = createSkillCommand({
     ...parsed,
     skillName: commandName,
     displayName: parsed.displayName ?? resource.name ?? undefined,
@@ -111,62 +131,93 @@ function buildMcpSkillCommand(
     loadedFrom: 'mcp',
     paths: undefined,
   })
+
+  if (config.kind === 'workflow') {
+    return decorateWorkflowPromptCommand({
+      ...command,
+      kind: 'workflow',
+      context: command.context ?? 'fork',
+      progressMessage: 'running workflow',
+    })
+  }
+
+  return command
 }
 
-export const fetchMcpSkillsForClient = memoizeWithLRU(
-  async (client: MCPServerConnection): Promise<Command[]> => {
-    if (client.type !== 'connected' || !client.capabilities?.resources) {
-      return []
-    }
-
-    try {
-      const result = await client.client.request(
-        { method: 'resources/list' },
-        ListResourcesResultSchema,
-      )
-      const skillResources = (result.resources ?? []).filter(isSkillResource)
-
-      if (skillResources.length === 0) {
+function createMcpResourceCommandFetcher(config: McpResourceCommandConfig) {
+  return memoizeWithLRU(
+    async (client: MCPServerConnection): Promise<Command[]> => {
+      if (client.type !== 'connected' || !client.capabilities?.resources) {
         return []
       }
 
-      const commands = await Promise.all(
-        skillResources.map(async resource => {
-          try {
-            const readResult = await client.client.readResource({
-              uri: resource.uri,
-            })
-            const markdown = getSkillMarkdownFromReadResult(readResult)
-            if (!markdown) {
+      try {
+        const result = await client.client.request(
+          { method: 'resources/list' },
+          ListResourcesResultSchema,
+        )
+        const matchingResources = (result.resources ?? []).filter(resource =>
+          hasResourcePrefix(resource, config.uriPrefix),
+        )
+
+        if (matchingResources.length === 0) {
+          return []
+        }
+
+        const commands = await Promise.all(
+          matchingResources.map(async resource => {
+            try {
+              const readResult = await client.client.readResource({
+                uri: resource.uri,
+              })
+              const markdown = getSkillMarkdownFromReadResult(readResult)
+              if (!markdown) {
+                logForDebugging(
+                  `[mcp-${config.kind}s] Skipping ${resource.uri} from ${client.name}: resource did not contain text ${config.kind} content`,
+                  { level: 'warn' },
+                )
+                return null
+              }
+              return buildMcpResourceCommand(client, resource, markdown, config)
+            } catch (error) {
               logForDebugging(
-                `[mcp-skills] Skipping ${resource.uri} from ${client.name}: resource did not contain text skill content`,
+                `[mcp-${config.kind}s] Failed to load ${resource.uri} from ${client.name}: ${errorMessage(error)}`,
                 { level: 'warn' },
               )
               return null
             }
-            return buildMcpSkillCommand(client, resource, markdown)
-          } catch (error) {
-            logForDebugging(
-              `[mcp-skills] Failed to load ${resource.uri} from ${client.name}: ${errorMessage(error)}`,
-              { level: 'warn' },
-            )
-            return null
-          }
-        }),
-      )
+          }),
+        )
 
-      return uniqBy(
-        commands.filter((command): command is Command => command !== null),
-        'name',
-      )
-    } catch (error) {
-      logForDebugging(
-        `[mcp-skills] Failed to list skill resources for ${client.name}: ${errorMessage(error)}`,
-        { level: 'warn' },
-      )
-      return []
-    }
-  },
-  (client: MCPServerConnection) => client.name,
-  MCP_SKILL_FETCH_CACHE_SIZE,
-)
+        return uniqBy(
+          commands.filter((command): command is Command => command !== null),
+          'name',
+        )
+      } catch (error) {
+        logForDebugging(
+          `[mcp-${config.kind}s] Failed to list ${config.kind} resources for ${client.name}: ${errorMessage(error)}`,
+          { level: 'warn' },
+        )
+        return []
+      }
+    },
+    (client: MCPServerConnection) => client.name,
+    MCP_SKILL_FETCH_CACHE_SIZE,
+  )
+}
+
+export const fetchMcpSkillsForClient = createMcpResourceCommandFetcher({
+  kind: 'skill',
+  uriPrefix: SKILL_URI_PREFIX,
+  uriProtocol: 'skill:',
+  commandPrefix: '',
+  descriptionFallbackLabel: 'Skill',
+})
+
+export const fetchMcpWorkflowsForClient = createMcpResourceCommandFetcher({
+  kind: 'workflow',
+  uriPrefix: WORKFLOW_URI_PREFIX,
+  uriProtocol: 'workflow:',
+  commandPrefix: 'workflow:',
+  descriptionFallbackLabel: 'Custom command',
+})

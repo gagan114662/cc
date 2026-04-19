@@ -18,7 +18,7 @@ import {
   logEvent,
 } from '../services/analytics/index.js'
 import { roughTokenCountEstimation } from '../services/tokenEstimation.js'
-import type { Command, PromptCommand } from '../types/command.js'
+import type { Command, PromptCommand, WorkflowStep } from '../types/command.js'
 import {
   parseArgumentNames,
   substituteArguments,
@@ -98,7 +98,17 @@ export function getSkillsPath(
  * (name, description, whenToUse) since full content is only loaded on invocation.
  */
 export function estimateSkillFrontmatterTokens(skill: Command): number {
-  const frontmatterText = [skill.name, skill.description, skill.whenToUse]
+  const frontmatterText = [
+    skill.name,
+    skill.description,
+    skill.whenToUse,
+    skill.inputs?.join(' '),
+    skill.outputs?.join(' '),
+    skill.successCriteria?.join(' '),
+    skill.workflowSteps
+      ?.map(step => [step.title, step.objective, step.success].filter(Boolean).join(' '))
+      .join(' '),
+  ]
     .filter(Boolean)
     .join(' ')
   return roughTokenCountEstimation(frontmatterText)
@@ -177,6 +187,73 @@ function parseSkillPaths(frontmatter: FrontmatterData): string[] | undefined {
   return patterns
 }
 
+function parseStringListFrontmatter(value: unknown): string[] | undefined {
+  if (typeof value !== 'string' && !Array.isArray(value)) {
+    return undefined
+  }
+
+  const parsed = splitPathInFrontmatter(value)
+    .map(item => item.trim())
+    .filter(Boolean)
+
+  return parsed.length > 0 ? parsed : undefined
+}
+
+function parseWorkflowSteps(value: unknown): WorkflowStep[] | undefined {
+  if (!Array.isArray(value)) {
+    return undefined
+  }
+
+  const parsed = value
+    .map((item): WorkflowStep | null => {
+      if (typeof item === 'string') {
+        const title = item.trim()
+        return title ? { title } : null
+      }
+
+      if (!item || typeof item !== 'object' || Array.isArray(item)) {
+        return null
+      }
+
+      const record = item as Record<string, unknown>
+      const titleCandidate =
+        record.title ?? record.name ?? record.step ?? record.label
+
+      const title =
+        typeof titleCandidate === 'string' ? titleCandidate.trim() : ''
+      if (!title) {
+        return null
+      }
+
+      const objectiveCandidate = record.objective ?? record.description
+      const objective =
+        typeof objectiveCandidate === 'string' && objectiveCandidate.trim()
+          ? objectiveCandidate.trim()
+          : undefined
+
+      const successCandidate =
+        record.success ?? record.successCriteria ?? record.success_criteria
+      const success =
+        typeof successCandidate === 'string' && successCandidate.trim()
+          ? successCandidate.trim()
+          : undefined
+
+      const tools = parseStringListFrontmatter(
+        record.tools ?? record['allowed-tools'],
+      )
+
+      return {
+        title,
+        objective,
+        success,
+        tools,
+      }
+    })
+    .filter((step): step is WorkflowStep => step !== null)
+
+  return parsed.length > 0 ? parsed : undefined
+}
+
 /**
  * Parses all skill frontmatter fields that are shared between file-based and
  * MCP skill loading. Caller supplies the resolved skill name and the
@@ -195,6 +272,10 @@ export function parseSkillFrontmatterFields(
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  inputs: string[] | undefined
+  outputs: string[] | undefined
+  successCriteria: string[] | undefined
+  workflowSteps: WorkflowStep[] | undefined
   version: string | undefined
   model: ReturnType<typeof parseUserSpecifiedModel> | undefined
   disableModelInvocation: boolean
@@ -250,6 +331,12 @@ export function parseSkillFrontmatterFields(
       frontmatter.arguments as string | string[] | undefined,
     ),
     whenToUse: frontmatter.when_to_use as string | undefined,
+    inputs: parseStringListFrontmatter(frontmatter.inputs),
+    outputs: parseStringListFrontmatter(frontmatter.outputs),
+    successCriteria: parseStringListFrontmatter(
+      frontmatter.success_criteria ?? frontmatter['success-criteria'],
+    ),
+    workflowSteps: parseWorkflowSteps(frontmatter.steps),
     version: frontmatter.version as string | undefined,
     model,
     disableModelInvocation: parseBooleanFrontmatter(
@@ -277,6 +364,10 @@ export function createSkillCommand({
   argumentHint,
   argumentNames,
   whenToUse,
+  inputs,
+  outputs,
+  successCriteria,
+  workflowSteps,
   version,
   model,
   disableModelInvocation,
@@ -300,6 +391,10 @@ export function createSkillCommand({
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  inputs: string[] | undefined
+  outputs: string[] | undefined
+  successCriteria: string[] | undefined
+  workflowSteps: WorkflowStep[] | undefined
   version: string | undefined
   model: string | undefined
   disableModelInvocation: boolean
@@ -323,6 +418,10 @@ export function createSkillCommand({
     argumentHint,
     argNames: argumentNames.length > 0 ? argumentNames : undefined,
     whenToUse,
+    inputs,
+    outputs,
+    successCriteria,
+    workflowSteps,
     version,
     model,
     disableModelInvocation,

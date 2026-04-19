@@ -73,16 +73,18 @@ import {
   renderToolUseProgressMessage,
   renderToolUseRejectedMessage,
 } from './UI.js'
+import { executeForkedWorkflow } from './workflowExecution.js'
 
 /**
- * Gets all commands including MCP skills/prompts from AppState.
- * SkillTool needs this because getCommands() only returns local/bundled skills.
+ * Gets all commands including MCP resource-delivered prompt commands from
+ * AppState. SkillTool needs this because getCommands() only returns
+ * local/bundled skills.
  */
 async function getAllCommands(context: ToolUseContext): Promise<Command[]> {
-  // Only include MCP skills (loadedFrom === 'mcp'), not plain MCP prompts.
-  // Before this filter, the model could invoke MCP prompts via SkillTool
-  // if it guessed the mcp__server__prompt name — they weren't discoverable
-  // but were technically reachable.
+  // Only include MCP resource-delivered commands (loadedFrom === 'mcp'), not
+  // plain MCP prompts. Before this filter, the model could invoke MCP prompts
+  // via SkillTool if it guessed the mcp__server__prompt name — they weren't
+  // discoverable but were technically reachable.
   const mcpSkills = context
     .getAppState()
     .mcp.commands.filter(
@@ -210,6 +212,21 @@ async function executeForkedSkill(
     command.effort !== undefined
       ? { ...baseAgent, effort: command.effort }
       : baseAgent
+
+  if (command.kind === 'workflow' && command.workflowSteps?.length) {
+    return executeForkedWorkflow({
+      command,
+      commandName,
+      args: args || '',
+      context,
+      canUseTool,
+      parentMessage,
+      onProgress,
+      modifiedGetAppState,
+      agentDefinition,
+      skillContent,
+    })
+  }
 
   // Collect messages from the forked agent
   const agentMessages: Message[] = []
@@ -898,11 +915,16 @@ const SAFE_SKILL_PROPERTIES = new Set([
   'isMcp',
   'argumentHint',
   'whenToUse',
+  'inputs',
+  'outputs',
+  'successCriteria',
+  'workflowSteps',
   'paths',
   'version',
   'disableModelInvocation',
   'userInvocable',
   'loadedFrom',
+  'kind',
   'immediate',
   'userFacingName',
 ])

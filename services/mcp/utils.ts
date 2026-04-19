@@ -45,9 +45,10 @@ export function filterToolsByServer(tools: Tool[], serverName: string): Tool[] {
  * True when a command belongs to the given MCP server.
  *
  * MCP **prompts** are named `mcp__<server>__<prompt>` (wire-format constraint);
- * MCP **skills** are named `<server>:<skill>` (matching plugin/nested-dir skill
- * naming). Both live in `mcp.commands`, so cleanup and filtering must match
- * either shape.
+ * MCP resource-delivered **skills/workflows** are named
+ * `<server>:<skill>` / `<server>:workflow:<workflow>` (matching
+ * plugin/nested-dir skill naming). All live in `mcp.commands`, so cleanup and
+ * filtering must match either shape.
  */
 export function commandBelongsToServer(
   command: Command,
@@ -75,12 +76,13 @@ export function filterCommandsByServer(
 }
 
 /**
- * Filters MCP **prompts** (not skills) by server. Used by the `/mcp` menu
- * capabilities display — skills are a separate feature shown in `/skills`,
- * so they mustn't inflate the "prompts" capability badge.
+ * Filters MCP **prompts** (not resource-delivered skills/workflows) by server.
+ * Used by the `/mcp` menu capabilities display — those higher-level commands
+ * are a separate feature shown elsewhere, so they mustn't inflate the "prompts"
+ * capability badge.
  *
- * The distinguisher is `loadedFrom === 'mcp'`: MCP skills set it, MCP
- * prompts don't (they use `isMcp: true` instead).
+ * The distinguisher is `loadedFrom === 'mcp'`: MCP resource-delivered commands
+ * set it, MCP prompts don't (they use `isMcp: true` instead).
  */
 export function filterMcpPromptsByServer(
   commands: Command[],
@@ -90,6 +92,40 @@ export function filterMcpPromptsByServer(
     c =>
       commandBelongsToServer(c, serverName) &&
       !(c.type === 'prompt' && c.loadedFrom === 'mcp'),
+  )
+}
+
+/**
+ * Filters MCP resource-delivered skills (but not workflows) by server. Used by
+ * UI surfaces that want to show agent-native command inventory separately from
+ * raw MCP prompts.
+ */
+export function filterMcpSkillsByServer(
+  commands: Command[],
+  serverName: string,
+): Command[] {
+  return commands.filter(
+    c =>
+      commandBelongsToServer(c, serverName) &&
+      c.type === 'prompt' &&
+      c.loadedFrom === 'mcp' &&
+      c.kind !== 'workflow',
+  )
+}
+
+/**
+ * Filters MCP resource-delivered workflows by server.
+ */
+export function filterMcpWorkflowsByServer(
+  commands: Command[],
+  serverName: string,
+): Command[] {
+  return commands.filter(
+    c =>
+      commandBelongsToServer(c, serverName) &&
+      c.type === 'prompt' &&
+      c.loadedFrom === 'mcp' &&
+      c.kind === 'workflow',
   )
 }
 

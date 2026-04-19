@@ -80,11 +80,11 @@ import {
 } from './model/model.js'
 import type { ReadResourceResult } from '@modelcontextprotocol/sdk/types.js'
 import { getSkillToolCommands, getMcpSkillCommands } from '../commands.js'
-import type { Command } from '../types/command.js'
 import uniqBy from 'lodash-es/uniqBy.js'
 import { getProjectRoot } from '../bootstrap/state.js'
 import { formatCommandsWithinBudget } from '../tools/SkillTool/prompt.js'
 import { getContextWindowForModel } from './context.js'
+import { rankCapabilities, rankCapabilityNames } from './capabilityDiscovery.js'
 import type { DiscoverySignal } from '../services/skillSearch/signals.js'
 // Conditional require for DCE. All skill-search string literals that would
 // otherwise leak into external builds live inside these modules. The only
@@ -821,6 +821,7 @@ export async function getAttachments(
   // Thread-safe attachments available in sub-agents
   // NOTE: These must be created AFTER userInputAttachments completes to ensure
   // nestedMemoryAttachmentTriggers is populated before getNestedMemoryAttachments runs
+  const capabilityDiscoveryText = buildCapabilityDiscoveryText(input, messages)
   const allThreadAttachments = [
     // queuedCommands is already agent-scoped by the drain gate in query.ts —
     // main thread gets agentId===undefined, subagents get their own agentId.
@@ -845,6 +846,7 @@ export async function getAttachments(
               : 'attachments_subagent',
             querySource,
           },
+          capabilityDiscoveryText,
         ),
       ),
     ),
@@ -872,7 +874,9 @@ export async function getAttachments(
     maybe('nested_memory', () => getNestedMemoryAttachments(context)),
     // relevant_memories moved to async prefetch (startRelevantMemoryPrefetch)
     maybe('dynamic_skill', () => getDynamicSkillAttachments(context)),
-    maybe('skill_listing', () => getSkillListingAttachments(context)),
+    maybe('skill_listing', () =>
+      getSkillListingAttachments(context, input, messages),
+    ),
     // Inter-turn skill discovery now runs via startSkillDiscoveryPrefetch
     // (query.ts, concurrent with the main turn). The blocking call that
     // previously lived here was the assistant_turn signal — 97% of those
@@ -1457,6 +1461,7 @@ export function getDeferredToolsDeltaAttachment(
   model: string,
   messages: Message[] | undefined,
   scanContext?: DeferredToolsDeltaScanContext,
+  discoveryText?: string | null,
 ): Attachment[] {
   if (!isDeferredToolsDeltaEnabled()) return []
   // These three checks mirror the sync parts of isToolSearchEnabled —
@@ -1471,7 +1476,25 @@ export function getDeferredToolsDeltaAttachment(
   if (!isToolSearchToolAvailable(tools)) return []
   const delta = getDeferredToolsDelta(tools, messages ?? [], scanContext)
   if (!delta) return []
-  return [{ type: 'deferred_tools_delta', ...delta }]
+  const rankedNames =
+    discoveryText?.trim()
+      ? rankCapabilityNames(delta.addedNames, discoveryText, 12)
+      : delta.addedNames
+  const rankedNameSet = new Set(rankedNames)
+  const rankedLines = delta.addedNames
+    .map((name, index) => ({
+      name,
+      line: delta.addedLines[index] ?? name,
+    }))
+    .filter(entry => rankedNameSet.has(entry.name))
+  return [
+    {
+      type: 'deferred_tools_delta',
+      addedNames: rankedLines.map(entry => entry.name),
+      addedLines: rankedLines.map(entry => entry.line),
+      removedNames: delta.removedNames,
+    },
+  ]
 }
 
 /**
@@ -2603,7 +2626,7 @@ async function getDynamicSkillAttachments(
 // Track which skills have been sent to avoid re-sending. Keyed by agentId
 // (empty string = main thread) so subagents get their own turn-0 listing —
 // without per-agent scoping, the main thread populating this Set would cause
-// every subagent's filterToBundledAndMcp result to dedup to empty.
+// every subagent's ranked capability set to dedup to empty.
 const sentSkillNames = new Map<string, Set<string>>()
 
 // Called when the skill set genuinely changes (plugin reload, skill file
@@ -2635,31 +2658,36 @@ export function suppressNextSkillListing(): void {
 }
 let suppressNext = false
 
-// When skill-search is enabled and the filtered (bundled + MCP) listing exceeds
-// this count, fall back to bundled-only. Protects MCP-heavy users (100+ servers)
-// from truncation while keeping the turn-0 guarantee for typical setups.
-const FILTERED_LISTING_MAX = 30
+function buildCapabilityDiscoveryText(
+  input: string | null,
+  messages: Message[] | undefined,
+): string {
+  const parts: string[] = []
 
-/**
- * Filter skills to bundled (Anthropic-curated) + MCP (user-connected) only.
- * Used when skill-search is enabled to resolve the turn-0 gap for subagents:
- * these sources are small, intent-signaled, and won't hit the truncation budget.
- * User/project/plugin skills (the long tail — 200+) go through discovery instead.
- *
- * Falls back to bundled-only if bundled+mcp exceeds FILTERED_LISTING_MAX.
- */
-export function filterToBundledAndMcp(commands: Command[]): Command[] {
-  const filtered = commands.filter(
-    cmd => cmd.loadedFrom === 'bundled' || cmd.loadedFrom === 'mcp',
-  )
-  if (filtered.length > FILTERED_LISTING_MAX) {
-    return filtered.filter(cmd => cmd.loadedFrom === 'bundled')
+  if (input?.trim()) {
+    parts.push(input.trim())
   }
-  return filtered
+
+  const recentHumanMessages =
+    messages
+      ?.filter(message => isHumanTurn(message) && !isThinkingMessage(message))
+      .slice(-3)
+      .map(message => getUserMessageText(message).trim())
+      .filter(Boolean) ?? []
+
+  for (const recentMessage of recentHumanMessages) {
+    if (!parts.includes(recentMessage)) {
+      parts.push(recentMessage)
+    }
+  }
+
+  return parts.join('\n')
 }
 
 async function getSkillListingAttachments(
   toolUseContext: ToolUseContext,
+  input: string | null,
+  messages: Message[] | undefined,
 ): Promise<Attachment[]> {
   if (process.env.NODE_ENV === 'test') {
     return []
@@ -2682,19 +2710,16 @@ async function getSkillListingAttachments(
       ? uniqBy([...localCommands, ...mcpSkills], 'name')
       : localCommands
 
-  // When skill search is active, filter to bundled + MCP instead of full
-  // suppression. Resolves the turn-0 gap: main thread gets turn-0 discovery
-  // via getTurnZeroSkillDiscovery (blocking), but subagents use the async
-  // subagent_spawn signal (collected post-tools, visible turn 1). Bundled +
-  // MCP are small and intent-signaled; user/project/plugin skills go through
-  // discovery. feature() first for DCE — the property-access string leaks
-  // otherwise even with ?. on null.
-  if (
+  const discoveryText = buildCapabilityDiscoveryText(input, messages)
+  const capabilityLimit =
     feature('EXPERIMENTAL_SKILL_SEARCH') &&
     skillSearchModules?.featureCheck.isSkillSearchEnabled()
-  ) {
-    allCommands = filterToBundledAndMcp(allCommands)
-  }
+      ? 10
+      : 12
+  allCommands = rankCapabilities(allCommands, {
+    queryText: discoveryText,
+    limit: capabilityLimit,
+  })
 
   const agentKey = toolUseContext.agentId ?? ''
   let sent = sentSkillNames.get(agentKey)
@@ -2730,7 +2755,7 @@ async function getSkillListingAttachments(
   }
 
   logForDebugging(
-    `Sending ${newSkills.length} skills via attachment (${isInitial ? 'initial' : 'dynamic'}, ${sent.size} total sent)`,
+    `Sending ${newSkills.length} ranked capabilities via attachment (${isInitial ? 'initial' : 'dynamic'}, ${sent.size} total sent, ${allCommands.length} in pool)`,
   )
 
   // Format within budget using existing logic

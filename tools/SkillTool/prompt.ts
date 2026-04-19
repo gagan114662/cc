@@ -16,6 +16,10 @@ import { logForDebugging } from '../../utils/debug.js'
 import { toError } from '../../utils/errors.js'
 import { truncate } from '../../utils/format.js'
 import { logError } from '../../utils/log.js'
+import {
+  formatWorkflowCommandSummary,
+  isWorkflowCommand,
+} from '../../utils/workflowCommands.js'
 
 // Skill listing gets 1% of the context window (in characters)
 export const SKILL_BUDGET_CONTEXT_PERCENT = 0.01
@@ -41,6 +45,13 @@ export function getCharBudget(contextWindowTokens?: number): number {
 }
 
 function getCommandDescription(cmd: Command): string {
+  if (isWorkflowCommand(cmd)) {
+    return formatWorkflowCommandSummary(cmd, {
+      includeTools: true,
+      includeArguments: true,
+    })
+  }
+
   const desc = cmd.whenToUse
     ? `${cmd.description} - ${cmd.whenToUse}`
     : cmd.description
@@ -187,6 +198,7 @@ How to invoke:
 
 Important:
 - Available skills are listed in system-reminder messages in the conversation
+- Some MCP-delivered commands are workflows: higher-level agent-native playbooks with declared inputs, outputs, and success criteria. Prefer a matching workflow over manual low-level tool orchestration when it fits the user's goal.
 - When a skill matches the user's request, this is a BLOCKING REQUIREMENT: invoke the relevant Skill tool BEFORE generating any other response about the task
 - NEVER mention a skill without actually calling this tool
 - Do not invoke a skill that is already running

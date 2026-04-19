@@ -156,6 +156,10 @@ import { logError } from './utils/log.js'
 import { toError } from './utils/errors.js'
 import { logForDebugging } from './utils/debug.js'
 import {
+  formatWorkflowCommandSummary,
+  isWorkflowCommand,
+} from './utils/workflowCommands.js'
+import {
   getSkillDirCommands,
   clearSkillCaches,
   getDynamicSkills,
@@ -543,10 +547,9 @@ export function clearCommandsCache(): void {
 }
 
 /**
- * Filter AppState.mcp.commands to MCP-provided skills (prompt-type,
- * model-invocable, loaded from MCP). These live outside getCommands() so
- * callers that need MCP skills in their skill index thread them through
- * separately.
+ * Filter AppState.mcp.commands to MCP-provided prompt commands loaded from
+ * resources (skills/workflows). These live outside getCommands() so callers
+ * that need them in their skill index thread them through separately.
  */
 export function getMcpSkillCommands(
   mcpCommands: readonly Command[],
@@ -734,8 +737,8 @@ export function formatDescriptionWithSource(cmd: Command): string {
     return cmd.description
   }
 
-  if (cmd.kind === 'workflow') {
-    return `${cmd.description} (workflow)`
+  if (isWorkflowCommand(cmd)) {
+    return `${formatWorkflowCommandSummary(cmd)} (workflow)`
   }
 
   if (cmd.source === 'plugin') {

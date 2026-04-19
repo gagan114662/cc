@@ -7,6 +7,11 @@ import {
 } from '../../commands.js'
 import type { SuggestionItem } from '../../components/PromptInput/PromptInputFooterSuggestions.js'
 import { getSkillUsageScore } from './skillUsageTracking.js'
+import {
+  formatWorkflowCommandSummary,
+  isWorkflowCommand,
+} from '../workflowCommands.js'
+import { scoreCapabilityForQuery } from '../capabilityDiscovery.js'
 
 // Treat these characters as word separators for command search
 const SEPARATORS = /[:_-]/g
@@ -270,12 +275,17 @@ function createCommandSuggestionItem(
   // Only show the alias if the user typed it
   const aliasText = matchedAlias ? ` (${matchedAlias})` : ''
 
-  const isWorkflow = cmd.type === 'prompt' && cmd.kind === 'workflow'
+  const isWorkflow = isWorkflowCommand(cmd)
   const fullDescription =
-    (isWorkflow ? cmd.description : formatDescriptionWithSource(cmd)) +
-    (cmd.type === 'prompt' && cmd.argNames?.length
-      ? ` (arguments: ${cmd.argNames.join(', ')})`
-      : '')
+    isWorkflow
+      ? formatWorkflowCommandSummary(cmd, {
+          includeTools: true,
+          includeArguments: true,
+        })
+      : formatDescriptionWithSource(cmd) +
+        (cmd.type === 'prompt' && cmd.argNames?.length
+          ? ` (arguments: ${cmd.argNames.join(', ')})`
+          : '')
 
   return {
     id: getCommandId(cmd),
@@ -418,7 +428,12 @@ export function generateCommandSuggestions(
       r.item.command.type === 'prompt'
         ? getSkillUsageScore(getCommandName(r.item.command))
         : 0
-    return { r, name, aliases, usage }
+    const capabilityScore = scoreCapabilityForQuery(
+      r.item.command,
+      query,
+      usage,
+    )
+    return { r, name, aliases, usage, capabilityScore }
   })
 
   const sortedResults = withMeta.sort((a, b) => {
@@ -461,6 +476,13 @@ export function generateCommandSuggestions(
       aPrefixAlias.length !== bPrefixAlias.length
     ) {
       return aPrefixAlias.length - bPrefixAlias.length
+    }
+
+    // Among otherwise similar fuzzy candidates, prefer the capability whose
+    // interface best matches the user's likely intent (workflow/browser/etc.).
+    const capabilityScoreDiff = b.capabilityScore - a.capabilityScore
+    if (Math.abs(capabilityScoreDiff) > 1) {
+      return capabilityScoreDiff
     }
 
     // For similar match types, use Fuse score with usage as tiebreaker
