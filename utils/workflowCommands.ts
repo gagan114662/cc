@@ -4,8 +4,10 @@ import type {
   Command,
   CommandBase,
   PromptCommand,
+  WorkflowCapabilityGrant,
   WorkflowStep,
 } from '../types/command.js'
+import { WORKFLOW_CAPABILITY_GRANTS } from '../types/command.js'
 
 export type WorkflowCommand = CommandBase &
   PromptCommand & {
@@ -82,6 +84,23 @@ export function isWorkflowCommand(
   cmd: Command | CommandBase,
 ): cmd is WorkflowCommand {
   return 'type' in cmd ? cmd.type === 'prompt' && cmd.kind === 'workflow' : false
+}
+
+export function resolveWorkflowCapabilityGrants(
+  cmd: Pick<WorkflowCommand, 'capabilityGrants'>,
+): WorkflowCapabilityGrant[] {
+  if (!cmd.capabilityGrants || cmd.capabilityGrants.length === 0) {
+    return [...WORKFLOW_CAPABILITY_GRANTS]
+  }
+
+  return [...new Set(cmd.capabilityGrants)]
+}
+
+function hasWorkflowCapabilityGrant(
+  cmd: Pick<WorkflowCommand, 'capabilityGrants'>,
+  grant: WorkflowCapabilityGrant,
+): boolean {
+  return resolveWorkflowCapabilityGrants(cmd).includes(grant)
 }
 
 function summarizeList(values: string[], maxItems = 4): string {
@@ -167,6 +186,13 @@ export function formatWorkflowCommandSummary(
     if (handoff) parts.push(handoff)
   }
 
+  const capabilityGrants = cmd.capabilityGrants?.length
+    ? formatLabeledList('Capabilities', resolveWorkflowCapabilityGrants(cmd))
+    : null
+  if (capabilityGrants) {
+    parts.push(capabilityGrants)
+  }
+
   if (includeSteps) {
     const procedure = summarizeWorkflowSteps(cmd.workflowSteps)
     if (procedure) parts.push(procedure)
@@ -195,6 +221,12 @@ export function buildWorkflowExecutionContract(
     formatLabeledList('Artifact kinds', cmd.artifactKinds),
     formatLabeledList('Success criteria', cmd.successCriteria),
     formatLabeledList('Structured handoff', cmd.handoffFields),
+    cmd.capabilityGrants?.length
+      ? formatLabeledList(
+          'Capability grants',
+          resolveWorkflowCapabilityGrants(cmd),
+        )
+      : null,
     formatLabeledList('Arguments', cmd.argNames),
     formatLabeledList('Recommended tools', cmd.allowedTools),
   ].filter((value): value is string => value !== null)
@@ -247,15 +279,44 @@ export function buildWorkflowCodeModePrompt(
     '- `workflow`: readonly workflow metadata plus `runStep(stepIndex)`, `skipStep(stepIndex, reason?)`, `getHandoff()`, `getOutcomes()`, and `hasOutcome(stepIndex)`',
     '- `args`: the raw workflow argument string',
     '- `state`: persistent workflow state with `get(key)`, `set(key, value)`, `delete(key)`, `replace(object)`, and `snapshot()`',
-    '- `browser`: typed browser capability helpers with `status()`, `listWorkflows()`, and `hasWorkflow(name)`',
-    '- `github`: typed GitHub capability helpers with `listWorkflows()`, `hasWorkflow(name)`, and `listRepoCapabilities()`',
-    '- `docs`: typed document capability helpers with `listWorkflows()`, `hasWorkflow(name)`, and `listDocCapabilities()`',
-    '- `cli`: typed CLI capability helpers with `allowedTools()`, `listTools()`, `isAllowed(toolName)`, and `isAvailable(toolName)`',
-    '- `mcp`: typed MCP capability helpers with `listServers()`, `listWorkflows(serverName?)`, `listSkills(serverName?)`, and `hasServer(serverName)`',
-    '- `workspace`: typed workspace/session helpers with `root()`, `sessionId()`, `transcriptProjectDir()`, `transcriptSubdir()`, `statePath()`, and `info()`',
-    '- `discovery`: typed capability discovery helpers with `listFamilies()`, `search(query, limit?)`, and `searchByFamily(family, query?, limit?)`',
     '- Top-level aliases remain available: `await runStep(stepIndex)`, `await skipStep(stepIndex, reason?)`, `getHandoff()`, `getOutcomes()`, and `hasOutcome(stepIndex)`',
   )
+
+  if (hasWorkflowCapabilityGrant(cmd, 'browser')) {
+    lines.push(
+      '- `browser`: typed browser capability helpers with `status()`, `listWorkflows()`, and `hasWorkflow(name)`',
+    )
+  }
+  if (hasWorkflowCapabilityGrant(cmd, 'github')) {
+    lines.push(
+      '- `github`: typed GitHub capability helpers with `listWorkflows()`, `hasWorkflow(name)`, and `listRepoCapabilities()`',
+    )
+  }
+  if (hasWorkflowCapabilityGrant(cmd, 'docs')) {
+    lines.push(
+      '- `docs`: typed document capability helpers with `listWorkflows()`, `hasWorkflow(name)`, and `listDocCapabilities()`',
+    )
+  }
+  if (hasWorkflowCapabilityGrant(cmd, 'cli')) {
+    lines.push(
+      '- `cli`: typed CLI capability helpers with `allowedTools()`, `listTools()`, `isAllowed(toolName)`, and `isAvailable(toolName)`',
+    )
+  }
+  if (hasWorkflowCapabilityGrant(cmd, 'mcp')) {
+    lines.push(
+      '- `mcp`: typed MCP capability helpers with `listServers()`, `listWorkflows(serverName?)`, `listSkills(serverName?)`, and `hasServer(serverName)`',
+    )
+  }
+  if (hasWorkflowCapabilityGrant(cmd, 'workspace')) {
+    lines.push(
+      '- `workspace`: typed workspace/session helpers with `root()`, `sessionId()`, `transcriptProjectDir()`, `transcriptSubdir()`, `statePath()`, and `info()`',
+    )
+  }
+  if (hasWorkflowCapabilityGrant(cmd, 'discovery')) {
+    lines.push(
+      '- `discovery`: typed capability discovery helpers with `listFamilies()`, `search(query, limit?)`, and `searchByFamily(family, query?, limit?)`',
+    )
+  }
 
   lines.push(
     '',
@@ -273,11 +334,46 @@ export function buildWorkflowCodeModePrompt(
   lines.push(
     '',
     'Return ONLY JavaScript for an async function. Example:',
-    'async ({ workflow, state, browser, github, discovery }) => {',
+    `async ({ ${[
+      'workflow',
+      'state',
+      hasWorkflowCapabilityGrant(cmd, 'browser') ? 'browser' : null,
+      hasWorkflowCapabilityGrant(cmd, 'github') ? 'github' : null,
+      hasWorkflowCapabilityGrant(cmd, 'docs') ? 'docs' : null,
+      hasWorkflowCapabilityGrant(cmd, 'cli') ? 'cli' : null,
+      hasWorkflowCapabilityGrant(cmd, 'mcp') ? 'mcp' : null,
+      hasWorkflowCapabilityGrant(cmd, 'workspace') ? 'workspace' : null,
+      hasWorkflowCapabilityGrant(cmd, 'discovery') ? 'discovery' : null,
+    ]
+      .filter(Boolean)
+      .join(', ')} }) => {`,
     '  await workflow.runStep(0)',
-    "  await state.set('browserReady', browser.status().installed)",
-    "  await state.set('repoCapability', github.listRepoCapabilities()[0]?.name ?? null)",
-    "  await state.set('topSuggestion', discovery.search('audit funnel', 1)[0]?.name ?? null)",
+  )
+  if (hasWorkflowCapabilityGrant(cmd, 'browser')) {
+    lines.push("  await state.set('browserReady', browser.status().installed)")
+  } else if (hasWorkflowCapabilityGrant(cmd, 'github')) {
+    lines.push(
+      "  await state.set('repoCapability', github.listRepoCapabilities()[0]?.name ?? null)",
+    )
+  } else if (hasWorkflowCapabilityGrant(cmd, 'docs')) {
+    lines.push(
+      "  await state.set('docCapability', docs.listDocCapabilities()[0]?.name ?? null)",
+    )
+  } else if (hasWorkflowCapabilityGrant(cmd, 'workspace')) {
+    lines.push("  await state.set('sessionId', workspace.sessionId())")
+  } else if (hasWorkflowCapabilityGrant(cmd, 'cli')) {
+    lines.push("  await state.set('availableTools', cli.allowedTools().length)")
+  } else if (hasWorkflowCapabilityGrant(cmd, 'mcp')) {
+    lines.push("  await state.set('serverCount', mcp.listServers().length)")
+  } else {
+    lines.push("  await state.set('stepOneComplete', true)")
+  }
+  if (hasWorkflowCapabilityGrant(cmd, 'discovery')) {
+    lines.push(
+      "  await state.set('topSuggestion', discovery.search('audit funnel', 1)[0]?.name ?? null)",
+    )
+  }
+  lines.push(
     '  if (workflow.getHandoff().priority_segment) {',
     '    await workflow.runStep(1)',
     '  } else {',

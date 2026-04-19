@@ -869,4 +869,144 @@ async ({ workflow, state, github, docs }) => {
       await rm(stateDir, { recursive: true, force: true })
     }
   })
+
+  test('hides ungranted code-mode capability APIs from browser-only workflows', async () => {
+    const calls: Array<{
+      stageKind: 'codegen' | 'step' | 'synthesis'
+      stageIndex: number
+      prompt: string
+    }> = []
+    const command = {
+      ...makeWorkflowCommand(),
+      workflowRuntime: 'code' as const,
+      capabilityGrants: ['browser'] as const,
+    }
+    const stateDir = await mkdtemp(join(tmpdir(), 'cc-code-mode-grants-'))
+    const statePath = join(stateDir, 'code-mode-state.json')
+
+    try {
+      const result = await executeForkedWorkflow({
+        command,
+        commandName: command.name,
+        args: 'browser-only audit',
+        context: makeCodeModeContext(makeGitHubDocsCapabilities()),
+        canUseTool: (() => ({ behavior: 'allow' })) as any,
+        parentMessage: { message: { id: 'parent' } } as any,
+        modifiedGetAppState: (() => ({})) as any,
+        agentDefinition: { agentType: 'general-purpose' } as any,
+        skillContent: '# Refresh the pipeline',
+        codeModeStatePath: statePath,
+        stageRunner: async stage => {
+          calls.push(stage)
+          if (stage.stageKind === 'codegen') {
+            return `\`\`\`js
+async ({ workflow, state, browser, github, docs, discovery }) => {
+  await state.set('hasBrowserApi', Boolean(browser))
+  await state.set('hasGitHubApi', Boolean(github))
+  await state.set('hasDocsApi', Boolean(docs))
+  await state.set('hasDiscoveryApi', Boolean(discovery))
+  await state.set('browserWorkflowCount', browser?.listWorkflows().length ?? 0)
+
+  await workflow.runStep(0)
+  await workflow.skipStep(1, 'Capability grant smoke only')
+  await workflow.skipStep(2, 'Capability grant smoke only')
+}
+\`\`\``
+          }
+
+          if (stage.stageKind === 'synthesis') {
+            return JSON.stringify({
+              summary: 'Validated browser-only capability grants',
+              completionStatus: 'completed',
+              outputs: [
+                {
+                  name: 'Updated pipeline brief',
+                  status: 'produced',
+                  evidence: 'Browser-only code-mode path completed',
+                },
+                {
+                  name: 'Prioritized outreach backlog',
+                  status: 'produced',
+                  evidence: 'Workflow still completed the first step',
+                },
+              ],
+              artifacts: [
+                {
+                  kind: 'pipeline brief',
+                  status: 'produced',
+                  evidence: 'Browser-only smoke artifact',
+                },
+                {
+                  kind: 'outreach backlog',
+                  status: 'produced',
+                  evidence: 'Browser-only smoke backlog',
+                },
+              ],
+              successCriteria: [
+                {
+                  criterion: 'Calls out stale assumptions',
+                  status: 'met',
+                  evidence: 'Capability grant validation completed',
+                },
+                {
+                  criterion: 'Produces the next highest-leverage actions',
+                  status: 'met',
+                  evidence: 'Workflow still produced the first step result',
+                },
+              ],
+              missingInputs: [],
+              unresolvedRisks: [],
+            })
+          }
+
+          return JSON.stringify({
+            summary: 'Gathered evidence for browser-only capability smoke',
+            artifacts: ['Capability evidence'],
+            risks: [],
+            handoff: {
+              stale_assumptions: 'Browser-only smoke',
+              priority_segment: 'browser-only audit',
+            },
+          })
+        },
+      })
+
+      expect(calls[0]?.prompt).toContain(
+        'Capability grants: browser',
+      )
+      expect(calls[0]?.prompt).toContain(
+        '`browser`: typed browser capability helpers',
+      )
+      expect(calls[0]?.prompt).not.toContain(
+        '`github`: typed GitHub capability helpers',
+      )
+      expect(calls[0]?.prompt).not.toContain(
+        '`docs`: typed document capability helpers',
+      )
+      expect(calls[0]?.prompt).not.toContain(
+        '`discovery`: typed capability discovery helpers',
+      )
+      expect(result.data.result).toContain(
+        'Validated browser-only capability grants',
+      )
+
+      const persisted = JSON.parse(await readFile(statePath, 'utf-8')) as Record<
+        string,
+        any
+      >
+      expect(persisted.workflow.capabilityGrants).toEqual(['browser'])
+      expect(persisted.userState.hasBrowserApi).toBe(true)
+      expect(persisted.userState.hasGitHubApi).toBe(false)
+      expect(persisted.userState.hasDocsApi).toBe(false)
+      expect(persisted.userState.hasDiscoveryApi).toBe(false)
+      expect(persisted.userState.browserWorkflowCount).toBeGreaterThan(0)
+      expect(persisted.capabilities.github.workflows).toHaveLength(0)
+      expect(persisted.capabilities.github.repoCapabilities).toHaveLength(0)
+      expect(persisted.capabilities.docs.workflows).toHaveLength(0)
+      expect(persisted.capabilities.docs.docCapabilities).toHaveLength(0)
+      expect(persisted.capabilities.browser.workflows.length).toBeGreaterThan(0)
+    } finally {
+      await rm(stateDir, { recursive: true, force: true })
+    }
+  })
 })
