@@ -1,5 +1,4 @@
 import { randomUUID } from 'crypto'
-import { Script, createContext } from 'node:vm'
 import type {
   SkillToolProgress,
   ToolCallProgress,
@@ -32,6 +31,7 @@ import { createAgentId } from '../../utils/uuid.js'
 import { clearInvokedSkillsForAgent } from '../../bootstrap/state.js'
 import type { AgentDefinition } from '../AgentTool/loadAgentsDir.js'
 import { runAgent } from '../AgentTool/runAgent.js'
+import { CodeModeExecutor, type CodeModeStateStore } from './codeModeExecutor.js'
 
 type ForkedWorkflowOutput = {
   success: true
@@ -58,27 +58,6 @@ type WorkflowSynthesisResult = {
 
 type WorkflowOutcomeMap = Map<number, WorkflowStepOutcome>
 
-type WorkflowProgramApi = {
-  workflow: Readonly<{
-    name: string
-    steps: ReadonlyArray<
-      Readonly<NonNullable<WorkflowCommand['workflowSteps']>[number]>
-    >
-    inputs: ReadonlyArray<string>
-    outputs: ReadonlyArray<string>
-    artifactKinds: ReadonlyArray<string>
-    successCriteria: ReadonlyArray<string>
-    handoffFields: ReadonlyArray<string>
-  }>
-  args: string
-  state: Record<string, unknown>
-  runStep: (stepIndex: number) => Promise<WorkflowStepOutcome>
-  skipStep: (stepIndex: number, reason?: string) => Promise<WorkflowStepOutcome>
-  getHandoff: () => Record<string, string>
-  getOutcomes: () => WorkflowStepOutcome[]
-  hasOutcome: (stepIndex: number) => boolean
-}
-
 type ExecuteForkedWorkflowArgs = {
   command: WorkflowCommand
   commandName: string
@@ -91,6 +70,7 @@ type ExecuteForkedWorkflowArgs = {
   agentDefinition: AgentDefinition
   skillContent: string
   stageRunner?: WorkflowStageRunner
+  codeModeStatePath?: string
 }
 
 function buildCombinedHandoff(
@@ -316,53 +296,6 @@ async function runWorkflowStepByIndex(args: {
   }
 }
 
-function compileWorkflowProgram(source: string): (api: WorkflowProgramApi) => unknown {
-  let program: unknown
-
-  try {
-    program = new Script(`(${source.trim()})`, {
-      filename: 'workflow-code-mode.js',
-    }).runInContext(createContext({}), { timeout: 1000 })
-  } catch (error) {
-    throw new Error(`Workflow code program could not be compiled: ${summarizeError(error)}`)
-  }
-
-  if (typeof program !== 'function') {
-    throw new Error(
-      'Workflow code mode must return a JavaScript function of the form async (api) => { ... }',
-    )
-  }
-
-  return program as (api: WorkflowProgramApi) => unknown
-}
-
-async function runWorkflowProgram(
-  program: (api: WorkflowProgramApi) => unknown,
-  api: WorkflowProgramApi,
-): Promise<void> {
-  const timeoutMs = 5000
-  let timeout: ReturnType<typeof setTimeout> | undefined
-
-  try {
-    await Promise.race([
-      Promise.resolve()
-        .then(() => program(api))
-        .then(() => undefined),
-      new Promise<never>((_, reject) => {
-        timeout = setTimeout(() => {
-          reject(
-            new Error(`Workflow code program timed out after ${timeoutMs}ms`),
-          )
-        }, timeoutMs)
-      }),
-    ])
-  } finally {
-    if (timeout !== undefined) {
-      clearTimeout(timeout)
-    }
-  }
-}
-
 async function executeCodeModeWorkflow(args: {
   command: WorkflowCommand
   workflowSteps: NonNullable<WorkflowCommand['workflowSteps']>
@@ -370,8 +303,22 @@ async function executeCodeModeWorkflow(args: {
   argsText: string
   runStage: WorkflowStageRunner
   transcriptSubdir: string
-}): Promise<WorkflowStepOutcome[]> {
-  const { command, workflowSteps, skillContent, argsText, runStage, transcriptSubdir } = args
+  context: ToolUseContext
+  codeModeStatePath?: string
+}): Promise<{
+  stepOutcomes: WorkflowStepOutcome[]
+  stateStore: CodeModeStateStore
+}> {
+  const {
+    command,
+    workflowSteps,
+    skillContent,
+    argsText,
+    runStage,
+    transcriptSubdir,
+    context,
+    codeModeStatePath,
+  } = args
 
   const codePrompt = buildWorkflowCodeModePrompt(command, skillContent, argsText)
   const rawProgram = await runStage({
@@ -386,22 +333,14 @@ async function executeCodeModeWorkflow(args: {
     throw new Error('Workflow code mode did not return any JavaScript source')
   }
 
-  const workflowMetadata = Object.freeze({
-    name: command.userFacingName?.() ?? command.name,
-    steps: Object.freeze(workflowSteps.map(step => Object.freeze({ ...step }))),
-    inputs: Object.freeze([...(command.inputs ?? [])]),
-    outputs: Object.freeze([...(command.outputs ?? [])]),
-    artifactKinds: Object.freeze([...(command.artifactKinds ?? [])]),
-    successCriteria: Object.freeze([...(command.successCriteria ?? [])]),
-    handoffFields: Object.freeze([...(command.handoffFields ?? [])]),
-  })
   const outcomeMap: WorkflowOutcomeMap = new Map()
-  const executionState: Record<string, unknown> = {}
-
-  const api: WorkflowProgramApi = {
-    workflow: workflowMetadata,
-    args: argsText,
-    state: executionState,
+  const executor = await CodeModeExecutor.create({
+    command,
+    argsText,
+    transcriptSubdir,
+    context,
+    commands: context.options.commands,
+    statePath: codeModeStatePath,
     runStep: async stepIndex =>
       runWorkflowStepByIndex({
         command,
@@ -438,10 +377,8 @@ async function executeCodeModeWorkflow(args: {
       assertValidWorkflowStepIndex(workflowSteps, stepIndex)
       return outcomeMap.has(stepIndex)
     },
-  }
-
-  const program = compileWorkflowProgram(source)
-  await runWorkflowProgram(program, api)
+  })
+  const { stateStore } = await executor.execute(source)
 
   for (const [stepIndex, step] of workflowSteps.entries()) {
     if (outcomeMap.has(stepIndex)) {
@@ -456,7 +393,13 @@ async function executeCodeModeWorkflow(args: {
     outcomeMap.set(stepIndex, createSkippedWorkflowOutcome(step, summary))
   }
 
-  return materializeWorkflowOutcomes(workflowSteps, outcomeMap)
+  const stepOutcomes = materializeWorkflowOutcomes(workflowSteps, outcomeMap)
+  await stateStore.recordOutcomes(stepOutcomes)
+
+  return {
+    stepOutcomes,
+    stateStore,
+  }
 }
 
 async function runWorkflowSynthesisWithValidation(args: {
@@ -624,6 +567,7 @@ export async function executeForkedWorkflow({
   agentDefinition,
   skillContent,
   stageRunner,
+  codeModeStatePath,
 }: ExecuteForkedWorkflowArgs): Promise<ToolResult<ForkedWorkflowOutput>> {
   const workflowSteps = command.workflowSteps ?? []
   if (workflowSteps.length === 0) {
@@ -644,16 +588,23 @@ export async function executeForkedWorkflow({
       command,
     })
 
+  let codeModeStateStore: CodeModeStateStore | undefined
   const stepOutcomes =
     command.workflowRuntime === 'code'
-      ? await executeCodeModeWorkflow({
-          command,
-          workflowSteps,
-          skillContent,
-          argsText: args,
-          runStage,
-          transcriptSubdir,
-        })
+      ? await (async (): Promise<WorkflowStepOutcome[]> => {
+          const result = await executeCodeModeWorkflow({
+            command,
+            workflowSteps,
+            skillContent,
+            argsText: args,
+            runStage,
+            transcriptSubdir,
+            context,
+            codeModeStatePath,
+          })
+          codeModeStateStore = result.stateStore
+          return result.stepOutcomes
+        })()
       : await (async (): Promise<WorkflowStepOutcome[]> => {
           const outcomeMap: WorkflowOutcomeMap = new Map()
           for (const [stepIndex] of workflowSteps.entries()) {
@@ -673,18 +624,30 @@ export async function executeForkedWorkflow({
         })()
 
   const synthesisAgentId = createAgentId()
-  const { finalState } = await runWorkflowSynthesisWithValidation({
-    command,
-    skillContent,
-    stepOutcomes,
-    argsText: args,
-    runStage: async stageArgs =>
-      runStage({
-        ...stageArgs,
-        agentId: synthesisAgentId,
-      }),
-    transcriptSubdir,
-  })
+  let finalState: WorkflowFinalState
+  try {
+    const synthesisResult = await runWorkflowSynthesisWithValidation({
+      command,
+      skillContent,
+      stepOutcomes,
+      argsText: args,
+      runStage: async stageArgs =>
+        runStage({
+          ...stageArgs,
+          agentId: synthesisAgentId,
+        }),
+      transcriptSubdir,
+    })
+    finalState = synthesisResult.finalState
+    if (codeModeStateStore) {
+      await codeModeStateStore.setFinalState(finalState)
+    }
+  } catch (error) {
+    if (codeModeStateStore) {
+      await codeModeStateStore.setPhase('failed', summarizeError(error))
+    }
+    throw error
+  }
   const finalResult = formatWorkflowFinalResult(finalState)
 
   return {

@@ -1,4 +1,7 @@
 import { describe, expect, test } from 'bun:test'
+import { mkdtemp, readFile, rm } from 'fs/promises'
+import { tmpdir } from 'os'
+import { join } from 'path'
 import type { WorkflowCommand } from 'src/utils/workflowCommands.js'
 import { executeForkedWorkflow } from 'src/tools/SkillTool/workflowExecution.js'
 
@@ -54,6 +57,54 @@ function makeWorkflowCommand(): WorkflowCommand {
       return 'Pipeline Refresh'
     },
   }
+}
+
+function makeCodeModeContext(extraCommands: Array<Record<string, unknown>> = []) {
+  const browserWorkflow = {
+    type: 'prompt',
+    name: 'browser-funnel-audit',
+    description: 'Audit a live browser funnel and recommend fixes',
+    kind: 'workflow',
+    verbs: ['audit funnel'],
+    outputs: ['Funnel audit summary'],
+    artifactKinds: ['funnel audit'],
+    loadedFrom: 'bundled',
+    userFacingName: () => 'Browser Funnel Audit',
+  }
+
+  const mcpWorkflow = {
+    type: 'prompt',
+    name: 'browser_harness:workflow:growth:funnel-refresh',
+    description: 'Refresh the browser-backed funnel workflow',
+    kind: 'workflow',
+    verbs: ['refresh funnel'],
+    outputs: ['Funnel refresh brief'],
+    artifactKinds: ['funnel brief'],
+    loadedFrom: 'mcp',
+    userFacingName: () => 'Funnel Refresh',
+  }
+
+  const mcpSkill = {
+    type: 'prompt',
+    name: 'browser_harness:growth:outbound-audit',
+    description: 'Audit outbound motion',
+    loadedFrom: 'mcp',
+    userFacingName: () => 'Outbound Audit',
+  }
+
+  return {
+    options: {
+      tools: [{ name: 'Read' }, { name: 'WebFetch' }, { name: 'Bash' }],
+      commands: [browserWorkflow, ...extraCommands],
+    },
+    getAppState: () => ({
+      mcp: {
+        commands: [mcpWorkflow, mcpSkill],
+        clients: [{ name: 'browser_harness', type: 'connected' }],
+        resources: { browser_harness: [{ uri: 'workflow://growth/funnel-refresh' }] },
+      },
+    }),
+  } as any
 }
 
 describe('executeForkedWorkflow', () => {
@@ -417,126 +468,204 @@ describe('executeForkedWorkflow', () => {
       workflowRuntime: 'code' as const,
     }
 
-    const result = await executeForkedWorkflow({
-      command,
-      commandName: command.name,
-      args: 'mid-market SaaS',
-      context: { options: { tools: [] } } as any,
-      canUseTool: (() => ({ behavior: 'allow' })) as any,
-      parentMessage: { message: { id: 'parent' } } as any,
-      modifiedGetAppState: (() => ({})) as any,
-      agentDefinition: { agentType: 'general-purpose' } as any,
-      skillContent: '# Refresh the pipeline',
-      stageRunner: async stage => {
-        calls.push(stage)
-        if (stage.stageKind === 'codegen') {
-          return `\`\`\`js
-async ({ runStep, getHandoff, skipStep, state }) => {
-  const evidence = await runStep(0)
-  state.firstSummary = evidence.state.summary
+    const stateDir = await mkdtemp(join(tmpdir(), 'cc-code-mode-'))
+    const statePath = join(stateDir, 'code-mode-state.json')
 
-  if (getHandoff().priority_segment) {
-    await runStep(1)
+    try {
+      const result = await executeForkedWorkflow({
+        command,
+        commandName: command.name,
+        args: 'mid-market SaaS',
+        context: makeCodeModeContext(),
+        canUseTool: (() => ({ behavior: 'allow' })) as any,
+        parentMessage: { message: { id: 'parent' } } as any,
+        modifiedGetAppState: (() => ({})) as any,
+        agentDefinition: { agentType: 'general-purpose' } as any,
+        skillContent: '# Refresh the pipeline',
+        codeModeStatePath: statePath,
+        stageRunner: async stage => {
+          calls.push(stage)
+          if (stage.stageKind === 'codegen') {
+            return `\`\`\`js
+async ({ workflow, state, browser, cli, mcp }) => {
+  const browserStatus = browser.status()
+  await state.set('browserInstalled', browserStatus.installed)
+  await state.set('toolNames', cli.listTools().map(tool => tool.name).join(','))
+  await state.set('mcpWorkflowCount', mcp.listWorkflows().length)
+  await state.set('browserWorkflowAvailable', browser.hasWorkflow('Browser Funnel Audit'))
+  await state.set('mcpServerSeen', mcp.hasServer('browser_harness'))
+
+  await workflow.runStep(0)
+
+  if (workflow.getHandoff().priority_segment) {
+    await workflow.runStep(1)
   }
 
-  if (getHandoff().publish_channel) {
-    await runStep(2)
-  } else {
-    await skipStep(2, 'Publish channel was not established')
-  }
+  await workflow.skipStep(2, 'Publish channel was not established')
 }
 \`\`\``
-        }
+          }
 
-        if (stage.stageKind === 'synthesis') {
-          return JSON.stringify({
-            summary: 'Code mode refreshed the pipeline',
-            completionStatus: 'completed',
-            outputs: [
-              {
-                name: 'Updated pipeline brief',
-                status: 'produced',
-                evidence: 'Derived from code-mode evidence and prioritization',
-              },
-              {
-                name: 'Prioritized outreach backlog',
-                status: 'produced',
-                evidence: 'Ranked for mid-market SaaS',
-              },
-            ],
-            artifacts: [
-              {
-                kind: 'pipeline brief',
-                status: 'produced',
-                evidence: 'Pipeline brief ready',
-              },
-              {
-                kind: 'outreach backlog',
-                status: 'produced',
-                evidence: 'Backlog ready',
-              },
-            ],
-            successCriteria: [
-              {
-                criterion: 'Calls out stale assumptions',
-                status: 'met',
-                evidence: 'Homepage ICP is stale',
-              },
-              {
-                criterion: 'Produces the next highest-leverage actions',
-                status: 'met',
-                evidence: 'Priority segment selected and backlog rebuilt',
-              },
-            ],
-            missingInputs: [],
-            unresolvedRisks: ['Publish channel still needs to be chosen'],
-          })
-        }
+          if (stage.stageKind === 'synthesis') {
+            return JSON.stringify({
+              summary: 'Code mode refreshed the pipeline',
+              completionStatus: 'completed',
+              outputs: [
+                {
+                  name: 'Updated pipeline brief',
+                  status: 'produced',
+                  evidence: 'Derived from code-mode evidence and prioritization',
+                },
+                {
+                  name: 'Prioritized outreach backlog',
+                  status: 'produced',
+                  evidence: 'Ranked for mid-market SaaS',
+                },
+              ],
+              artifacts: [
+                {
+                  kind: 'pipeline brief',
+                  status: 'produced',
+                  evidence: 'Pipeline brief ready',
+                },
+                {
+                  kind: 'outreach backlog',
+                  status: 'produced',
+                  evidence: 'Backlog ready',
+                },
+              ],
+              successCriteria: [
+                {
+                  criterion: 'Calls out stale assumptions',
+                  status: 'met',
+                  evidence: 'Homepage ICP is stale',
+                },
+                {
+                  criterion: 'Produces the next highest-leverage actions',
+                  status: 'met',
+                  evidence: 'Priority segment selected and backlog rebuilt',
+                },
+              ],
+              missingInputs: [],
+              unresolvedRisks: ['Publish channel still needs to be chosen'],
+            })
+          }
 
-        if (stage.stageIndex === 0) {
-          return JSON.stringify({
-            summary: 'Gathered live evidence',
-            artifacts: ['Evidence brief'],
-            risks: ['Homepage messaging may be stale'],
-            handoff: {
-              stale_assumptions: 'Homepage ICP is stale',
-              priority_segment: 'mid-market SaaS',
-            },
-          })
-        }
+          if (stage.stageIndex === 0) {
+            return JSON.stringify({
+              summary: 'Gathered live evidence',
+              artifacts: ['Evidence brief'],
+              risks: ['Homepage messaging may be stale'],
+              handoff: {
+                stale_assumptions: 'Homepage ICP is stale',
+                priority_segment: 'mid-market SaaS',
+              },
+            })
+          }
 
-        if (stage.stageIndex === 1) {
-          return JSON.stringify({
-            summary: 'Prioritized the backlog',
-            artifacts: ['Prioritized backlog'],
-            risks: [],
-            handoff: {
-              priority_segment: 'mid-market SaaS',
-            },
-          })
-        }
+          if (stage.stageIndex === 1) {
+            return JSON.stringify({
+              summary: 'Prioritized the backlog',
+              artifacts: ['Prioritized backlog'],
+              risks: [],
+              handoff: {
+                priority_segment: 'mid-market SaaS',
+              },
+            })
+          }
 
-        throw new Error(`Unexpected code-mode stage ${stage.stageKind}:${stage.stageIndex}`)
-      },
-    })
+          throw new Error(`Unexpected code-mode stage ${stage.stageKind}:${stage.stageIndex}`)
+        },
+      })
 
-    expect(calls.map(call => call.stageKind)).toEqual([
-      'codegen',
-      'step',
-      'step',
-      'synthesis',
-    ])
-    expect(calls[0]?.prompt).toContain('Return ONLY JavaScript')
-    expect(calls[0]?.prompt).toContain('Use code to decide sequencing, branching, looping, and state instead of explaining the workflow in prose')
-    expect(calls[0]?.prompt).toContain('await runStep(stepIndex)')
-    expect(calls[1]?.prompt).toContain('Title: Gather evidence')
-    expect(calls[2]?.prompt).toContain('Title: Prioritize actions')
-    expect(calls[3]?.prompt).toContain('3. Draft publish plan')
-    expect(calls[3]?.prompt).toContain('Status: skipped')
-    expect(calls[3]?.prompt).toContain(
-      'Summary: Skipped: Publish channel was not established',
-    )
-    expect(result.data.result).toContain('Code mode refreshed the pipeline')
-    expect(result.data.result).toContain('Open risks: Publish channel still needs to be chosen')
+      expect(calls.map(call => call.stageKind)).toEqual([
+        'codegen',
+        'step',
+        'step',
+        'synthesis',
+      ])
+      expect(calls[0]?.prompt).toContain('Return ONLY JavaScript')
+      expect(calls[0]?.prompt).toContain('Use code to decide sequencing, branching, looping, and state instead of explaining the workflow in prose')
+      expect(calls[0]?.prompt).toContain('state`: persistent workflow state with `get(key)`, `set(key, value)`')
+      expect(calls[0]?.prompt).toContain('browser`: typed browser capability helpers')
+      expect(calls[0]?.prompt).toContain('cli`: typed CLI capability helpers')
+      expect(calls[0]?.prompt).toContain('mcp`: typed MCP capability helpers')
+      expect(calls[1]?.prompt).toContain('Title: Gather evidence')
+      expect(calls[2]?.prompt).toContain('Title: Prioritize actions')
+      expect(calls[3]?.prompt).toContain('3. Draft publish plan')
+      expect(calls[3]?.prompt).toContain('Status: skipped')
+      expect(calls[3]?.prompt).toContain(
+        'Summary: Skipped: Publish channel was not established',
+      )
+      expect(result.data.result).toContain('Code mode refreshed the pipeline')
+      expect(result.data.result).toContain('Open risks: Publish channel still needs to be chosen')
+
+      const persisted = JSON.parse(await readFile(statePath, 'utf-8')) as Record<
+        string,
+        any
+      >
+      expect(persisted.phase).toBe('completed')
+      expect(persisted.programSource).toContain('browser.status()')
+      expect(typeof persisted.userState.browserInstalled).toBe('boolean')
+      expect(persisted.userState.toolNames).toBe('Read,WebFetch,Bash')
+      expect(persisted.userState.mcpWorkflowCount).toBe(1)
+      expect(persisted.userState.browserWorkflowAvailable).toBe(true)
+      expect(persisted.userState.mcpServerSeen).toBe(true)
+      expect(persisted.capabilities.cli.allowedTools).toEqual([
+        'Read',
+        'WebFetch',
+      ])
+      expect(persisted.capabilities.mcp.servers[0]).toMatchObject({
+        name: 'browser_harness',
+        connected: true,
+        workflowCount: 1,
+        skillCount: 1,
+      })
+      expect(persisted.stepOutcomes).toHaveLength(3)
+      expect(persisted.finalState.summary).toBe('Code mode refreshed the pipeline')
+    } finally {
+      await rm(stateDir, { recursive: true, force: true })
+    }
+  })
+
+  test('locks code-mode execution away from Node globals and persists the failure', async () => {
+    const command = {
+      ...makeWorkflowCommand(),
+      workflowRuntime: 'code' as const,
+    }
+    const stateDir = await mkdtemp(join(tmpdir(), 'cc-code-mode-fail-'))
+    const statePath = join(stateDir, 'code-mode-state.json')
+
+    try {
+      await expect(
+        executeForkedWorkflow({
+          command,
+          commandName: command.name,
+          args: 'mid-market SaaS',
+          context: makeCodeModeContext(),
+          canUseTool: (() => ({ behavior: 'allow' })) as any,
+          parentMessage: { message: { id: 'parent' } } as any,
+          modifiedGetAppState: (() => ({})) as any,
+          agentDefinition: { agentType: 'general-purpose' } as any,
+          skillContent: '# Refresh the pipeline',
+          codeModeStatePath: statePath,
+          stageRunner: async stage => {
+            if (stage.stageKind === 'codegen') {
+              return 'async () => process.cwd()'
+            }
+            throw new Error('synthesis should not run when code mode fails')
+          },
+        }),
+      ).rejects.toThrow(/process is not defined/)
+
+      const persisted = JSON.parse(await readFile(statePath, 'utf-8')) as Record<
+        string,
+        any
+      >
+      expect(persisted.phase).toBe('failed')
+      expect(String(persisted.error)).toContain('process is not defined')
+    } finally {
+      await rm(stateDir, { recursive: true, force: true })
+    }
   })
 })
