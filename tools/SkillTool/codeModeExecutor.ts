@@ -6,7 +6,11 @@ import type { Command } from '../../commands.js'
 import type { ToolUseContext } from '../../Tool.js'
 import { commandBelongsToServer } from '../../services/mcp/utils.js'
 import { getBrowserHarnessStatus, type BrowserHarnessStatus } from '../../utils/browserHarness.js'
-import { getCapabilityFamily } from '../../utils/capabilityDiscovery.js'
+import {
+  getCapabilityFamily,
+  rankCapabilities,
+  type CapabilityFamily,
+} from '../../utils/capabilityDiscovery.js'
 import { errorMessage } from '../../utils/errors.js'
 import { getProjectDir } from '../../utils/sessionStorage.js'
 import type {
@@ -22,6 +26,9 @@ type CapabilityDescriptor = {
   verbs: string[]
   outputs: string[]
   artifactKinds: string[]
+  family: CapabilityFamily
+  source: string | undefined
+  kind: 'workflow' | 'capability'
 }
 
 type CliCapabilityDescriptor = {
@@ -39,6 +46,17 @@ type McpServerDescriptor = {
 }
 
 type CodeModeCapabilitySnapshot = {
+  workspace: {
+    root: string
+    transcriptProjectDir: string
+    sessionId: string
+    transcriptSubdir: string
+    statePath: string
+  }
+  discovery: {
+    capabilityCount: number
+    families: CapabilityFamily[]
+  }
   browser: {
     status: BrowserHarnessStatus
     workflows: CapabilityDescriptor[]
@@ -120,6 +138,25 @@ type CodeModeBrowserApi = {
   hasWorkflow(name: string): boolean
 }
 
+type CodeModeWorkspaceApi = {
+  root(): string
+  sessionId(): string
+  transcriptProjectDir(): string
+  transcriptSubdir(): string
+  statePath(): string
+  info(): CodeModeCapabilitySnapshot['workspace']
+}
+
+type CodeModeDiscoveryApi = {
+  listFamilies(): CapabilityFamily[]
+  search(query: string, limit?: number): CapabilityDescriptor[]
+  searchByFamily(
+    family: CapabilityFamily,
+    query?: string,
+    limit?: number,
+  ): CapabilityDescriptor[]
+}
+
 type CodeModeMcpApi = {
   listServers(): McpServerDescriptor[]
   listWorkflows(serverName?: string): CapabilityDescriptor[]
@@ -134,6 +171,8 @@ type CodeModeProgramApi = {
   browser: CodeModeBrowserApi
   cli: CodeModeCliApi
   mcp: CodeModeMcpApi
+  workspace: CodeModeWorkspaceApi
+  discovery: CodeModeDiscoveryApi
   runStep(stepIndex: number): Promise<WorkflowStepOutcome>
   skipStep(stepIndex: number, reason?: string): Promise<WorkflowStepOutcome>
   getHandoff(): Record<string, string>
@@ -179,7 +218,37 @@ function summarizeCommand(command: Command): CapabilityDescriptor {
     verbs: [...(command.verbs ?? [])],
     outputs: [...(command.outputs ?? [])],
     artifactKinds: [...(command.artifactKinds ?? [])],
+    family: getCapabilityFamily(command),
+    source: command.loadedFrom ?? ('source' in command ? command.source : undefined),
+    kind: command.kind === 'workflow' ? 'workflow' : 'capability',
   }
+}
+
+const CAPABILITY_FAMILIES: CapabilityFamily[] = [
+  'workflow',
+  'browser',
+  'integration',
+  'pack',
+  'builtin',
+  'general',
+]
+
+function clampDiscoveryLimit(limit?: number): number {
+  if (typeof limit !== 'number' || !Number.isFinite(limit)) {
+    return 5
+  }
+  return Math.min(25, Math.max(1, Math.trunc(limit)))
+}
+
+function buildAllCommands(context: ToolUseContext, commands: Command[]): Command[] {
+  const commandMap = new Map<string, Command>()
+  for (const item of commands) {
+    commandMap.set(item.name, item)
+  }
+  for (const mcpCommand of context.getAppState().mcp.commands) {
+    commandMap.set(mcpCommand.name, mcpCommand)
+  }
+  return [...commandMap.values()]
 }
 
 function looksBrowserBackedCapability(command: Command): boolean {
@@ -204,17 +273,13 @@ function looksBrowserBackedCapability(command: Command): boolean {
 }
 
 function buildCapabilitySnapshot(
+  allCommands: Command[],
   command: WorkflowCommand,
   context: ToolUseContext,
-  commands: Command[],
   browserStatus: BrowserHarnessStatus,
+  statePath: string,
+  transcriptSubdir: string,
 ): CodeModeCapabilitySnapshot {
-  const commandMap = new Map(commands.map(item => [item.name, item]))
-  for (const mcpCommand of context.getAppState().mcp.commands) {
-    commandMap.set(mcpCommand.name, mcpCommand)
-  }
-  const allCommands = [...commandMap.values()]
-
   const browserWorkflows = allCommands.filter(
     item => item.type === 'prompt' && looksBrowserBackedCapability(item),
   )
@@ -244,6 +309,18 @@ function buildCapabilitySnapshot(
   })
 
   return {
+    workspace: {
+      root: getOriginalCwd(),
+      transcriptProjectDir:
+        getSessionProjectDir() ?? getProjectDir(getOriginalCwd()),
+      sessionId: getSessionId(),
+      transcriptSubdir,
+      statePath,
+    },
+    discovery: {
+      capabilityCount: allCommands.filter(item => item.type === 'prompt').length,
+      families: [...CAPABILITY_FAMILIES],
+    },
     browser: {
       status: browserStatus,
       workflows: browserWorkflows.map(summarizeCommand),
@@ -478,27 +555,35 @@ async function runProgramInSandbox(
 export class CodeModeExecutor {
   private constructor(
     private readonly args: CodeModeExecutorArgs,
+    private readonly allCommands: Command[],
     private readonly capabilitySnapshot: CodeModeCapabilitySnapshot,
     readonly stateStore: CodeModeStateStore,
   ) {}
 
   static async create(args: CodeModeExecutorArgs): Promise<CodeModeExecutor> {
+    const allCommands = buildAllCommands(args.context, [
+      args.command,
+      ...args.commands,
+    ])
     const browserStatus = await getBrowserHarnessStatus()
+    const statePath = getCodeModeStatePath(args.transcriptSubdir, args.statePath)
     const capabilitySnapshot = buildCapabilitySnapshot(
+      allCommands,
       args.command,
       args.context,
-      args.commands,
       browserStatus,
+      statePath,
+      args.transcriptSubdir,
     )
     const stateStore = await CodeModeStateStore.create({
-      path: getCodeModeStatePath(args.transcriptSubdir, args.statePath),
+      path: statePath,
       command: args.command,
       argsText: args.argsText,
       transcriptSubdir: args.transcriptSubdir,
       capabilities: capabilitySnapshot,
     })
 
-    return new CodeModeExecutor(args, capabilitySnapshot, stateStore)
+    return new CodeModeExecutor(args, allCommands, capabilitySnapshot, stateStore)
   }
 
   async execute(programSource: string): Promise<CodeModeExecutionResult> {
@@ -563,6 +648,44 @@ export class CodeModeExecutor {
         ),
     })
 
+    const workspaceApi: CodeModeWorkspaceApi = Object.freeze({
+      root: () => this.capabilitySnapshot.workspace.root,
+      sessionId: () => this.capabilitySnapshot.workspace.sessionId,
+      transcriptProjectDir: () =>
+        this.capabilitySnapshot.workspace.transcriptProjectDir,
+      transcriptSubdir: () => this.capabilitySnapshot.workspace.transcriptSubdir,
+      statePath: () => this.capabilitySnapshot.workspace.statePath,
+      info: () => ({ ...this.capabilitySnapshot.workspace }),
+    })
+
+    const promptCapabilities = this.allCommands.filter(
+      (item): item is Extract<Command, { type: 'prompt' }> => item.type === 'prompt',
+    )
+
+    const discoveryApi: CodeModeDiscoveryApi = Object.freeze({
+      listFamilies: () => [...this.capabilitySnapshot.discovery.families],
+      search: (query, limit) =>
+        rankCapabilities(promptCapabilities, {
+          queryText: query,
+        })
+          .slice(0, clampDiscoveryLimit(limit))
+          .map(summarizeCommand),
+      searchByFamily: (family, query, limit) => {
+        const filtered = promptCapabilities.filter(
+          capability => getCapabilityFamily(capability) === family,
+        )
+        const limited = clampDiscoveryLimit(limit)
+        if (!query?.trim()) {
+          return filtered.slice(0, limited).map(summarizeCommand)
+        }
+        return rankCapabilities(filtered, {
+          queryText: query,
+        })
+          .slice(0, limited)
+          .map(summarizeCommand)
+      },
+    })
+
     const mcpApi: CodeModeMcpApi = Object.freeze({
       listServers: () =>
         this.capabilitySnapshot.mcp.servers.map(server => ({ ...server })),
@@ -601,6 +724,8 @@ export class CodeModeExecutor {
       browser: browserApi,
       cli: cliApi,
       mcp: mcpApi,
+      workspace: workspaceApi,
+      discovery: discoveryApi,
       runStep: workflowApi.runStep,
       skipStep: workflowApi.skipStep,
       getHandoff: workflowApi.getHandoff,

@@ -487,13 +487,21 @@ describe('executeForkedWorkflow', () => {
           calls.push(stage)
           if (stage.stageKind === 'codegen') {
             return `\`\`\`js
-async ({ workflow, state, browser, cli, mcp }) => {
+async ({ workflow, state, browser, cli, mcp, workspace, discovery }) => {
   const browserStatus = browser.status()
+  const workspaceInfo = workspace.info()
+  const browserMatches = discovery.searchByFamily('workflow', 'audit the live signup funnel and capture friction', 2)
   await state.set('browserInstalled', browserStatus.installed)
   await state.set('toolNames', cli.listTools().map(tool => tool.name).join(','))
   await state.set('mcpWorkflowCount', mcp.listWorkflows().length)
   await state.set('browserWorkflowAvailable', browser.hasWorkflow('Browser Funnel Audit'))
   await state.set('mcpServerSeen', mcp.hasServer('browser_harness'))
+  await state.set('workspaceStatePath', workspace.statePath())
+  await state.set('workspaceTranscriptSubdir', workspace.transcriptSubdir())
+  await state.set('workspaceRoot', workspace.root())
+  await state.set('workspaceInfoSessionId', workspaceInfo.sessionId)
+  await state.set('topDiscovery', browserMatches[0]?.name ?? null)
+  await state.set('discoveryFamilies', discovery.listFamilies().join(','))
 
   await workflow.runStep(0)
 
@@ -590,6 +598,8 @@ async ({ workflow, state, browser, cli, mcp }) => {
       expect(calls[0]?.prompt).toContain('browser`: typed browser capability helpers')
       expect(calls[0]?.prompt).toContain('cli`: typed CLI capability helpers')
       expect(calls[0]?.prompt).toContain('mcp`: typed MCP capability helpers')
+      expect(calls[0]?.prompt).toContain('workspace`: typed workspace/session helpers')
+      expect(calls[0]?.prompt).toContain('discovery`: typed capability discovery helpers')
       expect(calls[1]?.prompt).toContain('Title: Gather evidence')
       expect(calls[2]?.prompt).toContain('Title: Prioritize actions')
       expect(calls[3]?.prompt).toContain('3. Draft publish plan')
@@ -608,17 +618,31 @@ async ({ workflow, state, browser, cli, mcp }) => {
       expect(persisted.programSource).toContain('browser.status()')
       expect(typeof persisted.userState.browserInstalled).toBe('boolean')
       expect(persisted.userState.toolNames).toBe('Read,WebFetch,Bash')
-      expect(persisted.userState.mcpWorkflowCount).toBe(1)
+      expect(persisted.userState.mcpWorkflowCount).toBe(2)
       expect(persisted.userState.browserWorkflowAvailable).toBe(true)
       expect(persisted.userState.mcpServerSeen).toBe(true)
+      expect(persisted.userState.workspaceStatePath).toBe(statePath)
+      expect(persisted.userState.workspaceTranscriptSubdir).toBe(
+        persisted.capabilities.workspace.transcriptSubdir,
+      )
+      expect(typeof persisted.userState.workspaceRoot).toBe('string')
+      expect(persisted.userState.workspaceInfoSessionId).toBe(
+        persisted.capabilities.workspace.sessionId,
+      )
+      expect(persisted.userState.topDiscovery).toBe('browser-funnel-audit')
+      expect(String(persisted.userState.discoveryFamilies)).toContain('browser')
+      expect(persisted.capabilities.discovery).toMatchObject({
+        capabilityCount: 4,
+      })
       expect(persisted.capabilities.cli.allowedTools).toEqual([
         'Read',
         'WebFetch',
       ])
+      expect(persisted.capabilities.workspace.statePath).toBe(statePath)
       expect(persisted.capabilities.mcp.servers[0]).toMatchObject({
         name: 'browser_harness',
         connected: true,
-        workflowCount: 1,
+        workflowCount: 2,
         skillCount: 1,
       })
       expect(persisted.stepOutcomes).toHaveLength(3)

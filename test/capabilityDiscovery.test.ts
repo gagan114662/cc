@@ -125,6 +125,80 @@ describe('capability discovery', () => {
     expect(ranked[0]?.name).toBe('browser-funnel-audit')
   })
 
+  test('prefers competitive teardown workflows for positioning and competitor analysis', () => {
+    const browserHarness = makePromptCommand({
+      name: 'browser-harness',
+      description: 'General browser executor',
+      whenToUse: 'Use for screenshots and web actions',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+    })
+    const competitiveTeardown = makePromptCommand({
+      name: 'browser-competitive-teardown',
+      description:
+        'Compare a target site against live competitors and prioritize differentiation moves',
+      whenToUse:
+        'Use when the user needs a browser-backed positioning or competitive teardown',
+      verbs: [
+        'compare competitors',
+        'map positioning gaps',
+        'prioritize differentiation',
+      ],
+      outputs: ['Competitive teardown', 'Differentiation backlog'],
+      artifactKinds: ['competitive teardown', 'differentiation backlog'],
+      kind: 'workflow',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+      workflowSteps: [
+        { title: 'Map target positioning' },
+        { title: 'Compare live competitors' },
+        { title: 'Prioritize differentiation moves' },
+      ],
+    })
+
+    const ranked = rankCapabilities([browserHarness, competitiveTeardown], {
+      queryText:
+        'Compare our homepage to competitors and tell me the biggest messaging and proof gaps',
+    })
+
+    expect(ranked[0]?.name).toBe('browser-competitive-teardown')
+  })
+
+  test('prefers support audit workflows for FAQ and customer path work', () => {
+    const browserHarness = makePromptCommand({
+      name: 'browser-harness',
+      description: 'General browser executor',
+      whenToUse: 'Use for screenshots and web actions',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+    })
+    const supportAudit = makePromptCommand({
+      name: 'browser-support-faq-audit',
+      description:
+        'Audit the live support and FAQ paths and prioritize the next fixes',
+      whenToUse:
+        'Use when the user needs a browser-backed support, FAQ, or help-center audit',
+      verbs: ['audit support path', 'map faq gaps', 'prioritize support fixes'],
+      outputs: ['Support audit summary', 'FAQ/support backlog'],
+      artifactKinds: ['support audit', 'faq backlog'],
+      kind: 'workflow',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+      workflowSteps: [
+        { title: 'Map support entry points' },
+        { title: 'Test top customer task' },
+        { title: 'Prioritize FAQ and support fixes' },
+      ],
+    })
+
+    const ranked = rankCapabilities([browserHarness, supportAudit], {
+      queryText:
+        'Audit the FAQ and support flow for the top customer issue and tell me what is missing',
+    })
+
+    expect(ranked[0]?.name).toBe('browser-support-faq-audit')
+  })
+
   test('ranks raw deferred capability names with the same intent model', () => {
     const ranked = rankCapabilityNames(
       [
