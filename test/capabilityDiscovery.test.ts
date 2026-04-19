@@ -212,4 +212,109 @@ describe('capability discovery', () => {
 
     expect(ranked[0]).toBe('mcp__claude-in-chrome__tabs_context_mcp')
   })
+
+  test('prefers pipeline refresh workflows for growth planning work', () => {
+    const browserHarness = makePromptCommand({
+      name: 'browser-harness',
+      description: 'General browser executor',
+      whenToUse: 'Use for screenshots and web actions',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+    })
+    const pipelineRefresh = makePromptCommand({
+      name: 'pipeline-refresh',
+      description:
+        'Refresh the current growth pipeline and turn the latest context into a prioritized outreach backlog',
+      whenToUse:
+        'Use when the pipeline needs to be refreshed after messaging, ICP, or market changes',
+      verbs: ['refresh pipeline', 'prioritize outreach', 'update growth plan'],
+      outputs: ['Pipeline refresh brief', 'Prioritized outreach backlog'],
+      artifactKinds: ['pipeline brief', 'outreach backlog'],
+      kind: 'workflow',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+      workflowSteps: [
+        { title: 'Gather current pipeline context' },
+        { title: 'Identify stale assumptions' },
+        { title: 'Produce the refreshed backlog' },
+      ],
+    })
+
+    const ranked = rankCapabilities([browserHarness, pipelineRefresh], {
+      queryText:
+        'Refresh the sales pipeline and tell me the next outreach backlog to prioritize',
+    })
+
+    expect(ranked[0]?.name).toBe('pipeline-refresh')
+  })
+
+  test('prefers inbox triage workflows for inbound response work', () => {
+    const browserHarness = makePromptCommand({
+      name: 'browser-harness',
+      description: 'General browser executor',
+      whenToUse: 'Use for screenshots and web actions',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+    })
+    const inboxTriage = makePromptCommand({
+      name: 'inbox-triage',
+      description:
+        'Triage inbound work into a prioritized response queue with explicit urgency and routing',
+      whenToUse:
+        'Use when the inbox or inbound workload needs routing and prioritization',
+      verbs: ['triage inbox', 'prioritize responses', 'route follow-up'],
+      outputs: ['Inbox triage brief', 'Prioritized response queue'],
+      artifactKinds: ['triage brief', 'response queue'],
+      kind: 'workflow',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+      workflowSteps: [
+        { title: 'Review inbox workload' },
+        { title: 'Classify urgency' },
+        { title: 'Produce response queue' },
+      ],
+    })
+
+    const ranked = rankCapabilities([browserHarness, inboxTriage], {
+      queryText:
+        'Triage the inbound inbox and give me the next prioritized response queue',
+    })
+
+    expect(ranked[0]?.name).toBe('inbox-triage')
+  })
+
+  test('prefers publish draft workflows for content release work', () => {
+    const genericDocs = makePromptCommand({
+      name: 'google-drive:google-docs',
+      description: 'Inspect and edit Google Docs documents',
+      whenToUse: 'Use for general Google Docs work',
+      loadedFrom: 'plugin',
+      source: 'plugin',
+    })
+    const publishDraft = makePromptCommand({
+      name: 'publish-draft',
+      description:
+        'Turn a working draft into a publish-ready brief with the next edits and release checklist',
+      whenToUse:
+        'Use when a draft needs to become a publish-ready asset for docs or content',
+      verbs: ['publish draft', 'tighten draft', 'prepare release copy'],
+      outputs: ['Publishing brief', 'Edit checklist'],
+      artifactKinds: ['publishing brief', 'edit checklist'],
+      kind: 'workflow',
+      loadedFrom: 'bundled',
+      source: 'bundled',
+      workflowSteps: [
+        { title: 'Review draft and publish goal' },
+        { title: 'Identify publish blockers' },
+        { title: 'Produce publishing brief' },
+      ],
+    })
+
+    const ranked = rankCapabilities([genericDocs, publishDraft], {
+      queryText:
+        'Turn this draft into a publish-ready brief and checklist for release',
+    })
+
+    expect(ranked[0]?.name).toBe('publish-draft')
+  })
 })
