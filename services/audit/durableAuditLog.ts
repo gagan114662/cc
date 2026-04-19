@@ -23,10 +23,24 @@ import {
 } from 'node:fs'
 import path from 'node:path'
 import { CACHE_PATHS } from '../../utils/cachePaths.js'
+import {
+  resolveTenantContext,
+  type TenantContext,
+} from '../tenant/tenantContext.js'
+
+// Stamped on every audit entry so post-mortem tooling can slice by tenant
+// without re-parsing arbitrary payload fields. Shape mirrors the span
+// attribute triple on purpose — same vocabulary everywhere.
+export type AuditTenantStamp = {
+  id: string
+  name: string
+  role: TenantContext['role']
+}
 
 export type AuditEntry = {
   ts: string
   kind: string
+  tenant?: AuditTenantStamp
   // Free-form payload. Entries must JSON.stringify cleanly; this is the
   // caller's responsibility (no Date, no BigInt, etc. without conversion).
   [key: string]: unknown
@@ -39,6 +53,9 @@ export type AuditWriteOptions = {
   // Override the clock (default: new Date()). Tests use this to assert
   // day-boundary rotation without waiting 24 hours.
   now?: () => Date
+  // Override tenant resolution (default: resolveTenantContext()). Daemon
+  // duty dispatch will pass the per-duty tenant once routing is wired.
+  tenant?: TenantContext
 }
 
 function resolveDir(opts: AuditWriteOptions | undefined): string {
@@ -70,7 +87,20 @@ export function writeAuditEntry(
   const dir = resolveDir(opts)
   mkdirSync(dir, { recursive: true })
   const file = auditFilePath(opts)
-  const line = JSON.stringify(entry) + '\n'
+  // Stamp tenant when the caller hasn't already — keeps legacy call sites
+  // working (they just get DEFAULT_TENANT) while Phase 2 routing catches up.
+  const tenantCtx = opts?.tenant ?? resolveTenantContext()
+  const stamped: AuditEntry = entry.tenant
+    ? entry
+    : {
+        ...entry,
+        tenant: {
+          id: tenantCtx.id,
+          name: tenantCtx.name,
+          role: tenantCtx.role,
+        },
+      }
+  const line = JSON.stringify(stamped) + '\n'
   appendFileSync(file, line, 'utf8')
   return file
 }

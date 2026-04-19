@@ -34,6 +34,11 @@ import {
   type EmployeeDuty,
   ENGINEERING_LEAD_AGENT_TYPE,
 } from '../../types/employee.js'
+import {
+  hasRole,
+  resolveTenantContext,
+  type TenantContext,
+} from '../../services/tenant/tenantContext.js'
 
 const HELP_TEXT = `Usage:
 /employee init [goal one | goal two]
@@ -101,6 +106,16 @@ async function handleInit(
   )
 }
 
+// Exported so tests can assert the gate without spinning up a background
+// session. Returns a denial message when the tenant's role is below
+// `developer`; returns null when the tenant is allowed to assign.
+export function denyAssignIfUnauthorized(
+  tenant: TenantContext = resolveTenantContext(),
+): string | null {
+  if (hasRole(tenant, 'developer')) return null
+  return `Tenant "${tenant.id}" has role "${tenant.role}" — /employee assign requires developer or admin. Ask an operator to upgrade the tenant role via CC_TENANT_ROLE.`
+}
+
 async function handleAssign(
   onDone: LocalJSXCommandOnDone,
   context: LocalJSXCommandContext,
@@ -108,6 +123,12 @@ async function handleAssign(
 ): Promise<void> {
   if (!assignment) {
     onDone('Usage: /employee assign <assignment>', { display: 'system' })
+    return
+  }
+
+  const denial = denyAssignIfUnauthorized()
+  if (denial) {
+    onDone(denial, { display: 'system' })
     return
   }
 

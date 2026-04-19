@@ -29,6 +29,11 @@ import {
   withAssignmentSpan,
   withDutySpan,
 } from '../services/observability/dutySpans.js'
+import {
+  resolveTenantContext,
+  tenantEnv,
+  type TenantContext,
+} from '../services/tenant/tenantContext.js'
 import type { EmployeeDuty } from '../types/employee.js'
 
 type DaemonArgs = {
@@ -53,6 +58,10 @@ type ScheduledDuty = {
 type DaemonState = {
   args: DaemonArgs
   startedAt: Date
+  // Resolved once at boot. Phase 2 follow-ups will move this to a
+  // per-duty tenant lookup (different employees, different tenants);
+  // for now the whole daemon runs under one tenant.
+  tenant: TenantContext
   configLoaded: boolean
   duties: Map<string, ScheduledDuty>
   httpServer: Server | null
@@ -146,6 +155,7 @@ async function fireDuty(
         title: scheduled.duty.title,
         cron: scheduled.duty.cron,
         attempt: scheduled.tickCount,
+        tenant: state.tenant,
       },
       async span => runDutySubprocess(state, scheduled, span),
     )
@@ -159,6 +169,44 @@ async function fireDuty(
   } finally {
     scheduled.lastFinishedAt = new Date()
     if (!state.args.once) scheduleNext(state, scheduled)
+  }
+}
+
+// Exported so tests can assert the env merge without spawning a real
+// subprocess (which would require a built dist/cli.js and is painful in
+// CI). Keep in sync with the spawn() call below.
+export function buildDutySubprocessEnv(
+  state: Pick<DaemonState, 'tenant'>,
+  duty: Pick<EmployeeDuty, 'id' | 'title' | 'tokenBudget' | 'costCap'>,
+  parentSpan?: import('@opentelemetry/api').Span,
+  baseEnv: Record<string, string | undefined> = process.env,
+): Record<string, string | undefined> {
+  const hasTokenBudget =
+    typeof duty.tokenBudget === 'number' &&
+    Number.isFinite(duty.tokenBudget) &&
+    duty.tokenBudget > 0
+  const hasCostCap =
+    typeof duty.costCap === 'number' &&
+    Number.isFinite(duty.costCap) &&
+    duty.costCap > 0
+  return {
+    ...baseEnv,
+    CLAUDE_CODE_REMOTE: 'true',
+    CC_DUTY_ID: duty.id,
+    CC_DUTY_TITLE: duty.title,
+    // Hard-stop enforcement hints — the query loop reads these and
+    // throws DutyBudgetExceededError once exceeded.
+    ...(hasTokenBudget
+      ? { CC_DUTY_TOKEN_BUDGET: String(duty.tokenBudget) }
+      : {}),
+    ...(hasCostCap
+      ? { CC_DUTY_COST_CAP_USD: String(duty.costCap) }
+      : {}),
+    // Tenant merge comes after trace env so CC_TENANT_* wins over any
+    // stale values the daemon process itself might have been started
+    // with — the daemon's resolved tenant is the source of truth.
+    ...traceEnvForActiveContext(parentSpan),
+    ...tenantEnv(state.tenant),
   }
 }
 
@@ -183,27 +231,7 @@ async function runDutySubprocess(
   const child = spawn({
     cmd,
     cwd: state.args.projectRoot,
-    env: {
-      ...process.env,
-      CLAUDE_CODE_REMOTE: 'true',
-      CC_DUTY_ID: scheduled.duty.id,
-      CC_DUTY_TITLE: scheduled.duty.title,
-      ...(typeof scheduled.duty.tokenBudget === 'number' &&
-      Number.isFinite(scheduled.duty.tokenBudget) &&
-      scheduled.duty.tokenBudget > 0
-        ? {
-            CC_DUTY_TOKEN_BUDGET: String(scheduled.duty.tokenBudget),
-          }
-        : {}),
-      ...(typeof scheduled.duty.costCap === 'number' &&
-      Number.isFinite(scheduled.duty.costCap) &&
-      scheduled.duty.costCap > 0
-        ? {
-            CC_DUTY_COST_CAP_USD: String(scheduled.duty.costCap),
-          }
-        : {}),
-      ...traceEnvForActiveContext(parentSpan),
-    },
+    env: buildDutySubprocessEnv(state, scheduled.duty, parentSpan),
     stdin: 'ignore',
     stdout: 'pipe',
     stderr: 'pipe',
@@ -238,6 +266,11 @@ function buildHealthBody(state: DaemonState): string {
       startedAt: state.startedAt.toISOString(),
       configLoaded: state.configLoaded,
       projectRoot: state.args.projectRoot,
+      tenant: {
+        id: state.tenant.id,
+        name: state.tenant.name,
+        role: state.tenant.role,
+      },
       duties,
     },
     null,
@@ -315,6 +348,7 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
   const state: DaemonState = {
     args,
     startedAt: new Date(),
+    tenant: resolveTenantContext(),
     configLoaded: false,
     duties: new Map(),
     httpServer: null,

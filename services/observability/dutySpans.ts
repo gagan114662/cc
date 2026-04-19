@@ -16,6 +16,11 @@ import {
   type Span,
 } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
+import {
+  resolveTenantContext,
+  tenantSpanAttributes,
+  type TenantContext,
+} from '../tenant/tenantContext.js'
 
 // The API package ships a noop propagator by default — so propagation.inject
 // would be a silent no-op unless someone (usually the SDK) registers a real
@@ -40,10 +45,21 @@ type BaseAttrs = {
   title?: string
   cron?: string
   attempt?: number
+  // When omitted, the span resolves tenant from env (so single-operator
+  // default wins). Pass explicitly from daemon duty dispatch once per-
+  // tenant routing is wired up.
+  tenant?: TenantContext
 }
 
-function attrs(base: BaseAttrs, extra?: Attributes): Attributes {
-  const out: Attributes = { ...(extra ?? {}) }
+function attrs(
+  base: BaseAttrs,
+  extra?: Attributes,
+  tenant?: TenantContext,
+): Attributes {
+  const out: Attributes = {
+    ...(extra ?? {}),
+    ...tenantSpanAttributes(tenant ?? resolveTenantContext()),
+  }
   if (base.dutyId) out['employee.duty.id'] = base.dutyId
   if (base.assignmentId) out['employee.assignment.id'] = base.assignmentId
   if (base.title) out['employee.title'] = base.title
@@ -59,7 +75,7 @@ async function runInSpan<T>(
   extra?: Attributes,
 ): Promise<T> {
   const tracer = trace.getTracer(TRACER_NAME)
-  return tracer.startActiveSpan(name, { attributes: attrs(base, extra) }, async span => {
+  return tracer.startActiveSpan(name, { attributes: attrs(base, extra, base.tenant) }, async span => {
     try {
       const result = await fn(span)
       span.setAttribute('employee.duty.status', 'ok')
@@ -95,13 +111,13 @@ export function withAssignmentSpan<T>(
   return runInSpan(ASSIGNMENT_SPAN_NAME, base, fn, extra)
 }
 
-// Stamp `employee.duty.id` / `employee.assignment.id` onto whichever span
-// is currently active, if any. Used from deep stack frames (API call,
-// tool call) that don't know they're running inside a duty.
+// Stamp `employee.duty.id` / `employee.assignment.id` (and tenant.*) onto
+// whichever span is currently active, if any. Used from deep stack frames
+// (API call, tool call) that don't know they're running inside a duty.
 export function stampEmployeeAttrs(base: BaseAttrs): void {
   const span = trace.getSpan(otelContext.active())
   if (!span) return
-  const next = attrs(base)
+  const next = attrs(base, undefined, base.tenant)
   for (const [k, v] of Object.entries(next)) {
     if (v !== undefined) span.setAttribute(k, v as string | number | boolean)
   }
