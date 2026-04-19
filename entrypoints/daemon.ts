@@ -51,11 +51,8 @@ import {
   SLACK_WEBHOOK_ROUTE,
   handleSlackWebhookRequest,
 } from '../services/webhooks/slackRoute.js'
-import {
-  drainOnce,
-  type AssignmentRunner,
-} from '../services/assignmentQueue/drainer.js'
-import { recoverCrashedAssignments } from '../services/assignmentQueue/storage.js'
+import { getQueueBackend } from '../services/assignmentQueue/backend.js'
+import type { AssignmentRunner } from '../services/assignmentQueue/backend.js'
 import type { EmployeeDuty } from '../types/employee.js'
 
 type DaemonArgs = {
@@ -182,7 +179,8 @@ async function drainTick(
   if (state.shuttingDown) return
   state.drainInFlight.add(tenant.id)
   try {
-    await drainOnce({
+    const backend = await getQueueBackend()
+    await backend.drainOnce({
       projectRoot: state.args.projectRoot,
       tenant,
       runner: state.args.assignmentRunner ?? defaultAssignmentRunner(state),
@@ -646,6 +644,17 @@ export async function stopDaemon(
     await new Promise<void>(resolve => state.httpServer!.close(() => resolve()))
   }
 
+  // Close queue backend after HTTP is down so no late enqueue can
+  // race against a closed Redis connection. JSONL's close is a noop.
+  try {
+    const backend = await getQueueBackend()
+    await backend.close()
+  } catch (err) {
+    log('error', 'queue_backend_close_failed', {
+      error: err instanceof Error ? err.message : String(err),
+    })
+  }
+
   log('info', 'shutdown_complete', {})
 }
 
@@ -699,11 +708,12 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
   // also crash mid-drain.
   state.drainerTenants = resolveDrainerTenants(tenantDuties)
   let recoveredTotal = 0
+  const backend = await getQueueBackend()
   for (const tenant of state.drainerTenants) {
-    const recovered = await recoverCrashedAssignments(
-      args.projectRoot,
-      tenant.id,
-    )
+    const recovered = await backend.recover({
+      projectRoot: args.projectRoot,
+      tenantId: tenant.id,
+    })
     if (recovered.length > 0) {
       recoveredTotal += recovered.length
       log('info', 'queue_recovered', {

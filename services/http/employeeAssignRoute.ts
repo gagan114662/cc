@@ -24,7 +24,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import { writeAuditEntry } from '../audit/durableAuditLog.js'
-import { enqueueAssignment } from '../assignmentQueue/storage.js'
+import { getQueueBackend } from '../assignmentQueue/backend.js'
 import { withAssignmentSpan } from '../observability/dutySpans.js'
 import { denyAssignIfUnauthorized } from '../tenant/assignmentAuthorization.js'
 import {
@@ -206,7 +206,8 @@ export async function handleEmployeeAssignRequest(
             },
             opts.auditDir ? { dir: opts.auditDir } : undefined,
           )
-          await enqueueAssignment(
+          const backend = await getQueueBackend()
+          await backend.enqueue(
             { id, assignment: body.assignment },
             { projectRoot: opts.projectRoot, tenantId: tenant.id },
           )
