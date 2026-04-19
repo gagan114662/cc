@@ -11,6 +11,10 @@ export type FrontmatterData = {
   // YAML can return null for keys with no value (e.g., "key:" with nothing after)
   'allowed-tools'?: string | string[] | null
   description?: string | null
+  inputs?: string | string[] | null
+  outputs?: string | string[] | null
+  success_criteria?: string | string[] | null
+  'success-criteria'?: string | string[] | null
   // Memory type: 'user', 'feedback', 'project', or 'reference'
   // Only applicable to memory files; narrowed via parseMemoryType() in src/memdir/memoryTypes.ts
   type?: string | null

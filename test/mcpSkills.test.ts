@@ -159,6 +159,18 @@ describe('fetchMcpWorkflowsForClient', () => {
               text: `---
 name: Pipeline Refresh
 description: Rebuild the pipeline from the current public surface
+when_to_use: Refresh the growth plan after market, messaging, or demand changes
+inputs:
+  - Website and public positioning
+  - Current ICP assumptions
+outputs:
+  - Updated pipeline brief
+  - Prioritized outreach backlog
+success_criteria:
+  - Identifies stale assumptions
+  - Produces the next highest-leverage actions
+arguments:
+  - segment
 allowed-tools:
   - Read
 ---
@@ -180,6 +192,19 @@ highest-leverage GTM actions.`,
     expect(workflow.source).toBe('mcp')
     expect(workflow.loadedFrom).toBe('mcp')
     expect(workflow.userFacingName?.()).toBe('Pipeline Refresh')
+    expect(workflow.inputs).toEqual([
+      'Website and public positioning',
+      'Current ICP assumptions',
+    ])
+    expect(workflow.outputs).toEqual([
+      'Updated pipeline brief',
+      'Prioritized outreach backlog',
+    ])
+    expect(workflow.successCriteria).toEqual([
+      'Identifies stale assumptions',
+      'Produces the next highest-leverage actions',
+    ])
+    expect(workflow.argNames).toEqual(['segment'])
 
     const prompt = await workflow.getPromptForCommand('', {} as any)
     expect(prompt).toHaveLength(1)

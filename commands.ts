@@ -156,6 +156,10 @@ import { logError } from './utils/log.js'
 import { toError } from './utils/errors.js'
 import { logForDebugging } from './utils/debug.js'
 import {
+  formatWorkflowCommandSummary,
+  isWorkflowCommand,
+} from './utils/workflowCommands.js'
+import {
   getSkillDirCommands,
   clearSkillCaches,
   getDynamicSkills,
@@ -733,8 +737,8 @@ export function formatDescriptionWithSource(cmd: Command): string {
     return cmd.description
   }
 
-  if (cmd.kind === 'workflow') {
-    return `${cmd.description} (workflow)`
+  if (isWorkflowCommand(cmd)) {
+    return `${formatWorkflowCommandSummary(cmd)} (workflow)`
   }
 
   if (cmd.source === 'plugin') {

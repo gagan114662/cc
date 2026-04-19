@@ -98,7 +98,14 @@ export function getSkillsPath(
  * (name, description, whenToUse) since full content is only loaded on invocation.
  */
 export function estimateSkillFrontmatterTokens(skill: Command): number {
-  const frontmatterText = [skill.name, skill.description, skill.whenToUse]
+  const frontmatterText = [
+    skill.name,
+    skill.description,
+    skill.whenToUse,
+    skill.inputs?.join(' '),
+    skill.outputs?.join(' '),
+    skill.successCriteria?.join(' '),
+  ]
     .filter(Boolean)
     .join(' ')
   return roughTokenCountEstimation(frontmatterText)
@@ -177,6 +184,18 @@ function parseSkillPaths(frontmatter: FrontmatterData): string[] | undefined {
   return patterns
 }
 
+function parseStringListFrontmatter(value: unknown): string[] | undefined {
+  if (typeof value !== 'string' && !Array.isArray(value)) {
+    return undefined
+  }
+
+  const parsed = splitPathInFrontmatter(value)
+    .map(item => item.trim())
+    .filter(Boolean)
+
+  return parsed.length > 0 ? parsed : undefined
+}
+
 /**
  * Parses all skill frontmatter fields that are shared between file-based and
  * MCP skill loading. Caller supplies the resolved skill name and the
@@ -195,6 +214,9 @@ export function parseSkillFrontmatterFields(
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  inputs: string[] | undefined
+  outputs: string[] | undefined
+  successCriteria: string[] | undefined
   version: string | undefined
   model: ReturnType<typeof parseUserSpecifiedModel> | undefined
   disableModelInvocation: boolean
@@ -250,6 +272,11 @@ export function parseSkillFrontmatterFields(
       frontmatter.arguments as string | string[] | undefined,
     ),
     whenToUse: frontmatter.when_to_use as string | undefined,
+    inputs: parseStringListFrontmatter(frontmatter.inputs),
+    outputs: parseStringListFrontmatter(frontmatter.outputs),
+    successCriteria: parseStringListFrontmatter(
+      frontmatter.success_criteria ?? frontmatter['success-criteria'],
+    ),
     version: frontmatter.version as string | undefined,
     model,
     disableModelInvocation: parseBooleanFrontmatter(
@@ -277,6 +304,9 @@ export function createSkillCommand({
   argumentHint,
   argumentNames,
   whenToUse,
+  inputs,
+  outputs,
+  successCriteria,
   version,
   model,
   disableModelInvocation,
@@ -300,6 +330,9 @@ export function createSkillCommand({
   argumentHint: string | undefined
   argumentNames: string[]
   whenToUse: string | undefined
+  inputs: string[] | undefined
+  outputs: string[] | undefined
+  successCriteria: string[] | undefined
   version: string | undefined
   model: string | undefined
   disableModelInvocation: boolean
@@ -323,6 +356,9 @@ export function createSkillCommand({
     argumentHint,
     argNames: argumentNames.length > 0 ? argumentNames : undefined,
     whenToUse,
+    inputs,
+    outputs,
+    successCriteria,
     version,
     model,
     disableModelInvocation,

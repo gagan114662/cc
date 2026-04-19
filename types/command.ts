@@ -185,6 +185,9 @@ export type CommandBase = {
   isMcp?: boolean
   argumentHint?: string // Hint text for command arguments (displayed in gray after command)
   whenToUse?: string // From the "Skill" spec. Detailed usage scenarios for when to use this command
+  inputs?: string[] // Structured workflow/skill inputs for agent-facing discovery
+  outputs?: string[] // Structured workflow/skill outputs for agent-facing discovery
+  successCriteria?: string[] // Completion criteria for structured workflows/skills
   version?: string // Version of the command/skill
   disableModelInvocation?: boolean // Whether to disable this command from being invoked by models
   userInvocable?: boolean // Whether users can invoke this skill by typing /skill-name

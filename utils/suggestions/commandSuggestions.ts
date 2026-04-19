@@ -7,6 +7,10 @@ import {
 } from '../../commands.js'
 import type { SuggestionItem } from '../../components/PromptInput/PromptInputFooterSuggestions.js'
 import { getSkillUsageScore } from './skillUsageTracking.js'
+import {
+  formatWorkflowCommandSummary,
+  isWorkflowCommand,
+} from '../workflowCommands.js'
 
 // Treat these characters as word separators for command search
 const SEPARATORS = /[:_-]/g
@@ -270,12 +274,17 @@ function createCommandSuggestionItem(
   // Only show the alias if the user typed it
   const aliasText = matchedAlias ? ` (${matchedAlias})` : ''
 
-  const isWorkflow = cmd.type === 'prompt' && cmd.kind === 'workflow'
+  const isWorkflow = isWorkflowCommand(cmd)
   const fullDescription =
-    (isWorkflow ? cmd.description : formatDescriptionWithSource(cmd)) +
-    (cmd.type === 'prompt' && cmd.argNames?.length
-      ? ` (arguments: ${cmd.argNames.join(', ')})`
-      : '')
+    isWorkflow
+      ? formatWorkflowCommandSummary(cmd, {
+          includeTools: true,
+          includeArguments: true,
+        })
+      : formatDescriptionWithSource(cmd) +
+        (cmd.type === 'prompt' && cmd.argNames?.length
+          ? ` (arguments: ${cmd.argNames.join(', ')})`
+          : '')
 
   return {
     id: getCommandId(cmd),
