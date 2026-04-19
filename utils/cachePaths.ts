@@ -35,4 +35,6 @@ export const CACHE_PATHS = {
       // Sanitize server name for Windows compatibility (colons are reserved for drive letters)
       `mcp-logs-${sanitizePath(serverName)}`,
     ),
+  audit: () =>
+    join(paths.cache, getProjectDir(getFsImplementation().cwd()), 'audit'),
 }
