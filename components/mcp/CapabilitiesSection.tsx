@@ -5,17 +5,21 @@ import { Byline } from '../design-system/Byline.js';
 type Props = {
   serverToolsCount: number;
   serverPromptsCount: number;
+  serverSkillsCount: number;
+  serverWorkflowsCount: number;
   serverResourcesCount: number;
 };
 export function CapabilitiesSection(t0) {
-  const $ = _c(9);
+  const $ = _c(13);
   const {
     serverToolsCount,
     serverPromptsCount,
+    serverSkillsCount,
+    serverWorkflowsCount,
     serverResourcesCount
   } = t0;
   let capabilities;
-  if ($[0] !== serverPromptsCount || $[1] !== serverResourcesCount || $[2] !== serverToolsCount) {
+  if ($[0] !== serverPromptsCount || $[1] !== serverResourcesCount || $[2] !== serverSkillsCount || $[3] !== serverToolsCount || $[4] !== serverWorkflowsCount) {
     capabilities = [];
     if (serverToolsCount > 0) {
       capabilities.push("tools");
@@ -26,35 +30,43 @@ export function CapabilitiesSection(t0) {
     if (serverPromptsCount > 0) {
       capabilities.push("prompts");
     }
+    if (serverSkillsCount > 0) {
+      capabilities.push("skills");
+    }
+    if (serverWorkflowsCount > 0) {
+      capabilities.push("workflows");
+    }
     $[0] = serverPromptsCount;
     $[1] = serverResourcesCount;
-    $[2] = serverToolsCount;
-    $[3] = capabilities;
+    $[2] = serverSkillsCount;
+    $[3] = serverToolsCount;
+    $[4] = serverWorkflowsCount;
+    $[5] = capabilities;
   } else {
-    capabilities = $[3];
+    capabilities = $[5];
   }
   let t1;
-  if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
+  if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = <Text bold={true}>Capabilities: </Text>;
-    $[4] = t1;
+    $[6] = t1;
   } else {
-    t1 = $[4];
+    t1 = $[6];
   }
   let t2;
-  if ($[5] !== capabilities) {
+  if ($[7] !== capabilities) {
     t2 = capabilities.length > 0 ? <Byline>{capabilities}</Byline> : "none";
-    $[5] = capabilities;
-    $[6] = t2;
+    $[7] = capabilities;
+    $[8] = t2;
   } else {
-    t2 = $[6];
+    t2 = $[8];
   }
   let t3;
-  if ($[7] !== t2) {
+  if ($[9] !== t2) {
     t3 = <Box>{t1}<Text color="text">{t2}</Text></Box>;
-    $[7] = t2;
-    $[8] = t3;
+    $[9] = t2;
+    $[10] = t3;
   } else {
-    t3 = $[8];
+    t3 = $[10];
   }
   return t3;
 }

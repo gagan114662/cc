@@ -96,6 +96,40 @@ export function filterMcpPromptsByServer(
 }
 
 /**
+ * Filters MCP resource-delivered skills (but not workflows) by server. Used by
+ * UI surfaces that want to show agent-native command inventory separately from
+ * raw MCP prompts.
+ */
+export function filterMcpSkillsByServer(
+  commands: Command[],
+  serverName: string,
+): Command[] {
+  return commands.filter(
+    c =>
+      commandBelongsToServer(c, serverName) &&
+      c.type === 'prompt' &&
+      c.loadedFrom === 'mcp' &&
+      c.kind !== 'workflow',
+  )
+}
+
+/**
+ * Filters MCP resource-delivered workflows by server.
+ */
+export function filterMcpWorkflowsByServer(
+  commands: Command[],
+  serverName: string,
+): Command[] {
+  return commands.filter(
+    c =>
+      commandBelongsToServer(c, serverName) &&
+      c.type === 'prompt' &&
+      c.loadedFrom === 'mcp' &&
+      c.kind === 'workflow',
+  )
+}
+
+/**
  * Filters resources by MCP server name
  * @param resources Array of resources to filter
  * @param serverName Name of the MCP server

@@ -12,7 +12,7 @@ import { useKeybinding } from '../../keybindings/useKeybinding.js';
 import { AuthenticationCancelledError, performMCPOAuthFlow, revokeServerTokens } from '../../services/mcp/auth.js';
 import { clearServerCache } from '../../services/mcp/client.js';
 import { useMcpReconnect, useMcpToggleEnabled } from '../../services/mcp/MCPConnectionManager.js';
-import { describeMcpConfigFilePath, excludeCommandsByServer, excludeResourcesByServer, excludeToolsByServer, filterMcpPromptsByServer } from '../../services/mcp/utils.js';
+import { describeMcpConfigFilePath, excludeCommandsByServer, excludeResourcesByServer, excludeToolsByServer, filterMcpPromptsByServer, filterMcpSkillsByServer, filterMcpWorkflowsByServer } from '../../services/mcp/utils.js';
 import { useAppState, useSetAppState } from '../../state/AppState.js';
 import { getOauthAccountInfo } from '../../utils/auth.js';
 import { openBrowser } from '../../utils/browser.js';
@@ -209,8 +209,11 @@ export function MCPRemoteServerMenu({
   });
   const capitalizedServerName = capitalize(String(server.name));
 
-  // Count MCP prompts for this server (skills are shown in /skills, not here)
+  // Count the MCP command surfaces for this server separately so the UI shows
+  // both protocol-level and agent-native capabilities.
   const serverCommandsCount = filterMcpPromptsByServer(mcp.commands, server.name).length;
+  const serverSkillsCount = filterMcpSkillsByServer(mcp.commands, server.name).length;
+  const serverWorkflowsCount = filterMcpWorkflowsByServer(mcp.commands, server.name).length;
   const toggleMcpServer = useMcpToggleEnabled();
   const handleClaudeAIAuth = React.useCallback(async () => {
     const claudeAiBaseUrl = getOauthConfig().CLAUDE_AI_ORIGIN;
@@ -569,11 +572,23 @@ export function MCPRemoteServerMenu({
             <Text dimColor>{describeMcpConfigFilePath(server.scope)}</Text>
           </Box>
 
-          {server.client.type === 'connected' && <CapabilitiesSection serverToolsCount={serverToolsCount} serverPromptsCount={serverCommandsCount} serverResourcesCount={mcp.resources[server.name]?.length || 0} />}
+          {server.client.type === 'connected' && <CapabilitiesSection serverToolsCount={serverToolsCount} serverPromptsCount={serverCommandsCount} serverSkillsCount={serverSkillsCount} serverWorkflowsCount={serverWorkflowsCount} serverResourcesCount={mcp.resources[server.name]?.length || 0} />}
 
           {server.client.type === 'connected' && serverToolsCount > 0 && <Box>
               <Text bold>Tools: </Text>
               <Text dimColor>{serverToolsCount} tools</Text>
+            </Box>}
+          {server.client.type === 'connected' && serverCommandsCount > 0 && <Box>
+              <Text bold>Prompts: </Text>
+              <Text dimColor>{serverCommandsCount} prompts</Text>
+            </Box>}
+          {server.client.type === 'connected' && serverSkillsCount > 0 && <Box>
+              <Text bold>Skills: </Text>
+              <Text dimColor>{serverSkillsCount} skills</Text>
+            </Box>}
+          {server.client.type === 'connected' && serverWorkflowsCount > 0 && <Box>
+              <Text bold>Workflows: </Text>
+              <Text dimColor>{serverWorkflowsCount} workflows</Text>
             </Box>}
         </Box>
 
