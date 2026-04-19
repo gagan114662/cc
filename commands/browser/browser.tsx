@@ -153,8 +153,9 @@ function BrowserHarnessDialog({
           </Text>
         )}
         <Text dimColor={true}>
-          Use /chrome for Claude in Chrome settings. Use /browser-harness once
-          the external command is installed and on PATH.
+          Use /chrome for Claude in Chrome settings. Use the
+          browser-harness skill once the external command is installed and on
+          PATH.
         </Text>
         <Select
           key={selectKey}
