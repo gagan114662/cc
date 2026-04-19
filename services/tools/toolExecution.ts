@@ -23,6 +23,7 @@ import {
   getCodeEditToolDecisionCounter,
   getStatsStore,
 } from '../../bootstrap/state.js'
+import { tenantAttributesForTelemetry } from '../tenant/telemetryAttrs.js'
 import {
   buildCodeEditToolAttributes,
   isCodeEditingTool,
@@ -972,7 +973,12 @@ async function checkPermissionsAndCallTool(
         processedInput,
         decision,
         source,
-      ).then(attributes => getCodeEditToolDecisionCounter()?.add(1, attributes))
+      ).then(attributes =>
+        getCodeEditToolDecisionCounter()?.add(1, {
+          ...attributes,
+          ...tenantAttributesForTelemetry(),
+        }),
+      )
     }
   }
 
