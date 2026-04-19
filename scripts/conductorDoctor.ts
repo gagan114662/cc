@@ -10,6 +10,21 @@ type Remote = {
   kind: 'fetch' | 'push'
 }
 
+// Optional git-hygiene checks beyond the baseline origin-remote check.
+// Kept opt-in so existing `bun run conductor:doctor` output stays stable
+// for callers that only want the origin/conductor readiness verdict.
+export type HygieneCheckName = 'dirty-tree' | 'stale-branch' | 'pre-merge-gate'
+
+export type HygieneOptions = {
+  checks?: HygieneCheckName[]
+  // Stale-branch threshold in days — anything older flags. Default 30.
+  maxBranchAgeDays?: number
+  // Base branch used by the pre-merge-gate check. Default 'main'.
+  baseBranch?: string
+}
+
+export type GitRunner = (args: string[], cwd: string) => Promise<string>
+
 export type ConductorDoctorReport = {
   repoPath: string
   gitRepo: boolean
@@ -18,6 +33,12 @@ export type ConductorDoctorReport = {
   conductorReady: boolean
   problems: string[]
   recommendations: string[]
+  hygiene?: {
+    checksRun: HygieneCheckName[]
+    dirtyTree?: { clean: boolean; files: string[] }
+    staleBranch?: { stale: boolean; ageDays: number; threshold: number }
+    preMergeGate?: { mergedFromBase: boolean; baseBranch: string }
+  }
   appliedChange?: string
 }
 
@@ -29,9 +50,61 @@ function escapeHtml(value: string): string {
     .replaceAll('"', '&quot;')
 }
 
-async function git(args: string[], cwd: string): Promise<string> {
+const defaultGit: GitRunner = async (args, cwd) => {
   const { stdout } = await execa('git', args, { cwd })
   return stdout.trim()
+}
+
+// Kept as a thin wrapper so existing internal call sites keep working.
+async function git(args: string[], cwd: string): Promise<string> {
+  return defaultGit(args, cwd)
+}
+
+export async function checkDirtyTree(
+  repoPath: string,
+  runner: GitRunner = defaultGit,
+): Promise<{ clean: boolean; files: string[] }> {
+  const out = await runner(['status', '--porcelain'], repoPath)
+  const files = out
+    .split('\n')
+    .map(line => line.trim())
+    .filter(Boolean)
+  return { clean: files.length === 0, files }
+}
+
+export async function checkStaleBranch(
+  repoPath: string,
+  maxBranchAgeDays: number,
+  runner: GitRunner = defaultGit,
+  now: Date = new Date(),
+): Promise<{ stale: boolean; ageDays: number; threshold: number }> {
+  const tipTimestamp = await runner(['log', '-1', '--format=%ct', 'HEAD'], repoPath)
+  const tipSeconds = Number(tipTimestamp)
+  if (!tipTimestamp || !Number.isFinite(tipSeconds) || tipSeconds <= 0) {
+    return { stale: false, ageDays: 0, threshold: maxBranchAgeDays }
+  }
+  const ageMs = now.getTime() - tipSeconds * 1000
+  const ageDays = Math.floor(ageMs / (1000 * 60 * 60 * 24))
+  return { stale: ageDays > maxBranchAgeDays, ageDays, threshold: maxBranchAgeDays }
+}
+
+export async function checkPreMergeGate(
+  repoPath: string,
+  baseBranch: string,
+  runner: GitRunner = defaultGit,
+): Promise<{ mergedFromBase: boolean; baseBranch: string }> {
+  // `git merge-base --is-ancestor <base> HEAD` exits 0 when <base> is
+  // reachable from HEAD — i.e. base is already merged in. Exit 1 means
+  // base has commits not yet merged into the current branch.
+  try {
+    await runner(
+      ['merge-base', '--is-ancestor', `origin/${baseBranch}`, 'HEAD'],
+      repoPath,
+    )
+    return { mergedFromBase: true, baseBranch }
+  } catch {
+    return { mergedFromBase: false, baseBranch }
+  }
 }
 
 function parseRemotes(stdout: string): Remote[] {
@@ -53,6 +126,7 @@ function parseRemotes(stdout: string): Remote[] {
 
 export async function inspectConductorRepo(
   repoPath: string,
+  hygiene: HygieneOptions = {},
 ): Promise<ConductorDoctorReport> {
   try {
     const inside = await git(['rev-parse', '--is-inside-work-tree'], repoPath)
@@ -104,6 +178,21 @@ export async function inspectConductorRepo(
     )
   }
 
+  const gbLocal = remotes.find(
+    remote =>
+      remote.name === 'gb-local' &&
+      remote.kind === 'fetch' &&
+      remote.url === '.',
+  )
+  if (gbLocal && !fetchOrigin) {
+    problems.push('gitbutler_local_remote_only')
+    recommendations.push(
+      'This repo currently uses GitButler local syncing only (`gb-local -> .`). Conductor still needs a GitHub-backed `origin` remote.',
+    )
+  }
+
+  const hygieneReport = await runHygieneChecks(repoPath, hygiene, problems, recommendations)
+
   return {
     repoPath,
     gitRepo: true,
@@ -112,7 +201,69 @@ export async function inspectConductorRepo(
     conductorReady: problems.length === 0,
     problems,
     recommendations,
+    hygiene: hygieneReport,
   }
+}
+
+async function runHygieneChecks(
+  repoPath: string,
+  opts: HygieneOptions,
+  problems: string[],
+  recommendations: string[],
+): Promise<ConductorDoctorReport['hygiene']> {
+  const checks = opts.checks ?? []
+  if (checks.length === 0) return undefined
+
+  const report: NonNullable<ConductorDoctorReport['hygiene']> = {
+    checksRun: [...checks],
+  }
+
+  if (checks.includes('dirty-tree')) {
+    const result = await checkDirtyTree(repoPath).catch(() => ({
+      clean: true,
+      files: [],
+    }))
+    report.dirtyTree = result
+    if (!result.clean) {
+      problems.push('dirty_tree')
+      recommendations.push(
+        `Commit or stash ${result.files.length} uncommitted change(s) before handing off to Conductor: git status`,
+      )
+    }
+  }
+
+  if (checks.includes('stale-branch')) {
+    const threshold = opts.maxBranchAgeDays ?? 30
+    const result = await checkStaleBranch(repoPath, threshold).catch(() => ({
+      stale: false,
+      ageDays: 0,
+      threshold,
+    }))
+    report.staleBranch = result
+    if (result.stale) {
+      problems.push('stale_branch')
+      recommendations.push(
+        `Current branch tip is ${result.ageDays} days old (threshold ${threshold}). Rebase onto main or retire the branch.`,
+      )
+    }
+  }
+
+  if (checks.includes('pre-merge-gate')) {
+    const baseBranch = opts.baseBranch ?? 'main'
+    const result = await checkPreMergeGate(repoPath, baseBranch).catch(() => ({
+      mergedFromBase: true,
+      baseBranch,
+    }))
+    report.preMergeGate = result
+    if (!result.mergedFromBase) {
+      problems.push('base_not_merged')
+      recommendations.push(
+        `origin/${baseBranch} has commits not in the current branch. Merge or rebase before landing: git merge origin/${baseBranch}`,
+      )
+    }
+  }
+
+  return report
 }
 
 async function setOrigin(repoPath: string, remoteUrl: string): Promise<string> {
@@ -219,16 +370,30 @@ function renderHtml(report: ConductorDoctorReport): string {
 </html>`
 }
 
+const ALL_HYGIENE_CHECKS: HygieneCheckName[] = [
+  'dirty-tree',
+  'stale-branch',
+  'pre-merge-gate',
+]
+
+function isHygieneCheckName(value: string): value is HygieneCheckName {
+  return (ALL_HYGIENE_CHECKS as string[]).includes(value)
+}
+
 function parseArgs(argv: string[]): {
   repoPath: string
   remoteUrl?: string
   json: boolean
   htmlPath?: string
+  hygiene: HygieneOptions
 } {
   let repoPath = process.cwd()
   let remoteUrl: string | undefined
   let json = false
   let htmlPath: string | undefined
+  const checks: HygieneCheckName[] = []
+  let maxBranchAgeDays: number | undefined
+  let baseBranch: string | undefined
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index]
@@ -249,20 +414,57 @@ function parseArgs(argv: string[]): {
     if (arg === '--html') {
       htmlPath = argv[index + 1]
       index += 1
+      continue
+    }
+    if (arg === '--check') {
+      const value = argv[index + 1]
+      index += 1
+      if (!value) continue
+      if (value === 'all') {
+        for (const c of ALL_HYGIENE_CHECKS) {
+          if (!checks.includes(c)) checks.push(c)
+        }
+        continue
+      }
+      if (isHygieneCheckName(value) && !checks.includes(value)) {
+        checks.push(value)
+      }
+      continue
+    }
+    if (arg === '--max-branch-age-days') {
+      const value = Number(argv[index + 1])
+      if (Number.isFinite(value) && value >= 0) {
+        maxBranchAgeDays = value
+      }
+      index += 1
+      continue
+    }
+    if (arg === '--base-branch') {
+      baseBranch = argv[index + 1]
+      index += 1
+      continue
     }
   }
 
-  return { repoPath, remoteUrl, json, htmlPath }
+  return {
+    repoPath,
+    remoteUrl,
+    json,
+    htmlPath,
+    hygiene: { checks, maxBranchAgeDays, baseBranch },
+  }
 }
 
 if (import.meta.main) {
-  const { repoPath, remoteUrl, json, htmlPath } = parseArgs(process.argv.slice(2))
+  const { repoPath, remoteUrl, json, htmlPath, hygiene } = parseArgs(
+    process.argv.slice(2),
+  )
   let appliedChange: string | undefined
   if (remoteUrl) {
     appliedChange = await setOrigin(repoPath, remoteUrl)
   }
 
-  const report = await inspectConductorRepo(repoPath)
+  const report = await inspectConductorRepo(repoPath, hygiene)
   report.appliedChange = appliedChange
 
   if (htmlPath) {

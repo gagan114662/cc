@@ -109,6 +109,11 @@ import {
   runElicitationHooks,
   runElicitationResultHooks,
 } from './elicitationHandler.js'
+import {
+  defaultMCPCircuitRegistry,
+  isIgnorableBreakerError,
+  MCPCircuitOpenError,
+} from './circuitBreaker.js'
 import { buildMcpToolName } from './mcpStringUtils.js'
 import { normalizeNameForMCP } from './normalization.js'
 import { getLoggingSafeMcpBaseUrl } from './utils.js'
@@ -3048,6 +3053,21 @@ async function callMCPTool({
   const toolStartTime = Date.now()
   let progressInterval: NodeJS.Timeout | undefined
 
+  // Fail fast if the circuit for this server is open. Opens after
+  // DEFAULT_CIRCUIT_OPTIONS.failureThreshold consecutive failures and
+  // auto-probes after cooldownMs — see services/mcp/circuitBreaker.ts.
+  try {
+    defaultMCPCircuitRegistry.guard(name)
+  } catch (err) {
+    if (err instanceof MCPCircuitOpenError) {
+      logMCPDebug(
+        name,
+        `Circuit breaker open for "${name}"; skipping tool call '${tool}'`,
+      )
+    }
+    throw err
+  }
+
   try {
     logMCPDebug(name, `Calling MCP tool: ${tool}`)
 
@@ -3169,6 +3189,7 @@ async function callMCPTool({
     }
 
     const content = await processMCPResult(result, tool, name)
+    defaultMCPCircuitRegistry.recordSuccess(name)
     return {
       content,
       _meta: result._meta as Record<string, unknown> | undefined,
@@ -3180,6 +3201,17 @@ async function callMCPTool({
     // Clear intervals on error
     if (progressInterval !== undefined) {
       clearInterval(progressInterval)
+    }
+
+    // Record failure on the breaker — but only for errors that actually
+    // indicate server health. User- or signal-initiated cancellations
+    // (Esc, SIGINT, duty cancellation) used to count here, so a handful
+    // of routine cancels tripped the breaker and blocked every other
+    // concurrent job using the same MCP server. Server-side issues
+    // (timeouts, 401s, connection closed) still count via the default
+    // branch of isIgnorableBreakerError.
+    if (!isIgnorableBreakerError(e, signal.aborted)) {
+      defaultMCPCircuitRegistry.recordFailure(name)
     }
 
     const elapsed = Date.now() - toolStartTime

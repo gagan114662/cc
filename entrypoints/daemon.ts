@@ -25,6 +25,7 @@ import path from 'node:path'
 import { readEmployeeConfig } from '../utils/employeeConfig.js'
 import { computeNextCronRun, parseCronExpression } from '../utils/cron.js'
 import {
+  traceEnvForActiveContext,
   withAssignmentSpan,
   withDutySpan,
 } from '../services/observability/dutySpans.js'
@@ -146,7 +147,7 @@ async function fireDuty(
         cron: scheduled.duty.cron,
         attempt: scheduled.tickCount,
       },
-      async () => runDutySubprocess(state, scheduled),
+      async span => runDutySubprocess(state, scheduled, span),
     )
     scheduled.lastStatus = 'ok'
   } catch (err) {
@@ -164,6 +165,7 @@ async function fireDuty(
 async function runDutySubprocess(
   state: DaemonState,
   scheduled: ScheduledDuty,
+  parentSpan?: import('@opentelemetry/api').Span,
 ): Promise<void> {
   if (!existsSync(state.args.cliBundlePath)) {
     throw new Error(`cli_bundle_missing: ${state.args.cliBundlePath}`)
@@ -200,6 +202,7 @@ async function runDutySubprocess(
             CC_DUTY_COST_CAP_USD: String(scheduled.duty.costCap),
           }
         : {}),
+      ...traceEnvForActiveContext(parentSpan),
     },
     stdin: 'ignore',
     stdout: 'pipe',
