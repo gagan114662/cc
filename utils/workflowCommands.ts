@@ -250,6 +250,8 @@ export function buildWorkflowCodeModePrompt(
     '- `browser`: typed browser capability helpers with `status()`, `listWorkflows()`, and `hasWorkflow(name)`',
     '- `cli`: typed CLI capability helpers with `allowedTools()`, `listTools()`, `isAllowed(toolName)`, and `isAvailable(toolName)`',
     '- `mcp`: typed MCP capability helpers with `listServers()`, `listWorkflows(serverName?)`, `listSkills(serverName?)`, and `hasServer(serverName)`',
+    '- `workspace`: typed workspace/session helpers with `root()`, `sessionId()`, `transcriptProjectDir()`, `transcriptSubdir()`, `statePath()`, and `info()`',
+    '- `discovery`: typed capability discovery helpers with `listFamilies()`, `search(query, limit?)`, and `searchByFamily(family, query?, limit?)`',
     '- Top-level aliases remain available: `await runStep(stepIndex)`, `await skipStep(stepIndex, reason?)`, `getHandoff()`, `getOutcomes()`, and `hasOutcome(stepIndex)`',
   )
 
@@ -269,9 +271,10 @@ export function buildWorkflowCodeModePrompt(
   lines.push(
     '',
     'Return ONLY JavaScript for an async function. Example:',
-    'async ({ workflow, state, browser }) => {',
+    'async ({ workflow, state, browser, discovery }) => {',
     '  await workflow.runStep(0)',
     "  await state.set('browserReady', browser.status().installed)",
+    "  await state.set('topSuggestion', discovery.search('audit funnel', 1)[0]?.name ?? null)",
     '  if (workflow.getHandoff().priority_segment) {',
     '    await workflow.runStep(1)',
     '  } else {',

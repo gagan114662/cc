@@ -365,7 +365,11 @@ export const getClaudeTempDir = memoize(function getClaudeTempDir(): string {
 export const getBundledSkillsRoot = memoize(
   function getBundledSkillsRoot(): string {
     const nonce = randomBytes(16).toString('hex')
-    return join(getClaudeTempDir(), 'bundled-skills', MACRO.VERSION, nonce)
+    const version =
+      typeof MACRO !== 'undefined' && typeof MACRO.VERSION === 'string'
+        ? MACRO.VERSION
+        : '0.0.0-dev'
+    return join(getClaudeTempDir(), 'bundled-skills', version, nonce)
   },
 )
 

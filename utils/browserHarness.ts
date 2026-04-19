@@ -205,6 +205,48 @@ Workflow deliverable requirements:
 `
 }
 
+export function buildBrowserCompetitiveTeardownWorkflowPrompt(
+  args?: string,
+): string {
+  return `${buildBrowserHarnessSkillPrompt(
+    args ||
+      'Compare the target site against live competitors in the browser, capture the biggest positioning gaps, and recommend the next differentiation moves.',
+  )}
+
+Workflow deliverable requirements:
+
+- Review the target offer, ICP, proof, CTA, and on-page messaging first.
+- Compare live competitor pages instead of relying on memory or generic category claims.
+- Capture concrete evidence for every meaningful messaging, proof, or offer gap.
+- Return enough detail for a final artifact covering:
+  - the target positioning summary
+  - the strongest competitor moves observed
+  - the biggest positioning or proof gaps
+  - a prioritized differentiation backlog
+  - any blockers or unknowns
+`
+}
+
+export function buildBrowserSupportFaqAuditWorkflowPrompt(args?: string): string {
+  return `${buildBrowserHarnessSkillPrompt(
+    args ||
+      'Audit the current support, FAQ, and contact paths in the browser, identify the biggest coverage gaps, and recommend the next fixes.',
+  )}
+
+Workflow deliverable requirements:
+
+- Walk the live help, FAQ, support, and contact entry points a real customer would use.
+- Try to complete the highest-priority customer task through the live experience.
+- Capture concrete evidence for missing answers, dead ends, confusing routing, or escalation gaps.
+- Return enough detail for a final artifact covering:
+  - the support paths reviewed
+  - the top customer-task blockers
+  - the FAQ/support gaps that should be fixed next
+  - a prioritized support or backoffice backlog
+  - any blockers that prevented a full audit
+`
+}
+
 export async function getBrowserHarnessStatus(): Promise<BrowserHarnessStatus> {
   const executablePath = await which('browser-harness')
   const config = getGlobalConfig()

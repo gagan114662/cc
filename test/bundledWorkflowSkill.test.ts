@@ -2,48 +2,51 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import {
   clearBundledSkills,
   getBundledSkills,
-  registerBundledSkill,
 } from 'src/skills/bundledSkills.js'
+import { registerBrowserCompetitiveTeardownWorkflow } from 'src/skills/bundled/browserCompetitiveTeardown.js'
+import { registerBrowserFunnelAuditWorkflow } from 'src/skills/bundled/browserFunnelAudit.js'
+import { registerBrowserSupportFaqAuditWorkflow } from 'src/skills/bundled/browserSupportFaqAudit.js'
 
 describe('bundled workflow skills', () => {
   afterEach(() => {
     clearBundledSkills()
   })
 
-  test('registers browser funnel audit as a first-class workflow', () => {
-    registerBundledSkill({
-      name: 'browser-funnel-audit',
-      description: 'Audit a live website funnel and recommend fixes',
-      whenToUse: 'Use when a browser-backed funnel audit is needed',
-      verbs: ['audit funnel'],
-      inputs: ['Target URL'],
-      outputs: ['Funnel audit summary'],
-      artifactKinds: ['funnel audit'],
-      successCriteria: ['Calls out the biggest friction points'],
-      handoffFields: ['highest_friction_step'],
-      workflowSteps: [
-        { title: 'Open funnel' },
-        { title: 'Collect friction evidence' },
-        { title: 'Recommend fixes' },
-      ],
-      context: 'fork',
-      workflowRuntime: 'code',
-      allowedTools: ['Bash'],
-      async getPromptForCommand() {
-        return [{ type: 'text', text: '# Audit the funnel' }]
-      },
-    })
+  test('registers browser-backed business workflows as first-class workflows', () => {
+    registerBrowserFunnelAuditWorkflow()
+    registerBrowserCompetitiveTeardownWorkflow()
+    registerBrowserSupportFaqAuditWorkflow()
 
-    const workflow = getBundledSkills().find(
-      command => command.name === 'browser-funnel-audit',
+    const workflows = getBundledSkills().filter(
+      command => command.kind === 'workflow',
+    )
+    const workflowNames = workflows.map(command => command.name)
+
+    expect(workflowNames).toEqual(
+      expect.arrayContaining([
+        'browser-funnel-audit',
+        'browser-competitive-teardown',
+        'browser-support-faq-audit',
+      ]),
     )
 
-    expect(workflow).toBeDefined()
-    expect(workflow?.kind).toBe('workflow')
-    expect(workflow?.context).toBe('fork')
-    expect(workflow?.workflowRuntime).toBe('code')
-    expect(workflow?.verbs).toContain('audit funnel')
-    expect(workflow?.artifactKinds).toContain('funnel audit')
-    expect(workflow?.workflowSteps).toHaveLength(3)
+    const competitive = workflows.find(
+      command => command.name === 'browser-competitive-teardown',
+    )
+    const support = workflows.find(
+      command => command.name === 'browser-support-faq-audit',
+    )
+
+    expect(competitive?.context).toBe('fork')
+    expect(competitive?.workflowRuntime).toBe('code')
+    expect(competitive?.artifactKinds).toContain('competitive teardown')
+    expect(competitive?.verbs).toContain('map positioning gaps')
+    expect(competitive?.workflowSteps).toHaveLength(3)
+
+    expect(support?.context).toBe('fork')
+    expect(support?.workflowRuntime).toBe('code')
+    expect(support?.artifactKinds).toContain('support audit')
+    expect(support?.verbs).toContain('audit support path')
+    expect(support?.workflowSteps).toHaveLength(3)
   })
 })
