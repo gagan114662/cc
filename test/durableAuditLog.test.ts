@@ -11,6 +11,7 @@ import {
   readAuditTail,
   writeAuditEntry,
 } from 'src/services/audit/durableAuditLog.js'
+import { DEFAULT_TENANT } from 'src/services/tenant/tenantContext.js'
 
 let dir: string
 
@@ -25,15 +26,61 @@ afterEach(() => {
 describe('durableAuditLog', () => {
   test('writeAuditEntry creates the day file and appends JSONL', () => {
     const now = () => new Date('2026-04-19T10:00:00Z')
-    writeAuditEntry({ ts: '2026-04-19T10:00:00Z', kind: 'error', message: 'boom' }, { dir, now })
+    writeAuditEntry(
+      { ts: '2026-04-19T10:00:00Z', kind: 'error', message: 'boom' },
+      { dir, now, tenant: DEFAULT_TENANT },
+    )
 
     const file = auditFilePath({ dir, now })
     expect(file).toBe(path.join(dir, '2026-04-19.jsonl'))
 
     const contents = readFileSync(file, 'utf8')
-    expect(contents).toBe(
-      JSON.stringify({ ts: '2026-04-19T10:00:00Z', kind: 'error', message: 'boom' }) + '\n',
+    const parsed = JSON.parse(contents.trim())
+    expect(parsed.kind).toBe('error')
+    expect(parsed.message).toBe('boom')
+    expect(parsed.tenant).toEqual({
+      id: DEFAULT_TENANT.id,
+      name: DEFAULT_TENANT.name,
+      role: DEFAULT_TENANT.role,
+    })
+  })
+
+  test('writeAuditEntry stamps tenant from opts.tenant', () => {
+    const now = () => new Date('2026-04-19T10:00:00Z')
+    writeAuditEntry(
+      { ts: 't', kind: 'duty.start' },
+      {
+        dir,
+        now,
+        tenant: { id: 'acme', name: 'Acme Robotics', role: 'developer' },
+      },
     )
+
+    const tail = readAuditTail(1, { dir, now })
+    expect(tail[0]!.tenant).toEqual({
+      id: 'acme',
+      name: 'Acme Robotics',
+      role: 'developer',
+    })
+  })
+
+  test('entry.tenant wins over opts.tenant (caller had more specific info)', () => {
+    const now = () => new Date('2026-04-19T10:00:00Z')
+    writeAuditEntry(
+      {
+        ts: 't',
+        kind: 'duty.start',
+        tenant: { id: 'explicit', name: 'Explicit', role: 'admin' },
+      },
+      {
+        dir,
+        now,
+        tenant: { id: 'resolved', name: 'Resolved', role: 'viewer' },
+      },
+    )
+
+    const tail = readAuditTail(1, { dir, now })
+    expect((tail[0]!.tenant as { id: string }).id).toBe('explicit')
   })
 
   test('multiple entries stack on the same day', () => {
