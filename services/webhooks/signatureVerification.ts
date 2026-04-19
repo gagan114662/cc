@@ -20,13 +20,21 @@ export type VerifyHmacInput = {
 
 const SHA256_HEX_LEN = 64 // HMAC-SHA256 produces 32 bytes = 64 hex chars
 
+// Match any short alphanumeric scheme token followed by '=' at the
+// start of the signature — e.g. "sha256=" (GitHub), "v0=" (Slack),
+// future "sha512=" / "hmac=". Bounded to 8 chars so a garbage input
+// can't chew through a long string before failing.
+const SCHEME_PREFIX = /^[A-Za-z0-9]{1,8}=/
+
 function stripPrefix(sig: string): string {
-  // GitHub prefixes with "sha256=", some tools double-quote, and a few
-  // stray whitespace-padded examples exist in the wild — normalize
-  // aggressively because signatures that "almost match" are bugs, not
-  // attacks, and we want to stay strict on the underlying bytes.
+  // Producers prefix their hex with a scheme tag; some tools double-quote
+  // the header, and a few stray whitespace-padded examples exist in the
+  // wild — normalize aggressively because signatures that "almost match"
+  // are bugs, not attacks, and we want to stay strict on the underlying
+  // bytes.
   let s = sig.trim()
-  if (s.startsWith('sha256=')) s = s.slice('sha256='.length)
+  const m = SCHEME_PREFIX.exec(s)
+  if (m) s = s.slice(m[0].length)
   if (s.startsWith('"') && s.endsWith('"')) s = s.slice(1, -1)
   return s
 }
