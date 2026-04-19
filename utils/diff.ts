@@ -2,6 +2,7 @@ import { type StructuredPatchHunk, structuredPatch } from 'diff'
 import { logEvent } from 'src/services/analytics/index.js'
 import { getLocCounter } from '../bootstrap/state.js'
 import { addToTotalLinesChanged } from '../cost-tracker.js'
+import { tenantAttributesForTelemetry } from '../services/tenant/telemetryAttrs.js'
 import type { FileEdit } from '../tools/FileEditTool/types.js'
 import { count } from './array.js'
 import { convertLeadingTabsToSpaces } from './file.js'
@@ -69,8 +70,9 @@ export function countLinesChanged(
 
   addToTotalLinesChanged(numAdditions, numRemovals)
 
-  getLocCounter()?.add(numAdditions, { type: 'added' })
-  getLocCounter()?.add(numRemovals, { type: 'removed' })
+  const tenantAttrs = tenantAttributesForTelemetry()
+  getLocCounter()?.add(numAdditions, { type: 'added', ...tenantAttrs })
+  getLocCounter()?.add(numRemovals, { type: 'removed', ...tenantAttrs })
 
   logEvent('tengu_file_changed', {
     lines_added: numAdditions,

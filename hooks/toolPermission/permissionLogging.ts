@@ -8,6 +8,7 @@ import {
 } from 'src/services/analytics/index.js'
 import { sanitizeToolNameForAnalytics } from 'src/services/analytics/metadata.js'
 import { getCodeEditToolDecisionCounter } from '../../bootstrap/state.js'
+import { tenantAttributesForTelemetry } from '../../services/tenant/telemetryAttrs.js'
 import type { Tool as ToolType, ToolUseContext } from '../../Tool.js'
 import { getLanguageName } from '../../utils/cliHighlight.js'
 import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js'
@@ -213,7 +214,11 @@ function logPermissionDecision(
   // Track code editing tool metrics
   if (isCodeEditingTool(tool.name)) {
     void buildCodeEditToolAttributes(tool, input, decision, sourceString).then(
-      attributes => getCodeEditToolDecisionCounter()?.add(1, attributes),
+      attributes =>
+        getCodeEditToolDecisionCounter()?.add(1, {
+          ...attributes,
+          ...tenantAttributesForTelemetry(),
+        }),
     )
   }
 

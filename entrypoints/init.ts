@@ -6,6 +6,7 @@ import memoize from 'lodash-es/memoize.js'
 import { getIsNonInteractiveSession } from 'src/bootstrap/state.js'
 import type { AttributedCounter } from '../bootstrap/state.js'
 import { getSessionCounter, setMeter } from '../bootstrap/state.js'
+import { tenantAttributesForTelemetry } from '../services/tenant/telemetryAttrs.js'
 import { shutdownLspServerManager } from '../services/lsp/manager.js'
 import { populateOAuthAccountInfoIfNeeded } from '../services/oauth/client.js'
 import {
@@ -335,6 +336,6 @@ async function setMeterState(): Promise<void> {
     // Increment session counter here because the startup telemetry path
     // runs before this async initialization completes, so the counter
     // would be null there.
-    getSessionCounter()?.add(1)
+    getSessionCounter()?.add(1, tenantAttributesForTelemetry())
   }
 }
