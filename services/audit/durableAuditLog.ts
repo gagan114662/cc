@@ -23,10 +23,8 @@ import {
 } from 'node:fs'
 import path from 'node:path'
 import { CACHE_PATHS } from '../../utils/cachePaths.js'
-import {
-  resolveTenantContext,
-  type TenantContext,
-} from '../tenant/tenantContext.js'
+import { type TenantContext } from '../tenant/tenantContext.js'
+import { currentTenantContext } from '../tenant/tenantScope.js'
 
 // Stamped on every audit entry so post-mortem tooling can slice by tenant
 // without re-parsing arbitrary payload fields. Shape mirrors the span
@@ -87,9 +85,10 @@ export function writeAuditEntry(
   const dir = resolveDir(opts)
   mkdirSync(dir, { recursive: true })
   const file = auditFilePath(opts)
-  // Stamp tenant when the caller hasn't already — keeps legacy call sites
-  // working (they just get DEFAULT_TENANT) while Phase 2 routing catches up.
-  const tenantCtx = opts?.tenant ?? resolveTenantContext()
+  // Stamp tenant when the caller hasn't already. Precedence: explicit opts
+  // override → active AsyncLocalStorage scope (set by daemon fireDuty) →
+  // env resolution (legacy). All three terminate at DEFAULT_TENANT.
+  const tenantCtx = currentTenantContext(opts?.tenant)
   const stamped: AuditEntry = entry.tenant
     ? entry
     : {

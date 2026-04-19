@@ -17,10 +17,10 @@ import {
 } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
 import {
-  resolveTenantContext,
   tenantSpanAttributes,
   type TenantContext,
 } from '../tenant/tenantContext.js'
+import { currentTenantContext } from '../tenant/tenantScope.js'
 
 // The API package ships a noop propagator by default — so propagation.inject
 // would be a silent no-op unless someone (usually the SDK) registers a real
@@ -58,7 +58,10 @@ function attrs(
 ): Attributes {
   const out: Attributes = {
     ...(extra ?? {}),
-    ...tenantSpanAttributes(tenant ?? resolveTenantContext()),
+    // currentTenantContext checks explicit arg → AsyncLocalStorage scope → env
+    // so a daemon fire wrapped in runWithTenantScope stamps the scope's
+    // tenant, and legacy paths keep resolving from env.
+    ...tenantSpanAttributes(currentTenantContext(tenant)),
   }
   if (base.dutyId) out['employee.duty.id'] = base.dutyId
   if (base.assignmentId) out['employee.assignment.id'] = base.assignmentId
