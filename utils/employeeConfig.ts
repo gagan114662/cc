@@ -196,6 +196,12 @@ function parseEmployeeConfig(raw: string): EmployeeConfig | null {
       ...(typeof duty.cronTaskId === 'string'
         ? { cronTaskId: duty.cronTaskId }
         : {}),
+      ...(typeof duty.tokenBudget === 'number' && duty.tokenBudget > 0
+        ? { tokenBudget: duty.tokenBudget }
+        : {}),
+      ...(typeof duty.costCap === 'number' && duty.costCap > 0
+        ? { costCap: duty.costCap }
+        : {}),
     }))
 
   return {

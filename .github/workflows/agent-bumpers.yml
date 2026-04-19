@@ -40,3 +40,46 @@ jobs:
         with:
           name: test-quality-proof
           path: test-quality-proof.html
+
+  docker-build:
+    needs: verify
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # Local-only build: no registry push yet. When a deploy target is
+      # picked (GHCR / ECR), add a login step + `push: true` here. The
+      # image is exported as a tarball so the smoke step can docker-load
+      # it and run /health against a live container.
+      - name: Build image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: false
+          load: true
+          tags: cc-rebuilt:ci
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke — container /health
+        run: |
+          docker run -d --name cc-daemon -p 8181:8181 cc-rebuilt:ci
+          for i in {1..20}; do
+            if curl -sf http://127.0.0.1:8181/health > /dev/null; then
+              echo "daemon healthy after $i probes"
+              curl -s http://127.0.0.1:8181/health | head -c 2000
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "daemon did not become healthy" >&2
+          docker logs cc-daemon || true
+          exit 1
+
+      - name: Teardown container
+        if: always()
+        run: docker rm -f cc-daemon || true

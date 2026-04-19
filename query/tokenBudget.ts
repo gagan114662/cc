@@ -42,12 +42,95 @@ type StopDecision = {
 
 export type TokenBudgetDecision = ContinueDecision | StopDecision
 
+// Per-duty/per-assignment hard ceiling. When either bound is exceeded,
+// checkTokenBudget throws DutyBudgetExceededError instead of returning a
+// decision. This is the mechanical difference from the per-turn
+// `budget` arg (which only nudges/stops continuation, never throws).
+export type DutyBudgetContext = {
+  dutyId?: string
+  assignmentId?: string
+  // Hard token ceiling for this duty/assignment tick. Exceeding it throws.
+  maxTokens?: number
+  // Hard cumulative USD cap. Checked against currentCostUSD.
+  maxCostUSD?: number
+  currentCostUSD?: number
+}
+
+export class DutyBudgetExceededError extends Error {
+  readonly dutyId?: string
+  readonly assignmentId?: string
+  readonly reason: 'tokens' | 'cost'
+  readonly limit: number
+  readonly observed: number
+
+  constructor(args: {
+    reason: 'tokens' | 'cost'
+    limit: number
+    observed: number
+    dutyId?: string
+    assignmentId?: string
+  }) {
+    const subject = args.dutyId
+      ? `duty ${args.dutyId}`
+      : args.assignmentId
+        ? `assignment ${args.assignmentId}`
+        : 'budget scope'
+    super(
+      `${subject} exceeded ${args.reason} ceiling (${args.observed} > ${args.limit})`,
+    )
+    this.name = 'DutyBudgetExceededError'
+    this.dutyId = args.dutyId
+    this.assignmentId = args.assignmentId
+    this.reason = args.reason
+    this.limit = args.limit
+    this.observed = args.observed
+  }
+}
+
+function enforceDutyHardStop(
+  globalTurnTokens: number,
+  dutyContext: DutyBudgetContext | undefined,
+): void {
+  if (!dutyContext) return
+  const { maxTokens, maxCostUSD, currentCostUSD, dutyId, assignmentId } =
+    dutyContext
+  if (typeof maxTokens === 'number' && maxTokens > 0 && globalTurnTokens > maxTokens) {
+    throw new DutyBudgetExceededError({
+      reason: 'tokens',
+      limit: maxTokens,
+      observed: globalTurnTokens,
+      dutyId,
+      assignmentId,
+    })
+  }
+  if (
+    typeof maxCostUSD === 'number' &&
+    maxCostUSD > 0 &&
+    typeof currentCostUSD === 'number' &&
+    currentCostUSD > maxCostUSD
+  ) {
+    throw new DutyBudgetExceededError({
+      reason: 'cost',
+      limit: maxCostUSD,
+      observed: currentCostUSD,
+      dutyId,
+      assignmentId,
+    })
+  }
+}
+
 export function checkTokenBudget(
   tracker: BudgetTracker,
   agentId: string | undefined,
   budget: number | null,
   globalTurnTokens: number,
+  dutyContext?: DutyBudgetContext,
 ): TokenBudgetDecision {
+  // Hard-stop enforcement runs first and is independent of the per-turn
+  // continuation budget — a duty can exceed its ceiling mid-turn even when
+  // the subagent budget hasn't triggered a nudge/stop yet.
+  enforceDutyHardStop(globalTurnTokens, dutyContext)
+
   if (agentId || budget === null || budget <= 0) {
     return { action: 'stop', completionEvent: null }
   }

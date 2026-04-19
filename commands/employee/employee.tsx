@@ -206,7 +206,16 @@ async function handleStatus(
             const cronTask = duty.cronTaskId
               ? allCronTasks.find(task => task.id === duty.cronTaskId)
               : undefined
-            return `- ${duty.id} ${duty.title} (${duty.enabled ? 'enabled' : 'disabled'}, ${cronToHuman(duty.cron)}${cronTask ? '' : ', unscheduled'})`
+            const budgetParts: string[] = []
+            if (typeof duty.tokenBudget === 'number' && duty.tokenBudget > 0) {
+              budgetParts.push(`tokens ≤ ${duty.tokenBudget.toLocaleString()}`)
+            }
+            if (typeof duty.costCap === 'number' && duty.costCap > 0) {
+              budgetParts.push(`cost ≤ $${duty.costCap.toFixed(2)}`)
+            }
+            const budgetTag =
+              budgetParts.length > 0 ? `, ${budgetParts.join(', ')}` : ''
+            return `- ${duty.id} ${duty.title} (${duty.enabled ? 'enabled' : 'disabled'}, ${cronToHuman(duty.cron)}${cronTask ? '' : ', unscheduled'}${budgetTag})`
           })
           .join('\n')
       : '- No recurring duties configured'
