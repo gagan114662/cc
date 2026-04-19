@@ -12,6 +12,7 @@ import {
   SpanStatusCode,
   trace,
   type Attributes,
+  type Context,
   type Span,
 } from '@opentelemetry/api'
 import { W3CTraceContextPropagator } from '@opentelemetry/core'
@@ -126,4 +127,46 @@ export function traceEnvForActiveContext(span?: Span): Record<string, string> {
   if (carrier.traceparent) out.TRACEPARENT = carrier.traceparent
   if (carrier.tracestate) out.TRACESTATE = carrier.tracestate
   return out
+}
+
+// Import side of traceEnvForActiveContext. The daemon spawns the CLI
+// with TRACEPARENT / TRACESTATE set; without this the child starts a
+// fresh trace and Honeycomb shows daemon and CLI as unrelated roots.
+// Returns a Context with the remote SpanContext as the active span, so
+// callers can pass it to tracer.startSpan(name, opts, ctx) and the
+// child's first span inherits the daemon's trace-id.
+//
+// Returns undefined if env has no valid traceparent (normal interactive
+// CLI invocations) — callers should treat that as "start a new trace".
+export function adoptParentTraceContextFromEnv(
+  env: Record<string, string | undefined> = process.env,
+): Context | undefined {
+  const traceparent = env.TRACEPARENT
+  const tracestate = env.TRACESTATE
+  if (!traceparent) return undefined
+  const carrier: Record<string, string> = { traceparent }
+  if (tracestate) carrier.tracestate = tracestate
+  const ctx = propagation.extract(otelContext.active(), carrier)
+  const spanCtx = trace.getSpanContext(ctx)
+  // Reject invalid traceparents (bad format, all-zeroes ids) — extract
+  // returns the base context silently in that case.
+  if (!spanCtx || !spanCtx.traceId || spanCtx.traceId === '0'.repeat(32)) {
+    return undefined
+  }
+  return ctx
+}
+
+// Cached version for the CLI hot path — extract-once, share with every
+// startSpan call. First invocation reads env; subsequent calls are free.
+let cachedAdoptedContext: Context | undefined | null = null
+export function getInheritedParentContext(): Context | undefined {
+  if (cachedAdoptedContext === null) {
+    cachedAdoptedContext = adoptParentTraceContextFromEnv()
+  }
+  return cachedAdoptedContext
+}
+
+// Test-only: re-read env on the next getInheritedParentContext() call.
+export function _resetInheritedParentContextCache(): void {
+  cachedAdoptedContext = null
 }

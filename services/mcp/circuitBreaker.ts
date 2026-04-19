@@ -119,3 +119,19 @@ export class MCPCircuitRegistry {
 // code paths that don't inject a registry share this one so breaker
 // state is consistent across every MCP tool call in the daemon.
 export const defaultMCPCircuitRegistry = new MCPCircuitRegistry()
+
+// Decide whether an error should count against the breaker. User- or
+// signal-initiated cancellations have no bearing on server health —
+// counting them flipped the breaker during routine Esc / SIGINT / duty
+// cancellation and opened the circuit for every *other* concurrent job
+// on the same server. Likewise, a fail-fast `MCPCircuitOpenError` must
+// never double-record or the breaker could never reset.
+export function isIgnorableBreakerError(
+  err: unknown,
+  signalAborted?: boolean,
+): boolean {
+  if (signalAborted) return true
+  if (err instanceof MCPCircuitOpenError) return true
+  if (err instanceof Error && err.name === 'AbortError') return true
+  return false
+}

@@ -7,6 +7,9 @@ import { describe, expect, test } from 'bun:test'
 import { trace } from '@opentelemetry/api'
 import { BasicTracerProvider } from '@opentelemetry/sdk-trace-base'
 import {
+  _resetInheritedParentContextCache,
+  adoptParentTraceContextFromEnv,
+  getInheritedParentContext,
   traceEnvForActiveContext,
   withDutySpan,
 } from 'src/services/observability/dutySpans.js'
@@ -37,5 +40,69 @@ describe('traceEnvForActiveContext', () => {
       const traceIdFromEnv = env.TRACEPARENT?.split('-')[1]
       expect(traceIdFromEnv).toBe(span.spanContext().traceId)
     })
+  })
+})
+
+describe('adoptParentTraceContextFromEnv', () => {
+  test('returns undefined when env has no TRACEPARENT', () => {
+    expect(adoptParentTraceContextFromEnv({})).toBeUndefined()
+  })
+
+  test('returns undefined for a malformed TRACEPARENT', () => {
+    expect(
+      adoptParentTraceContextFromEnv({ TRACEPARENT: 'not-a-traceparent' }),
+    ).toBeUndefined()
+  })
+
+  test('round-trips parent trace-id from env into a child span', async () => {
+    // Capture the parent span's traceparent into an env-shaped object —
+    // this is exactly what entrypoints/daemon.ts hands the subprocess.
+    let parentEnv: Record<string, string> = {}
+    let parentTraceId = ''
+    let parentSpanId = ''
+    await withDutySpan({ dutyId: 'parent' }, async span => {
+      parentEnv = traceEnvForActiveContext(span)
+      parentTraceId = span.spanContext().traceId
+      parentSpanId = span.spanContext().spanId
+    })
+
+    // Now simulate the child process: extract the context and start a
+    // span with it as parent. The trace-id must match; the span-id must
+    // differ (it's a new span); the parent span-id link is carried by
+    // the Context itself.
+    const parentCtx = adoptParentTraceContextFromEnv(parentEnv)
+    expect(parentCtx).toBeDefined()
+    const tracer = trace.getTracer('test')
+    const child = tracer.startSpan('child-span', {}, parentCtx!)
+    try {
+      expect(child.spanContext().traceId).toBe(parentTraceId)
+      expect(child.spanContext().spanId).not.toBe(parentSpanId)
+    } finally {
+      child.end()
+    }
+  })
+
+  test('getInheritedParentContext caches the first env read', () => {
+    // Test harness may already have TRACEPARENT set (Claude Code injects
+    // it when spawning subprocesses). Temporarily strip it so we can
+    // prove caching: first call with env clean → undefined, subsequent
+    // calls must return the same cached undefined even if env changes.
+    const saved = process.env.TRACEPARENT
+    try {
+      delete process.env.TRACEPARENT
+      _resetInheritedParentContextCache()
+
+      const first = getInheritedParentContext()
+      expect(first).toBeUndefined()
+
+      process.env.TRACEPARENT =
+        '00-' + 'a'.repeat(32) + '-' + 'b'.repeat(16) + '-01'
+      const second = getInheritedParentContext()
+      expect(second).toBeUndefined()
+    } finally {
+      if (saved === undefined) delete process.env.TRACEPARENT
+      else process.env.TRACEPARENT = saved
+      _resetInheritedParentContextCache()
+    }
   })
 })

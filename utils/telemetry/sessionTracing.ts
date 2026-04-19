@@ -14,6 +14,7 @@ import { feature } from 'bun:bundle'
 import { context as otelContext, type Span, trace } from '@opentelemetry/api'
 import { AsyncLocalStorage } from 'async_hooks'
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../services/analytics/growthbook.js'
+import { getInheritedParentContext } from '../../services/observability/dutySpans.js'
 import type { AssistantMessage, UserMessage } from '../../types/message.js'
 import { isEnvDefinedFalsy, isEnvTruthy } from '../envUtils.js'
 import { getTelemetryAttributes } from '../telemetryAttributes.js'
@@ -213,9 +214,13 @@ export function startInteractionSpan(userPrompt: string): Span {
     'interaction.sequence': interactionSequence,
   })
 
-  const span = tracer.startSpan('claude_code.interaction', {
-    attributes,
-  })
+  // If this process was spawned by the daemon (TRACEPARENT is set), make
+  // the interaction span a child of the caller's duty span so the whole
+  // chain stitches together in Honeycomb as one trace.
+  const parentCtx = getInheritedParentContext()
+  const span = parentCtx
+    ? tracer.startSpan('claude_code.interaction', { attributes }, parentCtx)
+    : tracer.startSpan('claude_code.interaction', { attributes })
 
   // Add experimental attributes (new_context)
   addBetaInteractionAttributes(span, userPrompt)

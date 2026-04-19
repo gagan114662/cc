@@ -111,6 +111,7 @@ import {
 } from './elicitationHandler.js'
 import {
   defaultMCPCircuitRegistry,
+  isIgnorableBreakerError,
   MCPCircuitOpenError,
 } from './circuitBreaker.js'
 import { buildMcpToolName } from './mcpStringUtils.js'
@@ -3202,9 +3203,16 @@ async function callMCPTool({
       clearInterval(progressInterval)
     }
 
-    // Record failure on the breaker. A circuit-open rethrow was handled
-    // before this try block, so we never double-record for fail-fast.
-    defaultMCPCircuitRegistry.recordFailure(name)
+    // Record failure on the breaker — but only for errors that actually
+    // indicate server health. User- or signal-initiated cancellations
+    // (Esc, SIGINT, duty cancellation) used to count here, so a handful
+    // of routine cancels tripped the breaker and blocked every other
+    // concurrent job using the same MCP server. Server-side issues
+    // (timeouts, 401s, connection closed) still count via the default
+    // branch of isIgnorableBreakerError.
+    if (!isIgnorableBreakerError(e, signal.aborted)) {
+      defaultMCPCircuitRegistry.recordFailure(name)
+    }
 
     const elapsed = Date.now() - toolStartTime
 

@@ -6,6 +6,7 @@
 
 import { describe, expect, test } from 'bun:test'
 import {
+  isIgnorableBreakerError,
   MCPCircuitOpenError,
   MCPCircuitRegistry,
 } from 'src/services/mcp/circuitBreaker.js'
@@ -154,6 +155,43 @@ describe('MCPCircuitRegistry', () => {
     // Healthy server still serves calls.
     const result = await reg.run('healthy-srv', async () => 'ok')
     expect(result).toBe('ok')
+  })
+
+  test('caller skips recordFailure for cancellations → breaker stays closed', async () => {
+    // Regression: client.ts used to call recordFailure on every throw,
+    // including AbortError from user Esc / signal cancellation. Many
+    // concurrent cancels would then open the breaker and knock out
+    // every other job using the same server. Gate with
+    // isIgnorableBreakerError at the call site and the breaker stays
+    // closed no matter how many cancels arrive.
+    const reg = new MCPCircuitRegistry({ failureThreshold: 2, cooldownMs: 1000 })
+    const abortErr = Object.assign(new Error('aborted'), { name: 'AbortError' })
+    for (let i = 0; i < 10; i++) {
+      try {
+        await reg.run('srv', async () => {
+          throw abortErr
+        })
+      } catch {
+        /* expected */
+      }
+      if (isIgnorableBreakerError(abortErr)) {
+        // Simulate the client.ts fix: undo the run()-auto-recorded failure.
+        reg.recordSuccess('srv')
+      }
+    }
+    expect(reg.getState('srv')).toBe('closed')
+  })
+
+  test('isIgnorableBreakerError classifies abort, open-breaker, and real errors', () => {
+    const abortErr = Object.assign(new Error('x'), { name: 'AbortError' })
+    expect(isIgnorableBreakerError(abortErr)).toBe(true)
+    expect(isIgnorableBreakerError(new MCPCircuitOpenError('srv', 0))).toBe(true)
+    // signal.aborted=true even with a generic Error → still ignorable.
+    expect(isIgnorableBreakerError(new Error('boom'), true)).toBe(true)
+    // Genuine server error → counts.
+    expect(isIgnorableBreakerError(new Error('boom'))).toBe(false)
+    // Non-Error throw → counts (stringy throws still indicate trouble).
+    expect(isIgnorableBreakerError('wat')).toBe(false)
   })
 
   test('recordSuccess mid-run resets consecutiveFailures', async () => {
