@@ -2,7 +2,11 @@ import { mkdirSync, readFileSync, writeFileSync } from 'fs'
 import { mkdir, readFile, rm, writeFile } from 'fs/promises'
 import { join } from 'path'
 import { z } from 'zod/v4'
-import { getSessionCreatedTeams } from '../../bootstrap/state.js'
+import {
+  clearAllSessionCreatedTeams,
+  getAllSessionCreatedTeamsByTenant,
+  getSessionCreatedTeams,
+} from '../../bootstrap/state.js'
 import { logForDebugging } from '../debug.js'
 import { getTeamsDir } from '../envUtils.js'
 import { errorMessage, getErrnoCode } from '../errors.js'
@@ -572,21 +576,34 @@ export function unregisterTeamForSessionCleanup(teamName: string): void {
 /**
  * Clean up all teams created this session that weren't explicitly deleted.
  * Registered with gracefulShutdown from init.ts.
+ *
+ * Walks every tenant's bucket because this runs at process shutdown —
+ * outside any AsyncLocalStorage tenant scope, so getSessionCreatedTeams()
+ * alone would only see the DEFAULT_TENANT bucket and leak every named
+ * tenant's teams on a shared daemon.
  */
 export async function cleanupSessionTeams(): Promise<void> {
-  const sessionCreatedTeams = getSessionCreatedTeams()
-  if (sessionCreatedTeams.size === 0) return
-  const teams = Array.from(sessionCreatedTeams)
+  const perTenant = getAllSessionCreatedTeamsByTenant()
+  const teams = new Set<string>()
+  for (const bucket of perTenant.values()) {
+    for (const name of bucket) teams.add(name)
+  }
+  if (teams.size === 0) return
+  const teamNames = Array.from(teams)
   logForDebugging(
-    `cleanupSessionTeams: removing ${teams.length} orphan team dir(s): ${teams.join(', ')}`,
+    `cleanupSessionTeams: removing ${teamNames.length} orphan team dir(s) across ${perTenant.size} tenant(s): ${teamNames.join(', ')}`,
   )
   // Kill panes first — on SIGINT the teammate processes are still running;
   // deleting directories alone would orphan them in open tmux/iTerm2 panes.
   // (TeamDeleteTool's path doesn't need this — by then teammates have
   // gracefully exited and useInboxPoller has already closed their panes.)
-  await Promise.allSettled(teams.map(name => killOrphanedTeammatePanes(name)))
-  await Promise.allSettled(teams.map(name => cleanupTeamDirectories(name)))
-  sessionCreatedTeams.clear()
+  await Promise.allSettled(
+    teamNames.map(name => killOrphanedTeammatePanes(name)),
+  )
+  await Promise.allSettled(
+    teamNames.map(name => cleanupTeamDirectories(name)),
+  )
+  clearAllSessionCreatedTeams()
 }
 
 /**

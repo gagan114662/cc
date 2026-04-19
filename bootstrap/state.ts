@@ -19,6 +19,7 @@ import { randomUUID } from 'src/utils/crypto.js'
 import type { ModelSetting } from 'src/utils/model/model.js'
 import type { ModelStrings } from 'src/utils/model/modelStrings.js'
 import type { SettingSource } from 'src/utils/settings/constants.js'
+import { currentTenantContext } from 'src/services/tenant/tenantScope.js'
 import { resetSettingsCache } from 'src/utils/settings/settingsCache.js'
 import type { PluginHookMatcher } from 'src/utils/settings/types.js'
 import { createSignal } from 'src/utils/signal.js'
@@ -146,7 +147,12 @@ type State = {
   // persist on disk forever (gh-32730). TeamDelete removes entries to
   // avoid double-cleanup. Lives here (not teamHelpers.ts) so
   // resetStateForTests() clears it between tests.
-  sessionCreatedTeams: Set<string>
+  //
+  // Keyed by tenant id so concurrent multi-tenant assignments on a
+  // shared daemon don't cross-delete each other's teams at shutdown.
+  // Each tenant's own register/unregister round-trips through its
+  // bucket; cleanupSessionTeams() walks every bucket on process exit.
+  sessionCreatedTeamsByTenant: Map<string, Set<string>>
   // Session-only trust flag for home directory (not persisted to disk)
   // When running from home dir, trust dialog is shown but not saved to disk.
   // This flag allows features requiring trust to work during the session.
@@ -358,7 +364,7 @@ function getInitialState(): State {
     // Scheduled tasks disabled until flag or dialog enables them
     scheduledTasksEnabled: false,
     sessionCronTasks: [],
-    sessionCreatedTeams: new Set(),
+    sessionCreatedTeamsByTenant: new Map(),
     // Session-only trust flag (not persisted to disk)
     sessionTrustAccepted: false,
     // Session-only flag to disable session persistence to disk
@@ -1469,8 +1475,43 @@ export function getPlanSlugCache(): Map<string, string> {
   return STATE.planSlugCache
 }
 
+/**
+ * Returns the active tenant's team-cleanup bucket, creating it lazily.
+ *
+ * Call sites (registerTeamForSessionCleanup, unregisterTeamForSessionCleanup)
+ * always operate inside the scope of the tenant that owns the team — same
+ * scope for Create/Delete round-trips, so TeamDelete cleans its own bucket.
+ * cleanupSessionTeams() uses getAllSessionCreatedTeamsByTenant() instead
+ * because it runs at process shutdown, outside any tenant scope.
+ */
 export function getSessionCreatedTeams(): Set<string> {
-  return STATE.sessionCreatedTeams
+  const tenantId = currentTenantContext().id
+  let bucket = STATE.sessionCreatedTeamsByTenant.get(tenantId)
+  if (!bucket) {
+    bucket = new Set()
+    STATE.sessionCreatedTeamsByTenant.set(tenantId, bucket)
+  }
+  return bucket
+}
+
+/**
+ * Full map of tenant → team-name Set. Only cleanupSessionTeams() should
+ * call this — it runs at process shutdown (outside any tenant scope) and
+ * must clean teams from every tenant that touched the daemon.
+ */
+export function getAllSessionCreatedTeamsByTenant(): ReadonlyMap<
+  string,
+  ReadonlySet<string>
+> {
+  return STATE.sessionCreatedTeamsByTenant
+}
+
+/**
+ * Clear every tenant bucket — called at the end of cleanupSessionTeams()
+ * so a subsequent cleanup call is a no-op, and tests get a fresh slate.
+ */
+export function clearAllSessionCreatedTeams(): void {
+  STATE.sessionCreatedTeamsByTenant.clear()
 }
 
 // Teleported session tracking for reliability logging
