@@ -68,6 +68,32 @@ export type SDKControlInitializeRequest = {
   agentProgressSummaries?: boolean
 }
 
+// Additional control-request subtypes not yet typed upstream. The runtime
+// dispatcher in cli/print.ts handles all of these; the Zod schema in
+// controlSchemas.ts accepts them too. Phantom fields are kept permissive
+// (unknown) because the consumer casts per-subtype at the callsite.
+export type SDKControlExtendedRequest =
+  | { subtype: 'end_session'; [key: string]: unknown }
+  | { subtype: 'get_context_usage'; [key: string]: unknown }
+  | { subtype: 'cancel_async_message'; [key: string]: unknown }
+  | { subtype: 'seed_read_state'; [key: string]: unknown }
+  | { subtype: 'reload_plugins'; [key: string]: unknown }
+  | { subtype: 'mcp_reconnect'; serverName: string; [key: string]: unknown }
+  | { subtype: 'mcp_toggle'; [key: string]: unknown }
+  | { subtype: 'channel_enable'; [key: string]: unknown }
+  | { subtype: 'mcp_authenticate'; [key: string]: unknown }
+  | { subtype: 'mcp_oauth_callback_url'; [key: string]: unknown }
+  | { subtype: 'mcp_clear_auth'; [key: string]: unknown }
+  | { subtype: 'claude_authenticate'; [key: string]: unknown }
+  | { subtype: 'claude_oauth_callback'; [key: string]: unknown }
+  | { subtype: 'claude_oauth_wait_for_completion'; [key: string]: unknown }
+  | { subtype: 'apply_flag_settings'; [key: string]: unknown }
+  | { subtype: 'generate_session_title'; [key: string]: unknown }
+  | { subtype: 'get_settings'; [key: string]: unknown }
+  | { subtype: 'remote_control'; [key: string]: unknown }
+  | { subtype: 'side_question'; [key: string]: unknown }
+  | { subtype: 'stop_task'; [key: string]: unknown }
+
 // Rebuild the control-request union so discriminated-union narrowing on
 // `subtype === 'initialize'` resolves to the augmented type above.
 export type SDKControlRequest = {
@@ -85,6 +111,71 @@ export type SDKControlRequest = {
     | SDKControlMcpMessageRequest
     | SDKControlRewindFilesRequest
     | SDKControlMcpSetServersRequest
+    | SDKControlExtendedRequest
+}
+
+// Additional system-message subtypes emitted at runtime but not yet in
+// upstream's SDKSystemMessage. Shapes are minimal because consumers in
+// cli/print.ts only narrow on `.subtype` before passing through.
+export type SDKSystemExtendedMessage =
+  | {
+      type: 'system'
+      subtype: 'session_state_changed'
+      uuid: string
+      session_id: string
+      [key: string]: unknown
+    }
+  | {
+      type: 'system'
+      subtype: 'task_notification'
+      uuid: string
+      session_id: string
+      [key: string]: unknown
+    }
+  | {
+      type: 'system'
+      subtype: 'task_started'
+      uuid: string
+      session_id: string
+      [key: string]: unknown
+    }
+  | {
+      type: 'system'
+      subtype: 'task_progress'
+      uuid: string
+      session_id: string
+      [key: string]: unknown
+    }
+  | {
+      type: 'system'
+      subtype: 'post_turn_summary'
+      uuid: string
+      session_id: string
+      [key: string]: unknown
+    }
+
+// Streamlined-output variants emitted by createStreamlinedTransformer and
+// prompt-suggestion channel messages. Not in upstream SDK types.
+export type SDKStreamlinedTextMessage = {
+  type: 'streamlined_text'
+  text: string
+  uuid: string
+  session_id: string
+  [key: string]: unknown
+}
+
+export type SDKStreamlinedToolUseSummaryMessage = {
+  type: 'streamlined_tool_use_summary'
+  uuid: string
+  session_id: string
+  [key: string]: unknown
+}
+
+export type SDKPromptSuggestionMessage = {
+  type: 'prompt_suggestion'
+  uuid: string
+  session_id: string
+  [key: string]: unknown
 }
 
 // Rebuild aggregate stdin/stdout message unions so they use the augmented
@@ -92,6 +183,10 @@ export type SDKControlRequest = {
 // upstream node_modules version.
 export type StdoutMessage =
   | SDKMessage
+  | SDKSystemExtendedMessage
+  | SDKStreamlinedTextMessage
+  | SDKStreamlinedToolUseSummaryMessage
+  | SDKPromptSuggestionMessage
   | SDKControlResponse
   | SDKControlRequest
   | SDKControlCancelRequest

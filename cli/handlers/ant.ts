@@ -2,7 +2,7 @@
  * Ant-only subcommand handlers — reconstructed stub.
  *
  * These handlers are only invoked under `USER_TYPE === 'ant'` / the
- * `"external" === 'ant'` constant-false gate in main.tsx. In the external
+ * `("external" as string) === 'ant'` constant-false gate in main.tsx. In the external
  * build the gate folds to false and the dynamic import is never reached at
  * runtime, so the runtime bodies below are deliberately minimal stubs
  * sufficient to satisfy `tsc --strict` for the static imports in main.tsx.
@@ -26,7 +26,7 @@ export async function logHandler(
 ): Promise<void> {
   // FIXME: Real implementation lives in the internal (ant) build. The
   // external bundle strips it, so we stub here. The surrounding gate in
-  // main.tsx (`"external" === 'ant'`) prevents this from being reached.
+  // main.tsx (`("external" as string) === 'ant'`) prevents this from being reached.
   void logId
   throw new Error('logHandler: not implemented in external build')
 }
