@@ -88,11 +88,29 @@ export type SDKControlExtendedRequest =
     }
   | { subtype: 'reload_plugins'; [key: string]: unknown }
   | { subtype: 'mcp_reconnect'; serverName: string; [key: string]: unknown }
-  | { subtype: 'mcp_toggle'; [key: string]: unknown }
+  | {
+      subtype: 'mcp_toggle'
+      serverName: string
+      enabled?: boolean
+      [key: string]: unknown
+    }
   | { subtype: 'channel_enable'; serverName: string; [key: string]: unknown }
-  | { subtype: 'mcp_authenticate'; [key: string]: unknown }
-  | { subtype: 'mcp_oauth_callback_url'; [key: string]: unknown }
-  | { subtype: 'mcp_clear_auth'; [key: string]: unknown }
+  | {
+      subtype: 'mcp_authenticate'
+      serverName: string
+      [key: string]: unknown
+    }
+  | {
+      subtype: 'mcp_oauth_callback_url'
+      serverName: string
+      callbackUrl: string
+      [key: string]: unknown
+    }
+  | {
+      subtype: 'mcp_clear_auth'
+      serverName: string
+      [key: string]: unknown
+    }
   | { subtype: 'claude_authenticate'; [key: string]: unknown }
   | {
       subtype: 'claude_oauth_callback'
@@ -106,15 +124,28 @@ export type SDKControlExtendedRequest =
       settings: Record<string, unknown>
       [key: string]: unknown
     }
-  | { subtype: 'generate_session_title'; [key: string]: unknown }
+  | {
+      subtype: 'generate_session_title'
+      description: string
+      persist?: boolean
+      [key: string]: unknown
+    }
   | { subtype: 'get_settings'; [key: string]: unknown }
   | {
       subtype: 'remote_control'
       enabled?: boolean
       [key: string]: unknown
     }
-  | { subtype: 'side_question'; [key: string]: unknown }
-  | { subtype: 'stop_task'; [key: string]: unknown }
+  | {
+      subtype: 'side_question'
+      question: string
+      [key: string]: unknown
+    }
+  | {
+      subtype: 'stop_task'
+      task_id: string
+      [key: string]: unknown
+    }
 
 // Rebuild the control-request union so discriminated-union narrowing on
 // `subtype === 'initialize'` resolves to the augmented type above.

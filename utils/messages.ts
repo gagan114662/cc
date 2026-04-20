@@ -308,13 +308,20 @@ export const SYNTHETIC_MESSAGES = new Set([
 ])
 
 export function isSyntheticMessage(message: Message): boolean {
+  if (
+    message.type === 'progress' ||
+    message.type === 'attachment' ||
+    message.type === 'system' ||
+    message.type === 'tombstone' ||
+    message.type === 'tool_use_summary' ||
+    message.type === 'stream_event'
+  ) {
+    return false
+  }
   return (
-    message.type !== 'progress' &&
-    message.type !== 'attachment' &&
-    message.type !== 'system' &&
     Array.isArray(message.message.content) &&
     message.message.content[0]?.type === 'text' &&
-    SYNTHETIC_MESSAGES.has(message.message.content[0].text)
+    SYNTHETIC_MESSAGES.has(message.message.content[0].text as string)
   )
 }
 
@@ -370,10 +377,9 @@ function baseCreateAssistantMessage({
       ephemeral_1h_input_tokens: 0,
       ephemeral_5m_input_tokens: 0,
     },
-    inference_geo: null,
     iterations: null,
     speed: null,
-  },
+  } as Usage,
 }: {
   content: BetaContentBlock[]
   isApiErrorMessage?: boolean
@@ -397,8 +403,9 @@ function baseCreateAssistantMessage({
       type: 'message',
       usage,
       content,
+      // Field was added later in upstream SDK; cast to bypass narrower type.
       context_management: null,
-    },
+    } as BetaMessage,
     requestId: undefined,
     apiError,
     error,
@@ -690,7 +697,10 @@ export function isNotEmptyMessage(message: Message): boolean {
   if (
     message.type === 'progress' ||
     message.type === 'attachment' ||
-    message.type === 'system'
+    message.type === 'system' ||
+    message.type === 'tombstone' ||
+    message.type === 'tool_use_summary' ||
+    message.type === 'stream_event'
   ) {
     return true
   }
@@ -722,7 +732,7 @@ export function isNotEmptyMessage(message: Message): boolean {
 // Deterministic UUID derivation. Produces a stable UUID-shaped string from a
 // parent UUID + content block index so that the same input always produces the
 // same key across calls. Used by normalizeMessages and synthetic message creation.
-export function deriveUUID(parentUUID: UUID, index: number): UUID {
+export function deriveUUID(parentUUID: string, index: number): UUID {
   const hex = index.toString(16).padStart(12, '0')
   return `${parentUUID.slice(0, 24)}${hex}` as UUID
 }
@@ -760,8 +770,10 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
             message: {
               ...message.message,
               content: [_],
-              context_management: message.message.context_management ?? null,
-            },
+              context_management:
+                (message.message as unknown as { context_management?: unknown })
+                  .context_management ?? null,
+            } as BetaMessage,
             isMeta: message.isMeta,
             isVirtual: message.isVirtual,
             requestId: message.requestId,
