@@ -38,7 +38,7 @@ import {
   setLoggerProvider,
   setMeterProvider,
   setTracerProvider,
-} from 'src/bootstrap/state.js'
+} from 'src/services/observability/providers.js'
 import {
   getOtelHeadersFromHelper,
   getSubscriptionType,

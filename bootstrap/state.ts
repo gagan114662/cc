@@ -1,9 +1,5 @@
 import type { BetaMessageStreamParams } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
 import type { Attributes, Meter, MetricOptions } from '@opentelemetry/api'
-import type { logs } from '@opentelemetry/api-logs'
-import type { LoggerProvider } from '@opentelemetry/sdk-logs'
-import type { MeterProvider } from '@opentelemetry/sdk-metrics'
-import type { BasicTracerProvider } from '@opentelemetry/sdk-trace-base'
 import { realpathSync } from 'fs'
 import sumBy from 'lodash-es/sumBy.js'
 import { cwd } from 'process'
@@ -20,6 +16,7 @@ import type { ModelSetting } from 'src/utils/model/model.js'
 import type { ModelStrings } from 'src/utils/model/modelStrings.js'
 import type { SettingSource } from 'src/utils/settings/constants.js'
 import { currentTenantContext } from 'src/services/tenant/tenantScope.js'
+import { resetObservabilityProvidersForTests } from 'src/services/observability/providers.js'
 import { resetSettingsCache } from 'src/utils/settings/settingsCache.js'
 import type { PluginHookMatcher } from 'src/utils/settings/types.js'
 import { createSignal } from 'src/utils/signal.js'
@@ -101,13 +98,6 @@ type State = {
   sessionId: SessionId
   // Parent session ID for tracking session lineage (e.g., plan mode -> implementation)
   parentSessionId: SessionId | undefined
-  // Logger state
-  loggerProvider: LoggerProvider | null
-  eventLogger: ReturnType<typeof logs.getLogger> | null
-  // Meter provider state
-  meterProvider: MeterProvider | null
-  // Tracer provider state
-  tracerProvider: BasicTracerProvider | null
   // Agent color state
   agentColorMap: Map<string, AgentColorName>
   agentColorIndex: number
@@ -344,12 +334,6 @@ function getInitialState(): State {
     statsStore: null,
     sessionId: randomUUID() as SessionId,
     parentSessionId: undefined,
-    // Logger state
-    loggerProvider: null,
-    eventLogger: null,
-    // Meter provider state
-    meterProvider: null,
-    tracerProvider: null,
     // Agent color state
     agentColorMap: new Map(),
     agentColorIndex: 0,
@@ -937,6 +921,7 @@ export function resetStateForTests(): void {
   Object.entries(getInitialState()).forEach(([key, value]) => {
     STATE[key as keyof State] = value as never
   })
+  resetObservabilityProvidersForTests()
   outputTokensAtTurnStart = 0
   currentTurnTokenBudget = null
   budgetContinuationCount = 0
@@ -1034,38 +1019,6 @@ export function getCodeEditToolDecisionCounter(): AttributedCounter | null {
 
 export function getActiveTimeCounter(): AttributedCounter | null {
   return STATE.activeTimeCounter
-}
-
-export function getLoggerProvider(): LoggerProvider | null {
-  return STATE.loggerProvider
-}
-
-export function setLoggerProvider(provider: LoggerProvider | null): void {
-  STATE.loggerProvider = provider
-}
-
-export function getEventLogger(): ReturnType<typeof logs.getLogger> | null {
-  return STATE.eventLogger
-}
-
-export function setEventLogger(
-  logger: ReturnType<typeof logs.getLogger> | null,
-): void {
-  STATE.eventLogger = logger
-}
-
-export function getMeterProvider(): MeterProvider | null {
-  return STATE.meterProvider
-}
-
-export function setMeterProvider(provider: MeterProvider | null): void {
-  STATE.meterProvider = provider
-}
-export function getTracerProvider(): BasicTracerProvider | null {
-  return STATE.tracerProvider
-}
-export function setTracerProvider(provider: BasicTracerProvider | null): void {
-  STATE.tracerProvider = provider
 }
 
 export function getIsNonInteractiveSession(): boolean {
@@ -1862,4 +1815,3 @@ export function getPromptId(): string | null {
 export function setPromptId(id: string | null): void {
   STATE.promptId = id
 }
-

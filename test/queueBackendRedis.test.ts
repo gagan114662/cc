@@ -25,6 +25,7 @@ import IORedis from 'ioredis'
 import { mkdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { createRedisQueueBackend } from 'src/services/assignmentQueue/backends/redis.js'
 import {
   __resetQueueBackendForTest,
   getQueueBackend,
@@ -140,5 +141,46 @@ describeIfRedis('BullMQ queue backend (needs REDIS_URL)', () => {
       tenantId: DEFAULT_TENANT.id,
     })
     expect(recovered).toEqual([])
+  })
+
+  test('a second backend instance drains work enqueued by the first backend', async () => {
+    const backendA = createRedisQueueBackend()
+    const backendB = createRedisQueueBackend()
+
+    try {
+      const seen: string[] = []
+
+      await backendA.enqueue(
+        { id: 'asg-cross-daemon', assignment: 'prove shared redis queue' },
+        { projectRoot, tenantId: DEFAULT_TENANT.id },
+      )
+
+      await backendB.drainOnce({
+        projectRoot,
+        tenant: DEFAULT_TENANT,
+        runner: async input => {
+          seen.push(`b:${input.id}`)
+        },
+      })
+
+      expect(seen).toEqual(['b:asg-cross-daemon'])
+
+      await backendA.drainOnce({
+        projectRoot,
+        tenant: DEFAULT_TENANT,
+        runner: async input => {
+          seen.push(`a:${input.id}`)
+        },
+      })
+
+      expect(seen).toEqual(['b:asg-cross-daemon'])
+
+      const queue = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
+      const done = queue.find(r => r.id === 'asg-cross-daemon')
+      expect(done?.state).toBe('done')
+    } finally {
+      await backendA.close()
+      await backendB.close()
+    }
   })
 })
