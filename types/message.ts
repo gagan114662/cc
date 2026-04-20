@@ -218,11 +218,11 @@ export type SystemMessage =
 // RequestStartEvent / HookResultMessage
 // ---------------------------------------------------------------------------
 
-export type AttachmentMessage = {
+export type AttachmentMessage<A extends Attachment = Attachment> = {
   type: 'attachment'
   uuid: string
   timestamp: string
-  attachment: Attachment
+  attachment: A
 }
 
 export type ProgressMessage = {
