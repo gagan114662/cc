@@ -690,6 +690,7 @@ async ({ workflow, state, browser, cli, mcp, workspace, discovery }) => {
   await state.set('browserWorkflowAvailable', browser.hasWorkflow('Browser Funnel Audit'))
   await state.set('mcpServerSeen', mcp.hasServer('browser_harness'))
   await state.set('workspaceStatePath', workspace.statePath())
+  await state.set('workspaceSharedStatePath', workspace.sharedStatePath())
   await state.set('workspaceTranscriptSubdir', workspace.transcriptSubdir())
   await state.set('workspaceRoot', workspace.root())
   await state.set('workspaceInfoSessionId', workspaceInfo.sessionId)
@@ -792,6 +793,7 @@ async ({ workflow, state, browser, cli, mcp, workspace, discovery }) => {
       expect(calls[0]?.prompt).toContain('cli`: typed CLI capability helpers')
       expect(calls[0]?.prompt).toContain('mcp`: typed MCP capability helpers')
       expect(calls[0]?.prompt).toContain('workspace`: typed workspace/session helpers')
+      expect(calls[0]?.prompt).toContain('sharedStatePath()')
       expect(calls[0]?.prompt).toContain('discovery`: typed capability discovery helpers')
       expect(calls[1]?.prompt).toContain('Title: Gather evidence')
       expect(calls[2]?.prompt).toContain('Title: Prioritize actions')
@@ -815,6 +817,9 @@ async ({ workflow, state, browser, cli, mcp, workspace, discovery }) => {
       expect(persisted.userState.browserWorkflowAvailable).toBe(true)
       expect(persisted.userState.mcpServerSeen).toBe(true)
       expect(persisted.userState.workspaceStatePath).toBe(statePath)
+      expect(persisted.userState.workspaceSharedStatePath).toBe(
+        persisted.capabilities.workspace.sharedStatePath,
+      )
       expect(persisted.userState.workspaceTranscriptSubdir).toBe(
         persisted.capabilities.workspace.transcriptSubdir,
       )
@@ -832,6 +837,9 @@ async ({ workflow, state, browser, cli, mcp, workspace, discovery }) => {
         'WebFetch',
       ])
       expect(persisted.capabilities.workspace.statePath).toBe(statePath)
+      expect(typeof persisted.capabilities.workspace.sharedStatePath).toBe(
+        'string',
+      )
       expect(persisted.capabilities.mcp.servers[0]).toMatchObject({
         name: 'browser_harness',
         connected: true,
@@ -1149,6 +1157,172 @@ async ({ workflow, state, browser, github, docs, discovery }) => {
       expect(persisted.capabilities.docs.workflows).toHaveLength(0)
       expect(persisted.capabilities.docs.docCapabilities).toHaveLength(0)
       expect(persisted.capabilities.browser.workflows.length).toBeGreaterThan(0)
+    } finally {
+      await rm(stateDir, { recursive: true, force: true })
+    }
+  })
+
+  test('restores shared workflow state across later runs in the same project', async () => {
+    const command = {
+      ...makeWorkflowCommand(),
+      workflowRuntime: 'code' as const,
+      capabilityGrants: ['workspace'] as const,
+    }
+    const stateDir = await mkdtemp(join(tmpdir(), 'cc-code-mode-shared-'))
+    const firstStatePath = join(stateDir, 'first-run.json')
+    const secondStatePath = join(stateDir, 'second-run.json')
+    const sharedStatePath = join(stateDir, 'shared-workflow-state.json')
+
+    const makeSynthesisResult = (summary: string) =>
+      JSON.stringify({
+        summary,
+        completionStatus: 'completed',
+        outputs: [
+          {
+            name: 'Updated pipeline brief',
+            status: 'produced',
+            evidence: 'Shared workflow state persisted successfully',
+          },
+          {
+            name: 'Prioritized outreach backlog',
+            status: 'produced',
+            evidence: 'Step execution still completed under the shared-state path',
+          },
+        ],
+        artifacts: [
+          {
+            kind: 'pipeline brief',
+            status: 'produced',
+            evidence: 'Shared-state pipeline artifact',
+          },
+          {
+            kind: 'outreach backlog',
+            status: 'produced',
+            evidence: 'Shared-state backlog artifact',
+          },
+        ],
+        successCriteria: [
+          {
+            criterion: 'Calls out stale assumptions',
+            status: 'met',
+            evidence: 'The shared workflow state was available during execution',
+          },
+          {
+            criterion: 'Produces the next highest-leverage actions',
+            status: 'met',
+            evidence: 'The workflow still completed with durable memory',
+          },
+        ],
+        missingInputs: [],
+        unresolvedRisks: [],
+      })
+
+    try {
+      await executeForkedWorkflow({
+        command,
+        commandName: command.name,
+        args: 'segment-one',
+        context: makeCodeModeContext(),
+        canUseTool: (() => ({ behavior: 'allow' })) as any,
+        parentMessage: { message: { id: 'parent-1' } } as any,
+        modifiedGetAppState: (() => ({})) as any,
+        agentDefinition: { agentType: 'general-purpose' } as any,
+        skillContent: '# Refresh the pipeline',
+        codeModeStatePath: firstStatePath,
+        codeModeSharedStatePath: sharedStatePath,
+        stageRunner: async stage => {
+          if (stage.stageKind === 'codegen') {
+            return `\`\`\`js
+async ({ args, state, workflow, workspace }) => {
+  await state.set('lastSegment', args)
+  await state.set('sharedPathSeen', workspace.sharedStatePath())
+  await workflow.runStep(0)
+  await workflow.skipStep(1, 'Shared-state smoke only')
+  await workflow.skipStep(2, 'Shared-state smoke only')
+}
+\`\`\``
+          }
+
+          if (stage.stageKind === 'synthesis') {
+            return makeSynthesisResult('Stored shared workflow state')
+          }
+
+          return JSON.stringify({
+            summary: 'Gathered evidence for shared-state smoke',
+            artifacts: ['Shared-state evidence'],
+            risks: [],
+            handoff: {
+              stale_assumptions: 'Shared-state smoke',
+              priority_segment: 'segment-one',
+            },
+          })
+        },
+      })
+
+      const firstSharedPersisted = JSON.parse(
+        await readFile(sharedStatePath, 'utf-8'),
+      ) as Record<string, any>
+      expect(firstSharedPersisted.userState.lastSegment).toBe('segment-one')
+      expect(firstSharedPersisted.userState.sharedPathSeen).toBe(sharedStatePath)
+
+      await executeForkedWorkflow({
+        command,
+        commandName: command.name,
+        args: 'segment-two',
+        context: makeCodeModeContext(),
+        canUseTool: (() => ({ behavior: 'allow' })) as any,
+        parentMessage: { message: { id: 'parent-2' } } as any,
+        modifiedGetAppState: (() => ({})) as any,
+        agentDefinition: { agentType: 'general-purpose' } as any,
+        skillContent: '# Refresh the pipeline',
+        codeModeStatePath: secondStatePath,
+        codeModeSharedStatePath: sharedStatePath,
+        stageRunner: async stage => {
+          if (stage.stageKind === 'codegen') {
+            return `\`\`\`js
+async ({ args, state, workflow, workspace }) => {
+  await state.set('previousSegment', state.get('lastSegment') ?? null)
+  await state.set('lastSegment', args)
+  await state.set('sharedPathSeenAgain', workspace.info().sharedStatePath)
+  await workflow.runStep(0)
+  await workflow.skipStep(1, 'Shared-state smoke only')
+  await workflow.skipStep(2, 'Shared-state smoke only')
+}
+\`\`\``
+          }
+
+          if (stage.stageKind === 'synthesis') {
+            return makeSynthesisResult('Restored shared workflow state')
+          }
+
+          return JSON.stringify({
+            summary: 'Gathered evidence for shared-state resume',
+            artifacts: ['Shared-state evidence'],
+            risks: [],
+            handoff: {
+              stale_assumptions: 'Shared-state resume',
+              priority_segment: 'segment-two',
+            },
+          })
+        },
+      })
+
+      const secondPersisted = JSON.parse(
+        await readFile(secondStatePath, 'utf-8'),
+      ) as Record<string, any>
+      expect(secondPersisted.userState.previousSegment).toBe('segment-one')
+      expect(secondPersisted.userState.lastSegment).toBe('segment-two')
+      expect(secondPersisted.userState.sharedPathSeenAgain).toBe(sharedStatePath)
+      expect(secondPersisted.capabilities.workspace.sharedStatePath).toBe(
+        sharedStatePath,
+      )
+
+      const secondSharedPersisted = JSON.parse(
+        await readFile(sharedStatePath, 'utf-8'),
+      ) as Record<string, any>
+      expect(secondSharedPersisted.userState.previousSegment).toBe('segment-one')
+      expect(secondSharedPersisted.userState.lastSegment).toBe('segment-two')
+      expect(secondSharedPersisted.lastTranscriptSubdir).toContain('workflows/')
     } finally {
       await rm(stateDir, { recursive: true, force: true })
     }
