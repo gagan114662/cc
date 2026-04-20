@@ -359,7 +359,7 @@ function getSettingsForSourceUncached(
           fileSettings || {},
           parsed.data,
           settingsMergeCustomizer,
-        ) as SettingsJson
+        )
       }
     }
   }

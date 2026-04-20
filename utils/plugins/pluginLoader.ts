@@ -227,7 +227,7 @@ export async function probeSeedCacheAnyVersion(
     try {
       const versions = await readdir(pluginDir)
       if (versions.length !== 1) continue
-      const versionDir = join(pluginDir, versions[0]!)
+      const versionDir = join(pluginDir, versions[0])
       const entries = await readdir(versionDir)
       if (entries.length > 0) return versionDir
     } catch {
@@ -1835,7 +1835,7 @@ async function loadPluginSettings(
   // Fall back to manifest.settings
   if (manifest.settings) {
     const filtered = parsePluginSettings(
-      manifest.settings as Record<string, unknown>,
+      manifest.settings,
     )
     if (filtered) {
       logForDebugging(
@@ -2039,7 +2039,7 @@ async function loadPluginsFromMarketplaces({
         errors.push({
           type: 'plugin-not-found',
           source: pluginId,
-          pluginId: pluginName!,
+          pluginId: pluginName,
           marketplace: marketplaceName!,
         })
         return null
@@ -2075,7 +2075,7 @@ async function loadPluginsFromMarketplaces({
     } else if (result.status === 'rejected') {
       const err = toError(result.reason)
       logError(err)
-      const pluginId = marketplacePluginEntries[i]![0]
+      const pluginId = marketplacePluginEntries[i][0]
       errors.push({
         type: 'generic-error',
         source: pluginId,

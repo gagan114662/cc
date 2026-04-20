@@ -1375,7 +1375,7 @@ export async function ingestGstackQualityArtifacts(
         .sort((left, right) => right.verifiedAt.localeCompare(left.verifiedAt))
       if (candidates.length === 1) {
         pr = state.quality.pullRequests[
-          createPullRequestQualityId(repoId, candidates[0]!.prNumber)
+          createPullRequestQualityId(repoId, candidates[0].prNumber)
         ]
       }
     }

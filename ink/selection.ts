@@ -721,7 +721,7 @@ function extractRowText(
 ): string {
   const noSelect = screen.noSelect
   const rowOff = row * screen.width
-  const contentEnd = row + 1 < screen.height ? screen.softWrap[row + 1]! : 0
+  const contentEnd = row + 1 < screen.height ? screen.softWrap[row + 1] : 0
   const lastCol = contentEnd > 0 ? Math.min(colEnd, contentEnd - 1) : colEnd
   let line = ''
   for (let col = colStart; col <= lastCol; col++) {
@@ -778,17 +778,17 @@ export function getSelectedText(s: SelectionState, screen: Screen): string {
   const lines: string[] = []
 
   for (let i = 0; i < s.scrolledOffAbove.length; i++) {
-    joinRows(lines, s.scrolledOffAbove[i]!, s.scrolledOffAboveSW[i])
+    joinRows(lines, s.scrolledOffAbove[i], s.scrolledOffAboveSW[i])
   }
 
   for (let row = start.row; row <= end.row; row++) {
     const rowStart = row === start.row ? start.col : 0
     const rowEnd = row === end.row ? end.col : screen.width - 1
-    joinRows(lines, extractRowText(screen, row, rowStart, rowEnd), sw[row]! > 0)
+    joinRows(lines, extractRowText(screen, row, rowStart, rowEnd), sw[row] > 0)
   }
 
   for (let i = 0; i < s.scrolledOffBelow.length; i++) {
-    joinRows(lines, s.scrolledOffBelow[i]!, s.scrolledOffBelowSW[i])
+    joinRows(lines, s.scrolledOffBelow[i], s.scrolledOffBelowSW[i])
   }
 
   return lines.join('\n')
@@ -834,7 +834,7 @@ export function captureScrolledRows(
     const colStart = row === start.row ? start.col : 0
     const colEnd = row === end.row ? end.col : width - 1
     captured.push(extractRowText(screen, row, colStart, colEnd))
-    capturedSW.push(sw[row]! > 0)
+    capturedSW.push(sw[row] > 0)
   }
 
   if (side === 'above') {

@@ -104,7 +104,7 @@ export function formatCommandsWithinBudget(
   const bundledIndices = new Set<number>()
   const restCommands: Command[] = []
   for (let i = 0; i < commands.length; i++) {
-    const cmd = commands[i]!
+    const cmd = commands[i]
     if (cmd.type === 'prompt' && cmd.source === 'bundled') {
       bundledIndices.add(i)
     } else {
@@ -147,7 +147,7 @@ export function formatCommandsWithinBudget(
     }
     return commands
       .map((cmd, i) =>
-        bundledIndices.has(i) ? fullEntries[i]!.full : `- ${cmd.name}`,
+        bundledIndices.has(i) ? fullEntries[i].full : `- ${cmd.name}`,
       )
       .join('\n')
   }
@@ -174,7 +174,7 @@ export function formatCommandsWithinBudget(
   return commands
     .map((cmd, i) => {
       // Bundled skills always get full descriptions
-      if (bundledIndices.has(i)) return fullEntries[i]!.full
+      if (bundledIndices.has(i)) return fullEntries[i].full
       const description = getCommandDescription(cmd)
       return `- ${cmd.name}: ${truncate(description, maxDescLen)}`
     })

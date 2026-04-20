@@ -1011,7 +1011,7 @@ export function stripExcessMediaItems(
           ...msg,
           message: { ...msg.message, content: stripped },
         }
-  }) as (UserMessage | AssistantMessage)[]
+  })
 }
 
 async function* queryModel(
@@ -1854,7 +1854,7 @@ async function* queryModel(
         yield e.value
       }
     } while (!e.done)
-    stream = e.value as Stream<BetaRawMessageStreamEvent>
+    stream = e.value
 
     // reset state
     newMessages.length = 0
@@ -3129,7 +3129,7 @@ export function addCacheBreakpoints(
     const msg = result[pinned.userMessageIndex]
     if (msg && msg.role === 'user') {
       if (!Array.isArray(msg.content)) {
-        msg.content = [{ type: 'text', text: msg.content as string }]
+        msg.content = [{ type: 'text', text: msg.content }]
       }
       const dedupedBlock = deduplicateEdits(pinned.block)
       if (dedupedBlock.edits.length > 0) {
@@ -3146,7 +3146,7 @@ export function addCacheBreakpoints(
         const msg = result[i]
         if (msg && msg.role === 'user') {
           if (!Array.isArray(msg.content)) {
-            msg.content = [{ type: 'text', text: msg.content as string }]
+            msg.content = [{ type: 'text', text: msg.content }]
           }
           insertBlockAfterToolResults(msg.content, dedupedNewEdits)
           // Pin so this block is re-sent at the same position in future calls
@@ -3167,7 +3167,7 @@ export function addCacheBreakpoints(
     // Find the last message containing a cache_control marker
     let lastCCMsg = -1
     for (let i = 0; i < result.length; i++) {
-      const msg = result[i]!
+      const msg = result[i]
       if (Array.isArray(msg.content)) {
         for (const block of msg.content) {
           if (block && typeof block === 'object' && 'cache_control' in block) {
@@ -3186,7 +3186,7 @@ export function addCacheBreakpoints(
     // blocks reused by secondary queries that use models without cache_editing support.
     if (lastCCMsg >= 0) {
       for (let i = 0; i < lastCCMsg; i++) {
-        const msg = result[i]!
+        const msg = result[i]
         if (msg.role !== 'user' || !Array.isArray(msg.content)) {
           continue
         }

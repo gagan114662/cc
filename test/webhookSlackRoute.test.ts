@@ -94,7 +94,7 @@ function mockReqRes(opts: {
   res.end = ((chunk?: unknown) => {
     if (typeof chunk === 'string') captured.body = chunk
     else if (Buffer.isBuffer(chunk)) captured.body = chunk.toString('utf8')
-    return origEnd() as ServerResponse
+    return origEnd()
   }) as typeof res.end
 
   return { req, res, captured }
@@ -184,10 +184,10 @@ describe('POST /v1/webhooks/slack', () => {
 
     const queue = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(queue.length).toBe(1)
-    expect(queue[0]!.id).toBe(parsed.id)
-    expect(queue[0]!.assignment).toContain('C_BUILDS')
-    expect(queue[0]!.assignment).toContain('U42')
-    expect(queue[0]!.assignment).toContain('investigate the flaky build job')
+    expect(queue[0].id).toBe(parsed.id)
+    expect(queue[0].assignment).toContain('C_BUILDS')
+    expect(queue[0].assignment).toContain('U42')
+    expect(queue[0].assignment).toContain('investigate the flaky build job')
     const audit = readAuditTail(10, { dir: auditDir })
     expect(audit.at(-1)?.kind).toBe(SLACK_WEBHOOK_QUEUED_AUDIT_KIND)
     expect(audit.at(-1)?.assignmentId).toBe(parsed.id)

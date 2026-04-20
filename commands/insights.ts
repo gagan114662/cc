@@ -1093,14 +1093,14 @@ export function detectMultiClauding(
   const sessionLastIndex = new Map<string, number>()
 
   for (let i = 0; i < allSessionMessages.length; i++) {
-    const msg = allSessionMessages[i]!
+    const msg = allSessionMessages[i]
 
     // Shrink window from the left
     while (
       windowStart < i &&
-      msg.ts - allSessionMessages[windowStart]!.ts > OVERLAP_WINDOW_MS
+      msg.ts - allSessionMessages[windowStart].ts > OVERLAP_WINDOW_MS
     ) {
-      const expiring = allSessionMessages[windowStart]!
+      const expiring = allSessionMessages[windowStart]
       if (sessionLastIndex.get(expiring.sessionId) === windowStart) {
         sessionLastIndex.delete(expiring.sessionId)
       }
@@ -1111,12 +1111,12 @@ export function detectMultiClauding(
     const prevIndex = sessionLastIndex.get(msg.sessionId)
     if (prevIndex !== undefined) {
       for (let j = prevIndex + 1; j < i; j++) {
-        const between = allSessionMessages[j]!
+        const between = allSessionMessages[j]
         if (between.sessionId !== msg.sessionId) {
           const pair = [msg.sessionId, between.sessionId].sort().join(':')
           multiClaudeSessionPairs.add(pair)
           messagesDuringMulticlaude.add(
-            `${allSessionMessages[prevIndex]!.ts}:${msg.sessionId}`,
+            `${allSessionMessages[prevIndex].ts}:${msg.sessionId}`,
           )
           messagesDuringMulticlaude.add(`${between.ts}:${between.sessionId}`)
           messagesDuringMulticlaude.add(`${msg.ts}:${msg.sessionId}`)
@@ -2769,7 +2769,7 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
   const allSessions: LiteSessionInfo[] = []
 
   for (let i = 0; i < projectDirs.length; i++) {
-    const sessionFiles = await getSessionFilesWithMtime(projectDirs[i]!)
+    const sessionFiles = await getSessionFilesWithMtime(projectDirs[i])
     for (const [sessionId, fileInfo] of sessionFiles) {
       allSessions.push({
         sessionId,

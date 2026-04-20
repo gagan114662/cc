@@ -1035,8 +1035,8 @@ export function addToExcludedCommands(
         update.rules.some(rule => rule.toolName === BASH_TOOL_NAME),
     )
 
-    if (bashSuggestions.length > 0 && bashSuggestions[0]!.type === 'addRules') {
-      const firstBashRule = bashSuggestions[0]!.rules.find(
+    if (bashSuggestions.length > 0 && bashSuggestions[0].type === 'addRules') {
+      const firstBashRule = bashSuggestions[0].rules.find(
         rule => rule.toolName === BASH_TOOL_NAME,
       )
       if (firstBashRule?.ruleContent) {

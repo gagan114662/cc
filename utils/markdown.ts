@@ -232,7 +232,7 @@ export function formatToken(
             ?.map(_ => formatToken(_, theme, 0, null, null, highlight))
             .join('') ?? ''
         const displayText = getDisplayText(header.tokens)
-        const width = columnWidths[index]!
+        const width = columnWidths[index]
         const align = tableToken.align?.[index]
         tableOutput +=
           padAligned(content, stringWidth(displayText), width, align) + ' | '
@@ -257,7 +257,7 @@ export function formatToken(
               ?.map(_ => formatToken(_, theme, 0, null, null, highlight))
               .join('') ?? ''
           const displayText = getDisplayText(cell.tokens)
-          const width = columnWidths[index]!
+          const width = columnWidths[index]
           const align = tableToken.align?.[index]
           tableOutput +=
             padAligned(content, stringWidth(displayText), width, align) + ' | '

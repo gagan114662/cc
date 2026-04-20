@@ -158,11 +158,11 @@ describe('POST /v1/employee/assign', () => {
 
     const entries = await readAllAuditEntries()
     expect(entries).toHaveLength(1)
-    expect(entries[0]!.kind).toBe(ASSIGNMENT_AUDIT_KIND)
-    expect(entries[0]!.assignmentId).toBe(body.id)
-    expect(entries[0]!.assignment).toBe('investigate flaky CI')
-    expect(entries[0]!.source).toBe('http.v1')
-    expect(entries[0]!.tenant).toEqual({
+    expect(entries[0].kind).toBe(ASSIGNMENT_AUDIT_KIND)
+    expect(entries[0].assignmentId).toBe(body.id)
+    expect(entries[0].assignment).toBe('investigate flaky CI')
+    expect(entries[0].source).toBe('http.v1')
+    expect(entries[0].tenant).toEqual({
       id: 'default',
       name: 'Default Tenant',
       role: 'admin',
@@ -185,7 +185,7 @@ describe('POST /v1/employee/assign', () => {
     expect(body.tenant).toEqual({ id: 'acme', name: 'Acme Corp', role: 'developer' })
 
     const entries = await readAllAuditEntries()
-    expect(entries[0]!.tenant).toEqual({
+    expect(entries[0].tenant).toEqual({
       id: 'acme',
       name: 'Acme Corp',
       role: 'developer',

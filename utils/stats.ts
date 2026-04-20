@@ -328,11 +328,11 @@ async function processSessionFiles(
               }
             }
 
-            modelUsageAgg[model]!.inputTokens += usage.input_tokens || 0
-            modelUsageAgg[model]!.outputTokens += usage.output_tokens || 0
-            modelUsageAgg[model]!.cacheReadInputTokens +=
+            modelUsageAgg[model].inputTokens += usage.input_tokens || 0
+            modelUsageAgg[model].outputTokens += usage.output_tokens || 0
+            modelUsageAgg[model].cacheReadInputTokens +=
               usage.cache_read_input_tokens || 0
-            modelUsageAgg[model]!.cacheCreationInputTokens +=
+            modelUsageAgg[model].cacheCreationInputTokens +=
               usage.cache_creation_input_tokens || 0
 
             // Track daily tokens per model
@@ -482,23 +482,23 @@ function cacheToStats(
     for (const [model, usage] of Object.entries(todayStats.modelUsage)) {
       if (modelUsage[model]) {
         modelUsage[model] = {
-          inputTokens: modelUsage[model]!.inputTokens + usage.inputTokens,
-          outputTokens: modelUsage[model]!.outputTokens + usage.outputTokens,
+          inputTokens: modelUsage[model].inputTokens + usage.inputTokens,
+          outputTokens: modelUsage[model].outputTokens + usage.outputTokens,
           cacheReadInputTokens:
-            modelUsage[model]!.cacheReadInputTokens +
+            modelUsage[model].cacheReadInputTokens +
             usage.cacheReadInputTokens,
           cacheCreationInputTokens:
-            modelUsage[model]!.cacheCreationInputTokens +
+            modelUsage[model].cacheCreationInputTokens +
             usage.cacheCreationInputTokens,
           webSearchRequests:
-            modelUsage[model]!.webSearchRequests + usage.webSearchRequests,
-          costUSD: modelUsage[model]!.costUSD + usage.costUSD,
+            modelUsage[model].webSearchRequests + usage.webSearchRequests,
+          costUSD: modelUsage[model].costUSD + usage.costUSD,
           contextWindow: Math.max(
-            modelUsage[model]!.contextWindow,
+            modelUsage[model].contextWindow,
             usage.contextWindow,
           ),
           maxOutputTokens: Math.max(
-            modelUsage[model]!.maxOutputTokens,
+            modelUsage[model].maxOutputTokens,
             usage.maxOutputTokens,
           ),
         }
@@ -890,11 +890,11 @@ function calculateStreaks(dailyActivity: DailyActivity[]): StreakInfo {
   if (dailyActivity.length > 0) {
     const sortedDates = Array.from(activeDates).sort()
     let tempStreak = 1
-    let tempStart = sortedDates[0]!
+    let tempStart = sortedDates[0]
 
     for (let i = 1; i < sortedDates.length; i++) {
-      const prevDate = new Date(sortedDates[i - 1]!)
-      const currDate = new Date(sortedDates[i]!)
+      const prevDate = new Date(sortedDates[i - 1])
+      const currDate = new Date(sortedDates[i])
 
       const dayDiff = Math.round(
         (currDate.getTime() - prevDate.getTime()) / (1000 * 60 * 60 * 24),
@@ -957,7 +957,7 @@ function extractShotCountFromMessages(
       }
       const match = SHOT_COUNT_REGEX.exec(block.input.command)
       if (match) {
-        return parseInt(match[1]!, 10)
+        return parseInt(match[1], 10)
       }
     }
   }

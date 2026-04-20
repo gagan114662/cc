@@ -276,7 +276,7 @@ class ShellCommandImpl implements ShellCommand {
       ShellCommandImpl.#handleTimeout,
       this.#timeout,
       this,
-    ) as NodeJS.Timeout
+    )
 
     const exitPromise = new Promise<number>(resolve => {
       this.#exitCodeResolver = resolve

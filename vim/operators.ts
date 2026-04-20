@@ -162,7 +162,7 @@ export function executeLineOp(
     }
   }
 
-  ctx.recordChange({ type: 'operator', op, motion: op[0]!, count })
+  ctx.recordChange({ type: 'operator', op, motion: op[0], count })
 }
 
 /**
@@ -263,7 +263,7 @@ export function executeJoin(count: number, ctx: OperatorContext): void {
   if (currentLine >= lines.length - 1) return
 
   const linesToJoin = Math.min(count, lines.length - currentLine - 1)
-  let joinedLine = lines[currentLine]!
+  let joinedLine = lines[currentLine]
   const cursorPos = joinedLine.length
 
   for (let i = 1; i <= linesToJoin; i++) {
@@ -373,7 +373,7 @@ export function executeIndent(
       while (
         idx < line.length &&
         removed < indent.length &&
-        /\s/.test(line[idx]!)
+        /\s/.test(line[idx])
       ) {
         removed++
         idx++

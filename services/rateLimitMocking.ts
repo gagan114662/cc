@@ -99,10 +99,7 @@ export function checkMockRateLimitError(
       'Rate limit exceeded',
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
       new globalThis.Headers(
-        Object.entries(fastModeHeaders).filter(([_, v]) => v !== undefined) as [
-          string,
-          string,
-        ][],
+        Object.entries(fastModeHeaders).filter(([_, v]) => v !== undefined),
       ),
     )
     return error
@@ -119,10 +116,7 @@ export function checkMockRateLimitError(
       'Rate limit exceeded',
       // eslint-disable-next-line eslint-plugin-n/no-unsupported-features/node-builtins
       new globalThis.Headers(
-        Object.entries(mockHeaders).filter(([_, v]) => v !== undefined) as [
-          string,
-          string,
-        ][],
+        Object.entries(mockHeaders).filter(([_, v]) => v !== undefined),
       ),
     )
     return error

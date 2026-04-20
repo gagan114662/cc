@@ -126,7 +126,7 @@ export function PowerShellPermissionRequest(props: PermissionRequestProps): Reac
       option_index: optionIndex[value],
       explainer_visible: explainerState.visible
     });
-    const toolNameForAnalytics = sanitizeToolNameForAnalytics(toolUseConfirm.tool.name) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+    const toolNameForAnalytics = sanitizeToolNameForAnalytics(toolUseConfirm.tool.name);
     if (value === 'yes-prefix-edited') {
       const trimmedPrefix = (editablePrefix ?? '').trim();
       logUnaryPermissionEvent('tool_use_single', toolUseConfirm, 'accept');

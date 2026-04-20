@@ -426,7 +426,7 @@ function toBlocks(v: PromptValue): ContentBlockParam[] {
  * to blocks and concatenated.
  */
 export function joinPromptValues(values: PromptValue[]): PromptValue {
-  if (values.length === 1) return values[0]!
+  if (values.length === 1) return values[0]
   if (values.every(v => typeof v === 'string')) {
     return values.join('\n')
   }
@@ -1343,7 +1343,7 @@ function runHeadlessStreaming(
             // Delegate to SDK consumer via control protocol
             const url =
               'url' in request.params
-                ? (request.params.url as string)
+                ? (request.params.url)
                 : undefined
             const requestedSchema =
               'requestedSchema' in request.params
@@ -2109,10 +2109,10 @@ function runHeadlessStreaming(
                 usage:
                   totalTokensMatch && toolUsesMatch
                     ? {
-                        total_tokens: parseInt(totalTokensMatch[1]!, 10),
-                        tool_uses: parseInt(toolUsesMatch[1]!, 10),
+                        total_tokens: parseInt(totalTokensMatch[1], 10),
+                        tool_uses: parseInt(toolUsesMatch[1], 10),
                         duration_ms: durationMsMatch
-                          ? parseInt(durationMsMatch[1]!, 10)
+                          ? parseInt(durationMsMatch[1], 10)
                           : 0,
                       }
                     : undefined,
@@ -4277,7 +4277,7 @@ export function createCanUseToolWithPermissionPrompt(
     }
 
     // TypeScript narrowing: after the abort check, raceResult must be ToolResult
-    const result = raceResult as Awaited<typeof toolCallPromise>
+    const result = raceResult
 
     const permissionToolResultBlockParam =
       permissionPromptTool.mapToolResultToToolResultBlockParam(result.data, '1')

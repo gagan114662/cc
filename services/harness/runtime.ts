@@ -325,7 +325,7 @@ function createDefaultWorkerExecutor(
         : await runner(
             process.execPath,
             [
-              process.argv[1]!,
+              process.argv[1],
               '-p',
               '--agent',
               jobSpec.targetAgent,
@@ -1565,7 +1565,7 @@ async function processLeasedJob(
     ? job.metadata.executionAttemptId
     : undefined
   if (attemptId && state.attempts[attemptId]) {
-    state.attempts[attemptId]!.sessionId = workerResult.sessionId
+    state.attempts[attemptId].sessionId = workerResult.sessionId
   }
 
   return outcome
@@ -1704,10 +1704,10 @@ function applyGitHubDiscovery(
   }
   if (state.repos[repoId]) {
     state.repos[repoId] = {
-      ...state.repos[repoId]!,
+      ...state.repos[repoId],
       repoNameWithOwner:
-        discovery.repoNameWithOwner ?? state.repos[repoId]!.repoNameWithOwner,
-      defaultBranch: discovery.defaultBranch ?? state.repos[repoId]!.defaultBranch,
+        discovery.repoNameWithOwner ?? state.repos[repoId].repoNameWithOwner,
+      defaultBranch: discovery.defaultBranch ?? state.repos[repoId].defaultBranch,
     }
   }
 
@@ -2012,8 +2012,8 @@ async function finalizeOutcome(
       state.repoHealth[repoId]?.lastAutoMergePrNumber != null
     ) {
       recordDefaultBranchFailureIncident(state, repoId, {
-        prNumber: state.repoHealth[repoId]!.lastAutoMergePrNumber!,
-        headSha: state.repoHealth[repoId]!.lastObservedFailureHeadSha,
+        prNumber: state.repoHealth[repoId].lastAutoMergePrNumber,
+        headSha: state.repoHealth[repoId].lastObservedFailureHeadSha,
         detectedAt: outcome.completedAt,
         summary:
           outcome.summary ||
@@ -2028,11 +2028,11 @@ async function finalizeOutcome(
     )
     refreshRepoQualitySnapshots(state, repoId, outcome.completedAt)
     if (observation.runnerId !== 'unknown-runner' && state.runners[observation.runnerId]) {
-      state.runners[observation.runnerId]!.activeLeaseCount = countRunnerActiveLeases(
+      state.runners[observation.runnerId].activeLeaseCount = countRunnerActiveLeases(
         state,
         observation.runnerId,
       )
-      state.runners[observation.runnerId]!.lastHeartbeatAt = outcome.completedAt
+      state.runners[observation.runnerId].lastHeartbeatAt = outcome.completedAt
     }
     refreshObservabilityHealth(state, new Date(outcome.completedAt))
 
@@ -2301,7 +2301,7 @@ export async function pollHarnessOnce(
   ) {
     const healthy = await getDefaultBranchHealth(
       repoRoot,
-      finalState.sourceCursors.defaultBranches[repoId]!,
+      finalState.sourceCursors.defaultBranches[repoId],
       deps.commandRunner,
     )
     if (healthy) {
@@ -2545,10 +2545,10 @@ export async function ingestGitHubWebhookEvent(
           state.repoHealth[repoId]?.lastAutoMergeHeadSha === workflowRun.head_sha
         ) {
           recordDefaultBranchFailureIncident(state, repoId, {
-            prNumber: state.repoHealth[repoId]!.lastAutoMergePrNumber!,
+            prNumber: state.repoHealth[repoId].lastAutoMergePrNumber,
             headSha: workflowRun.head_sha,
             detectedAt: now.toISOString(),
-            summary: `Default branch workflow ${workflowRun.name ?? 'workflow'} failed after merging PR #${state.repoHealth[repoId]!.lastAutoMergePrNumber!}.`,
+            summary: `Default branch workflow ${workflowRun.name ?? 'workflow'} failed after merging PR #${state.repoHealth[repoId].lastAutoMergePrNumber}.`,
           })
         }
       }

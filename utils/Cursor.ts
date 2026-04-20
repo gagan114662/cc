@@ -229,7 +229,7 @@ export class Cursor {
             const visibleCount = Math.min(6, graphemes.length)
             const maskCount = graphemes.length - visibleCount
             const splitOffset =
-              graphemes.length > visibleCount ? graphemes[maskCount]!.index : 0
+              graphemes.length > visibleCount ? graphemes[maskCount].index : 0
             displayText = mask.repeat(maskCount) + text.slice(splitOffset)
           } else {
             // Earlier wrapped lines: fully mask. Previously only the last line
@@ -280,7 +280,7 @@ export class Cursor {
         ) {
           // First ghost character goes in the inverted cursor (grapheme-safe)
           const firstGhostChar =
-            firstGrapheme(ghostText.text) || ghostText.text[0]!
+            firstGrapheme(ghostText.text) || ghostText.text[0]
           renderedCursor = cursorChar ? invert(firstGhostChar) : firstGhostChar
           // Rest of ghost text is dimmed after cursor
           const ghostRest = ghostText.text.slice(firstGhostChar.length)
@@ -961,7 +961,7 @@ export class Cursor {
       /(^|\s)\[(Pasted text #\d+(?: \+\d+ lines)?|Image #\d+|\.\.\.Truncated text #\d+ \+\d+ lines\.\.\.)\]$/,
     )
     if (pasteMatch) {
-      const matchStart = pasteMatch.index! + pasteMatch[1]!.length
+      const matchStart = pasteMatch.index! + pasteMatch[1].length
       return new Cursor(this.measuredText, matchStart).modifyText(this)
     }
 
@@ -1302,7 +1302,7 @@ export class MeasuredText {
 
     const lines = wrappedText.split('\n')
     for (let i = 0; i < lines.length; i++) {
-      const text = lines[i]!
+      const text = lines[i]
       const isPrecededByNewline = (startOffset: number) =>
         i === 0 || (startOffset > 0 && this.text[startOffset - 1] === '\n')
 
@@ -1380,7 +1380,7 @@ export class MeasuredText {
 
   private getLine(line: number): WrappedLine {
     const lines = this.wrappedLines
-    return lines[Math.max(0, Math.min(line, lines.length - 1))]!
+    return lines[Math.max(0, Math.min(line, lines.length - 1))]
   }
 
   public getOffsetFromPosition(position: Position): number {
@@ -1429,7 +1429,7 @@ export class MeasuredText {
   public getPositionFromOffset(offset: number): Position {
     const lines = this.wrappedLines
     for (let line = 0; line < lines.length; line++) {
-      const currentLine = lines[line]!
+      const currentLine = lines[line]
       const nextLine = lines[line + 1]
       if (
         offset >= currentLine.startOffset &&
@@ -1473,7 +1473,7 @@ export class MeasuredText {
 
     // If we're past the last character, return the end of the last line
     const line = lines.length - 1
-    const lastLine = this.wrappedLines[line]!
+    const lastLine = this.wrappedLines[line]
     return {
       line,
       column: stringWidth(lastLine.text),
@@ -1522,9 +1522,9 @@ export class MeasuredText {
     let hi = boundaries.length - 1
     while (lo < hi) {
       const mid = (lo + hi + 1) >> 1
-      if (boundaries[mid]! <= offset) lo = mid
+      if (boundaries[mid] <= offset) lo = mid
       else hi = mid - 1
     }
-    return boundaries[lo]!
+    return boundaries[lo]
   }
 }

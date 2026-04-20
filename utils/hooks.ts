@@ -969,7 +969,7 @@ async function execCommandHook(
       cwd: safeCwd,
       // Prevent visible console window on Windows (no-op on other platforms)
       windowsHide: true,
-    }) as ChildProcessWithoutNullStreams
+    })
   } else {
     // On Windows, use Git Bash explicitly (cmd.exe can't run bash syntax).
     // On other platforms, shell: true uses /bin/sh.
@@ -980,7 +980,7 @@ async function execCommandHook(
       shell,
       // Prevent visible console window on Windows (no-op on other platforms)
       windowsHide: true,
-    }) as ChildProcessWithoutNullStreams
+    })
   }
 
   // Hooks use pipe mode — stdout must be streamed into JS so we can parse
@@ -2274,7 +2274,7 @@ async function* executeHooks({
           toolUseID,
           messages,
           'agent_type' in hookInput
-            ? (hookInput.agent_type as string)
+            ? (hookInput.agent_type)
             : undefined,
         )
         // Inject timing fields for hook visibility

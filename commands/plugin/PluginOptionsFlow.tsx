@@ -111,7 +111,7 @@ export function PluginOptionsFlow({
   if (steps.length === 0) {
     return null;
   }
-  const current = steps[index]!;
+  const current = steps[index];
   function handleSave(values_1: PluginOptionValues): void {
     try {
       current.save(values_1);

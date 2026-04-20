@@ -337,7 +337,7 @@ function maskBracesInQuotedContexts(cmd: string): string {
   let inDouble = false
   let i = 0
   while (i < cmd.length) {
-    const c = cmd[i]!
+    const c = cmd[i]
     if (inSingle) {
       // Bash single quotes: no escapes, `'` always terminates.
       if (c === "'") inSingle = false
@@ -347,7 +347,7 @@ function maskBracesInQuotedContexts(cmd: string): string {
       // Bash double quotes: `\` escapes `"` and `\` (also `$`, backtick,
       // newline — but those don't affect quote state so we let them pass).
       if (c === '\\' && (cmd[i + 1] === '"' || cmd[i + 1] === '\\')) {
-        out.push(c, cmd[i + 1]!)
+        out.push(c, cmd[i + 1])
         i += 2
       } else {
         if (c === '"') inDouble = false
@@ -357,7 +357,7 @@ function maskBracesInQuotedContexts(cmd: string): string {
     } else {
       // Unquoted: `\` escapes any next char.
       if (c === '\\' && i + 1 < cmd.length) {
-        out.push(c, cmd[i + 1]!)
+        out.push(c, cmd[i + 1])
         i += 2
       } else {
         if (c === "'") inSingle = true
@@ -2233,7 +2233,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
         // fall through to name='timeout'.
         let i = 1
         while (i < a.length) {
-          const arg = a[i]!
+          const arg = a[i]
           if (
             arg === '--foreground' ||
             arg === '--preserve-status' ||
@@ -2245,7 +2245,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
           } else if (
             (arg === '--kill-after' || arg === '--signal') &&
             a[i + 1] &&
-            /^[A-Za-z0-9_.+-]+$/.test(a[i + 1]!)
+            /^[A-Za-z0-9_.+-]+$/.test(a[i + 1])
           ) {
             i += 2 // --kill-after 5, --signal TERM (space-separated)
           } else if (arg.startsWith('--')) {
@@ -2260,7 +2260,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
           } else if (
             (arg === '-k' || arg === '-s') &&
             a[i + 1] &&
-            /^[A-Za-z0-9_.+-]+$/.test(a[i + 1]!)
+            /^[A-Za-z0-9_.+-]+$/.test(a[i + 1])
           ) {
             i += 2 // -k DURATION / -s SIGNAL — separate value
           } else if (/^-[ks][A-Za-z0-9_.+-]+$/.test(arg)) {
@@ -2276,7 +2276,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
             break // non-flag — should be the duration
           }
         }
-        if (a[i] && /^\d+(?:\.\d+)?[smhd]?$/.test(a[i]!)) {
+        if (a[i] && /^\d+(?:\.\d+)?[smhd]?$/.test(a[i])) {
           a = a.slice(i + 1)
         } else if (a[i]) {
           // SECURITY (PR #21503 round 3): a[i] exists but doesn't match our
@@ -2322,7 +2322,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
         // Any OTHER flag → reject (fail-closed, not fail-open to name='env').
         let i = 1
         while (i < a.length) {
-          const arg = a[i]!
+          const arg = a[i]
           if (arg.includes('=') && !arg.startsWith('-')) {
             i++ // VAR=val assignment
           } else if (arg === '-i' || arg === '-0' || arg === '-v') {
@@ -2354,7 +2354,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
         // forms and fail closed on any unknown flag.
         let i = 1
         while (i < a.length) {
-          const arg = a[i]!
+          const arg = a[i]
           if (STDBUF_SHORT_SEP_RE.test(arg) && a[i + 1]) {
             i += 2 // -o MODE (space-separated)
           } else if (STDBUF_SHORT_FUSED_RE.test(arg)) {
@@ -2428,7 +2428,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
     const dangerFlags = SUBSCRIPT_EVAL_FLAGS[name]
     if (dangerFlags !== undefined) {
       for (let i = 1; i < a.length; i++) {
-        const arg = a[i]!
+        const arg = a[i]
         // Separate form: `-v` then NAME in next arg.
         if (dangerFlags.has(arg) && a[i + 1]?.includes('[')) {
           return {
@@ -2446,7 +2446,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
           !arg.includes('[')
         ) {
           for (const flag of dangerFlags) {
-            if (flag.length === 2 && arg.includes(flag[1]!)) {
+            if (flag.length === 2 && arg.includes(flag[1])) {
               if (a[i + 1]?.includes('[')) {
                 return {
                   ok: false,
@@ -2485,7 +2485,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
       // i starts at 2: a[0]='[[' (contains '['), a[1] is the first real
       // operand. A binary op can't appear before index 2.
       for (let i = 2; i < a.length; i++) {
-        if (!TEST_ARITH_CMP_OPS.has(a[i]!)) continue
+        if (!TEST_ARITH_CMP_OPS.has(a[i])) continue
         if (a[i - 1]?.includes('[') || a[i + 1]?.includes('[')) {
           return {
             ok: false,
@@ -2504,7 +2504,7 @@ export function checkSemantics(commands: SimpleCommand[]): SemanticCheckResult {
     if (BARE_SUBSCRIPT_NAME_BUILTINS.has(name)) {
       let skipNext = false
       for (let i = 1; i < a.length; i++) {
-        const arg = a[i]!
+        const arg = a[i]
         if (skipNext) {
           skipNext = false
           continue

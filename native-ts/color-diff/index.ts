@@ -118,9 +118,9 @@ function ansi256FromRgb(r: number, g: number, b: number): number {
   const greyLevel = Math.max(0, Math.min(23, Math.round((grey - 8) / 10)))
   const greyIdx = 232 + greyLevel
   const greyRgb = 8 + greyLevel * 10
-  const cr = CUBE_LEVELS[qr]!
-  const cg = CUBE_LEVELS[qg]!
-  const cb = CUBE_LEVELS[qb]!
+  const cr = CUBE_LEVELS[qr]
+  const cg = CUBE_LEVELS[qg]
+  const cb = CUBE_LEVELS[qb]
   const dCube = (r - cr) ** 2 + (g - cg) ** 2 + (b - cb) ** 2
   const dGrey = (r - greyRgb) ** 2 + (g - greyRgb) ** 2 + (b - greyRgb) ** 2
   return dGrey < dCube ? greyIdx : cubeIdx
@@ -461,7 +461,7 @@ function scopeColor(
   }
   return (
     theme.scopes[scope] ??
-    theme.scopes[scope.split('.')[0]!] ??
+    theme.scopes[scope.split('.')[0]] ??
     theme.foreground
   )
 }
@@ -551,15 +551,15 @@ function tokenize(text: string): string[] {
   const tokens: string[] = []
   let i = 0
   while (i < text.length) {
-    const ch = text[i]!
+    const ch = text[i]
     if (/[\p{L}\p{N}_]/u.test(ch)) {
       let j = i + 1
-      while (j < text.length && /[\p{L}\p{N}_]/u.test(text[j]!)) j++
+      while (j < text.length && /[\p{L}\p{N}_]/u.test(text[j])) j++
       tokens.push(text.slice(i, j))
       i = j
     } else if (/\s/.test(ch)) {
       let j = i + 1
-      while (j < text.length && /\s/.test(text[j]!)) j++
+      while (j < text.length && /\s/.test(text[j])) j++
       tokens.push(text.slice(i, j))
       i = j
     } else {
@@ -740,7 +740,7 @@ function addLineNumber(
         ? ` ${String(h.lineNumber).padStart(maxDigits)} `
         : ' '.repeat(maxDigits + 2)
     const wrapped = shouldDim && !fullDim ? `${DIM}${prefix}${UNDIM}` : prefix
-    h.lines[i]!.unshift([style, wrapped])
+    h.lines[i].unshift([style, wrapped])
   }
 }
 
@@ -758,9 +758,9 @@ function addMarker(h: Highlight, theme: Theme): void {
 function dimContent(h: Highlight): void {
   for (const line of h.lines) {
     if (line.length > 0) {
-      line[0]![1] = DIM + line[0]![1]
+      line[0][1] = DIM + line[0][1]
       const last = line.length - 1
-      line[last]![1] = line[last]![1] + UNDIM
+      line[last][1] = line[last][1] + UNDIM
     }
   }
 }
@@ -774,11 +774,11 @@ function applyBackground(h: Highlight, theme: Theme, ranges: Range[]): void {
   let byteOff = 0
   for (let li = 0; li < h.lines.length; li++) {
     const newLine: Block[] = []
-    for (const [style, text] of h.lines[li]!) {
+    for (const [style, text] of h.lines[li]) {
       const textStart = byteOff
       const textEnd = byteOff + text.length
 
-      while (rangeIdx < ranges.length && ranges[rangeIdx]!.end <= textStart) {
+      while (rangeIdx < ranges.length && ranges[rangeIdx].end <= textStart) {
         rangeIdx++
       }
       if (rangeIdx >= ranges.length) {
@@ -790,7 +790,7 @@ function applyBackground(h: Highlight, theme: Theme, ranges: Range[]): void {
       let remaining = text
       let pos = textStart
       while (remaining.length > 0 && rangeIdx < ranges.length) {
-        const r = ranges[rangeIdx]!
+        const r = ranges[rangeIdx]
         const inRange = pos >= r.start && pos < r.end
         let next: number
         if (inRange) {
@@ -900,8 +900,8 @@ export class ColorDiff {
       const markers = entries.map(e => e.marker)
       for (const [delIdx, addIdx] of findAdjacentPairs(markers)) {
         const [delR, addR] = wordDiffStrings(
-          entries[delIdx]!.code,
-          entries[addIdx]!.code,
+          entries[delIdx].code,
+          entries[addIdx].code,
         )
         ranges[delIdx] = delR
         ranges[addIdx] = addR
@@ -911,7 +911,7 @@ export class ColorDiff {
     // Second pass: highlight + transform pipeline
     const out: string[] = []
     for (let i = 0; i < entries.length; i++) {
-      const { lineNumber, marker, code } = entries[i]!
+      const { lineNumber, marker, code } = entries[i]
       const tokens: Block[] =
         marker === '-'
           ? [[defaultStyle(theme), code]]
@@ -919,7 +919,7 @@ export class ColorDiff {
 
       const h: Highlight = { marker, lineNumber, lines: [tokens] }
       removeNewlines(h)
-      applyBackground(h, theme, ranges[i]!)
+      applyBackground(h, theme, ranges[i])
       wrapText(h, effectiveWidth, theme)
       if (mode === 'ansi' && marker === '-') {
         dimContent(h)
@@ -956,7 +956,7 @@ export class ColorFile {
 
     const out: string[] = []
     for (let i = 0; i < lines.length; i++) {
-      const tokens = highlightLine(hlState, lines[i]!, theme)
+      const tokens = highlightLine(hlState, lines[i], theme)
       const h: Highlight = { marker: null, lineNumber: i + 1, lines: [tokens] }
       removeNewlines(h)
       wrapText(h, effectiveWidth, theme)

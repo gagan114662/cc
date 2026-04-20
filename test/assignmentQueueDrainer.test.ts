@@ -73,11 +73,11 @@ describe('drainOnce', () => {
     })
 
     expect(runnerCalls.length).toBe(1)
-    expect(runnerCalls[0]!.id).toBe('a-1')
-    expect(runnerCalls[0]!.tenantId).toBe(DEFAULT_TENANT.id)
+    expect(runnerCalls[0].id).toBe('a-1')
+    expect(runnerCalls[0].tenantId).toBe(DEFAULT_TENANT.id)
 
     const loaded = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
-    expect(loaded[0]!.state).toBe('done')
+    expect(loaded[0].state).toBe('done')
   })
 
   test('runner throws → state=failed with error message', async () => {
@@ -93,8 +93,8 @@ describe('drainOnce', () => {
     await drainOnce({ projectRoot, tenant: DEFAULT_TENANT, runner })
 
     const loaded = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
-    expect(loaded[0]!.state).toBe('failed')
-    expect(loaded[0]!.lastError).toBe('runner_boom')
+    expect(loaded[0].state).toBe('failed')
+    expect(loaded[0].lastError).toBe('runner_boom')
   })
 
   test('one failure does NOT block the next pending assignment in the same drain', async () => {

@@ -205,7 +205,7 @@ export async function getOutputStyleConfig(): Promise<OutputStyleConfig | null> 
 
   const settings = getSettings_DEPRECATED()
   const outputStyle = (settings?.outputStyle ||
-    DEFAULT_OUTPUT_STYLE_NAME) as string
+    DEFAULT_OUTPUT_STYLE_NAME)
 
   return allStyles[outputStyle] ?? null
 }

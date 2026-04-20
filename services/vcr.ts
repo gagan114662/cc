@@ -215,7 +215,7 @@ function mapMessages(
           return undefined
       }
     })
-  }) as (UserMessage | AssistantMessage)['message']['content'][]
+  })
 }
 
 function mapValuesDeep(

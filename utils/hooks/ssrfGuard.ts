@@ -146,8 +146,8 @@ function expandIPv6Groups(addr: string): number[] | null {
       return null
     }
     tailHextets = [
-      (octets[0]! << 8) | octets[1]!,
-      (octets[2]! << 8) | octets[3]!,
+      (octets[0] << 8) | octets[1],
+      (octets[2] << 8) | octets[3],
     ]
   }
 
@@ -196,8 +196,8 @@ function extractMappedIPv4(addr: string): string | null {
     g[4] === 0 &&
     g[5] === 0xffff
   ) {
-    const hi = g[6]!
-    const lo = g[7]!
+    const hi = g[6]
+    const lo = g[7]
     return `${hi >> 8}.${hi & 0xff}.${lo >> 8}.${lo & 0xff}`
   }
   return null

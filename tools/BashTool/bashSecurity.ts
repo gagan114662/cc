@@ -382,7 +382,7 @@ function isSafeHeredoc(command: string): boolean {
     let closeParenColIdx = -1 // Column index of `)` on that line
 
     for (let i = 0; i < bodyLines.length; i++) {
-      const rawLine = bodyLines[i]!
+      const rawLine = bodyLines[i]
       const line = isDash ? rawLine.replace(/^\t*/, '') : rawLine
 
       // Form 1: delimiter alone on a line
@@ -394,7 +394,7 @@ function isSafeHeredoc(command: string): boolean {
         const parenMatch = nextLine.match(/^([ \t]*)\)/)
         if (!parenMatch) return false // `)` not at start of next line
         closeParenLineIdx = i + 1
-        closeParenColIdx = parenMatch[1]!.length // Position of `)`
+        closeParenColIdx = parenMatch[1].length // Position of `)`
         break
       }
 
@@ -409,7 +409,7 @@ function isSafeHeredoc(command: string): boolean {
           // Column is in rawLine (pre-tab-strip), so recompute
           const tabPrefix = isDash ? (rawLine.match(/^\t*/)?.[0] ?? '') : ''
           closeParenColIdx =
-            tabPrefix.length + delimiter.length + parenMatch[1]!.length
+            tabPrefix.length + delimiter.length + parenMatch[1].length
           break
         }
         // Line starts with delimiter but has other trailing content —
@@ -429,7 +429,7 @@ function isSafeHeredoc(command: string): boolean {
     // Compute the absolute end position (one past the `)` character)
     let endPos = bodyStart
     for (let i = 0; i < closeParenLineIdx; i++) {
-      endPos += bodyLines[i]!.length + 1 // +1 for newline
+      endPos += bodyLines[i].length + 1 // +1 for newline
     }
     endPos += closeParenColIdx + 1 // +1 to include the `)` itself
 
@@ -542,7 +542,7 @@ export function stripSafeHeredocSubstitutions(command: string): string | null {
     const bodyStart = operatorEnd + openLineEnd + 1
     const bodyLines = command.slice(bodyStart).split('\n')
     for (let i = 0; i < bodyLines.length; i++) {
-      const rawLine = bodyLines[i]!
+      const rawLine = bodyLines[i]
       const line = isDash ? rawLine.replace(/^\t*/, '') : rawLine
       if (line.startsWith(delimiter)) {
         const after = line.slice(delimiter.length)
@@ -571,7 +571,7 @@ export function stripSafeHeredocSubstitutions(command: string): string | null {
   }
   if (!found) return null
   for (let i = ranges.length - 1; i >= 0; i--) {
-    const r = ranges[i]!
+    const r = ranges[i]
     result = result.slice(0, r.start) + result.slice(r.end)
   }
   return result
@@ -1326,7 +1326,7 @@ function validateObfuscatedFlags(context: ValidationContext): PermissionResult {
 
       // Collect content inside the quote
       while (j < originalCommand.length && originalCommand[j] !== quoteChar) {
-        insideQuote += originalCommand[j]!
+        insideQuote += originalCommand[j]
         j++
       }
 
@@ -1374,9 +1374,9 @@ function validateObfuscatedFlags(context: ValidationContext): PermissionResult {
           let combinedContent = insideQuote // Track what the shell will see
           while (
             pos < originalCommand.length &&
-            /['"`]/.test(originalCommand[pos]!)
+            /['"`]/.test(originalCommand[pos])
           ) {
-            const segQuote = originalCommand[pos]!
+            const segQuote = originalCommand[pos]
             let end = pos + 1
             while (
               end < originalCommand.length &&
@@ -1409,12 +1409,12 @@ function validateObfuscatedFlags(context: ValidationContext): PermissionResult {
           // Also check the unquoted char at the end of the chain
           if (
             pos < originalCommand.length &&
-            FLAG_CONTINUATION_CHARS.test(originalCommand[pos]!)
+            FLAG_CONTINUATION_CHARS.test(originalCommand[pos])
           ) {
             // If we have dashes in combined content, the trailing char completes a flag
             if (/^-+$/.test(combinedContent) || combinedContent === '') {
               // Check if we're about to form a flag with the following content
-              const nextChar = originalCommand[pos]!
+              const nextChar = originalCommand[pos]
               if (nextChar === '-') {
                 // More dashes, could still form a flag
                 return true

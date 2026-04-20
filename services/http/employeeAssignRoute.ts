@@ -160,7 +160,7 @@ export async function handleEmployeeAssignRequest(
   }
 
   const raw = await readBody(req)
-  const body = parseBody(raw, req.headers['content-type'] as string | undefined)
+  const body = parseBody(raw, req.headers['content-type'])
   if (!body.ok) {
     writeJson(res, body.status, { error: body.error })
     return

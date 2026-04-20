@@ -238,7 +238,7 @@ export class TaskOutput {
     this.#totalLines += lineCount
 
     for (let i = lines.length - 1; i >= 0; i--) {
-      this.#recentLines.add(lines[i]!)
+      this.#recentLines.add(lines[i])
     }
 
     if (this.#onProgress && lines.length > 0) {

@@ -160,7 +160,7 @@ async function initializeAgentMcpServers(
         )
         continue
       }
-      const [serverName, serverConfig] = entries[0]!
+      const [serverName, serverConfig] = entries[0]
       name = serverName
       config = {
         ...serverConfig,

@@ -82,7 +82,7 @@ export function getRainbowColor(
   shimmer: boolean = false,
 ): keyof Theme {
   const colors = shimmer ? RAINBOW_SHIMMER_COLORS : RAINBOW_COLORS
-  return colors[charIndex % colors.length]!
+  return colors[charIndex % colors.length]
 }
 
 // TODO(inigo): add support for probing unknown models via API error detection

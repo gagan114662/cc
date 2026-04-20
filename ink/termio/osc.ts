@@ -319,9 +319,9 @@ export function parseOscColor(spec: string): Color | null {
   if (hex) {
     return {
       type: 'rgb',
-      r: parseInt(hex[1]!, 16),
-      g: parseInt(hex[2]!, 16),
-      b: parseInt(hex[3]!, 16),
+      r: parseInt(hex[1], 16),
+      g: parseInt(hex[2], 16),
+      b: parseInt(hex[3], 16),
     }
   }
   const rgb = spec.match(
@@ -333,9 +333,9 @@ export function parseOscColor(spec: string): Color | null {
       Math.round((parseInt(s, 16) / (16 ** s.length - 1)) * 255)
     return {
       type: 'rgb',
-      r: scale(rgb[1]!),
-      g: scale(rgb[2]!),
-      b: scale(rgb[3]!),
+      r: scale(rgb[1]),
+      g: scale(rgb[2]),
+      b: scale(rgb[3]),
     }
   }
   return null

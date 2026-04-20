@@ -72,8 +72,8 @@ describe('operational alert dispatcher', () => {
 
       const stored = loadAlertDeliveries(projectRoot, 'acme')
       expect(stored).toHaveLength(1)
-      expect(stored[0]!.provider).toBe('pagerduty')
-      expect(stored[0]!.status).toBe('delivered')
+      expect(stored[0].provider).toBe('pagerduty')
+      expect(stored[0].status).toBe('delivered')
     } finally {
       await new Promise<void>(resolve => server.close(() => resolve()))
     }

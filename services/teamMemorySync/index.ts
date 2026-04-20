@@ -443,7 +443,7 @@ export function batchDeltaByBytes(
   let currentBytes = EMPTY_BODY_BYTES
 
   for (const key of keys) {
-    const added = entryBytes(key, delta[key]!)
+    const added = entryBytes(key, delta[key])
     if (
       currentBytes + added > MAX_PUT_BODY_BYTES &&
       Object.keys(current).length > 0
@@ -601,7 +601,7 @@ async function readLocalTeamMemory(maxEntries: number | null): Promise<{
                 // Report only the first match per file — one secret is
                 // enough to skip the file and we don't want to log more
                 // than necessary about credential locations.
-                const firstMatch = secretMatches[0]!
+                const firstMatch = secretMatches[0]
                 skippedSecrets.push({
                   path: relPath,
                   ruleId: firstMatch.ruleId,

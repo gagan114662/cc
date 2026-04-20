@@ -82,7 +82,7 @@ Use the public surface and identify the biggest GTM gaps.`,
     const skills = await fetchMcpSkillsForClient(client)
 
     expect(skills).toHaveLength(1)
-    const skill = skills[0]!
+    const skill = skills[0]
     expect(skill.name).toBe('browser_harness:growth:outbound-audit')
     expect(skill.source).toBe('mcp')
     expect(skill.loadedFrom).toBe('mcp')
@@ -216,7 +216,7 @@ highest-leverage GTM actions.`,
     const workflows = await fetchMcpWorkflowsForClient(client)
 
     expect(workflows).toHaveLength(1)
-    const workflow = workflows[0]!
+    const workflow = workflows[0]
     expect(workflow.name).toBe('browser_harness:workflow:growth:pipeline-refresh')
     expect(workflow.kind).toBe('workflow')
     expect(workflow.source).toBe('mcp')

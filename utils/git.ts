@@ -307,7 +307,7 @@ export function normalizeGitRemoteUrl(url: string): string | null {
       const proxyPath = path.slice(4) // Remove "git/" prefix
       const segments = proxyPath.split('/')
       // 3+ segments where first contains a dot → host/owner/repo (GHE format)
-      if (segments.length >= 3 && segments[0]!.includes('.')) {
+      if (segments.length >= 3 && segments[0].includes('.')) {
         return proxyPath.toLowerCase()
       }
       // 2 segments → owner/repo (legacy format, assume github.com)

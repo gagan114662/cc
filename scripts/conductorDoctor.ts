@@ -116,9 +116,9 @@ function parseRemotes(stdout: string): Remote[] {
       const match = line.match(/^(\S+)\s+(\S+)\s+\((fetch|push)\)$/)
       if (!match) return null
       return {
-        name: match[1]!,
-        url: match[2]!,
-        kind: match[3]! as 'fetch' | 'push',
+        name: match[1],
+        url: match[2],
+        kind: match[3] as 'fetch' | 'push',
       }
     })
     .filter((remote): remote is Remote => Boolean(remote))

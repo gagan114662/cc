@@ -307,22 +307,22 @@ export function mergeCacheWithNewStats(
   for (const [model, usage] of Object.entries(newStats.modelUsage)) {
     if (modelUsage[model]) {
       modelUsage[model] = {
-        inputTokens: modelUsage[model]!.inputTokens + usage.inputTokens,
-        outputTokens: modelUsage[model]!.outputTokens + usage.outputTokens,
+        inputTokens: modelUsage[model].inputTokens + usage.inputTokens,
+        outputTokens: modelUsage[model].outputTokens + usage.outputTokens,
         cacheReadInputTokens:
-          modelUsage[model]!.cacheReadInputTokens + usage.cacheReadInputTokens,
+          modelUsage[model].cacheReadInputTokens + usage.cacheReadInputTokens,
         cacheCreationInputTokens:
-          modelUsage[model]!.cacheCreationInputTokens +
+          modelUsage[model].cacheCreationInputTokens +
           usage.cacheCreationInputTokens,
         webSearchRequests:
-          modelUsage[model]!.webSearchRequests + usage.webSearchRequests,
-        costUSD: modelUsage[model]!.costUSD + usage.costUSD,
+          modelUsage[model].webSearchRequests + usage.webSearchRequests,
+        costUSD: modelUsage[model].costUSD + usage.costUSD,
         contextWindow: Math.max(
-          modelUsage[model]!.contextWindow,
+          modelUsage[model].contextWindow,
           usage.contextWindow,
         ),
         maxOutputTokens: Math.max(
-          modelUsage[model]!.maxOutputTokens,
+          modelUsage[model].maxOutputTokens,
           usage.maxOutputTokens,
         ),
       }

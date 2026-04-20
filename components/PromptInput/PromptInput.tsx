@@ -955,7 +955,7 @@ function PromptInput({
 
     // At bottom of history → enter footer at first visible pill
     if (onHistoryDown() && footerItems.length > 0) {
-      const first = footerItems[0]!;
+      const first = footerItems[0];
       selectFooterItem(first);
       if (first === 'tasks' && !getGlobalConfig().hasSeenTasksHint) {
         saveGlobalConfig(c => c.hasSeenTasksHint ? c : {

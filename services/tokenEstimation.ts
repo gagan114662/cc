@@ -90,7 +90,7 @@ function stripToolSearchFieldsFromMessages(
       // Strip tool_reference blocks from tool_result content (user messages)
       if (block.type === 'tool_result') {
         const toolResult =
-          block as Anthropic.Beta.Messages.BetaToolResultBlockParam
+          block
         if (Array.isArray(toolResult.content)) {
           const filteredContent = (toolResult.content as unknown[]).filter(
             c => !isToolReferenceBlock(c),
@@ -287,7 +287,7 @@ export async function countTokensViaHaikuFallback(
 
   const messagesToSend: MessageParam[] =
     normalizedMessages.length > 0
-      ? (normalizedMessages as MessageParam[])
+      ? (normalizedMessages)
       : [{ role: 'user', content: 'count' }]
 
   const betas = getModelBetas(model)

@@ -355,7 +355,7 @@ export function ensureTransport(type?: string): 'stdio' | 'sse' | 'http' {
     )
   }
 
-  return type as 'stdio' | 'sse' | 'http'
+  return type
 }
 
 export function parseHeaders(headerArray: string[]): Record<string, string> {
@@ -522,7 +522,7 @@ export function extractAgentMcpServers(
       const entries = Object.entries(spec)
       if (entries.length !== 1) continue
 
-      const [serverName, serverConfig] = entries[0]!
+      const [serverName, serverConfig] = entries[0]
       const existing = serverMap.get(serverName)
 
       if (existing) {

@@ -243,7 +243,7 @@ export function adjustIndexToPreserveAPIInvariants(
   // Collect tool_result IDs from ALL messages in the kept range
   const allToolResultIds: string[] = []
   for (let i = startIndex; i < messages.length; i++) {
-    allToolResultIds.push(...getToolResultIds(messages[i]!))
+    allToolResultIds.push(...getToolResultIds(messages[i]))
   }
 
   if (allToolResultIds.length > 0) {

@@ -114,7 +114,7 @@ export async function mcpRemoveHandler(name: string, options: {
       cliError(`No MCP server found with name: "${name}"`);
     } else if (scopes.length === 1) {
       // Server exists in only one scope, remove it
-      const scope = scopes[0]!;
+      const scope = scopes[0];
       logEvent('tengu_mcp_delete', {
         name: name as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         scope: scope as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS

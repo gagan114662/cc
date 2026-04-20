@@ -169,7 +169,7 @@ function createInProcessCanUseTool(
       if (classifierDecision) {
         return {
           behavior: 'allow',
-          updatedInput: input as Record<string, unknown>,
+          updatedInput: input,
           decisionReason: classifierDecision,
         }
       }
@@ -182,7 +182,7 @@ function createInProcessCanUseTool(
 
     const appState = toolUseContext.getAppState()
 
-    const description = await (tool as Tool).description(input as never, {
+    const description = await (tool).description(input as never, {
       isNonInteractiveSession: toolUseContext.options.isNonInteractiveSession,
       toolPermissionContext: appState.toolPermissionContext,
       tools: toolUseContext.options.tools,
@@ -224,7 +224,7 @@ function createInProcessCanUseTool(
           ...queue,
           {
             assistantMessage,
-            tool: tool as Tool,
+            tool: tool,
             description,
             input,
             toolUseContext,
@@ -336,7 +336,7 @@ function createInProcessCanUseTool(
     // Fallback: use mailbox system when leader UI queue is unavailable
     return new Promise<PermissionDecision>(resolve => {
       const request = createPermissionRequest({
-        toolName: (tool as Tool).name,
+        toolName: (tool).name,
         toolUseId: toolUseID,
         input,
         description,
@@ -783,7 +783,7 @@ async function waitForNextPromptOrShutdown(
       }
 
       if (shutdownIndex !== -1) {
-        const msg = allMessages[shutdownIndex]!
+        const msg = allMessages[shutdownIndex]
         const skippedUnread = count(
           allMessages.slice(0, shutdownIndex),
           m => !m.read,

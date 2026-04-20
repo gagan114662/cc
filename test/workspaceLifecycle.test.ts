@@ -43,7 +43,7 @@ describe('workspace lifecycle log', () => {
 
     const tail = readWorkspaceLifecycleTail(10, { projectRoot })
     expect(tail).toHaveLength(2)
-    expect(tail[0]!.kind).toBe('worktree.setup.completed')
+    expect(tail[0].kind).toBe('worktree.setup.completed')
 
     const summary = summarizeWorkspaceLifecycle(projectRoot, { recentLimit: 10 })
     expect(summary.total).toBe(2)

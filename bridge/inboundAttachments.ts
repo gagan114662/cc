@@ -147,7 +147,7 @@ export function prependPathRefs(
   if (typeof content === 'string') return prefix + content
   const i = content.findLastIndex(b => b.type === 'text')
   if (i !== -1) {
-    const b = content[i]!
+    const b = content[i]
     if (b.type === 'text') {
       return [
         ...content.slice(0, i),

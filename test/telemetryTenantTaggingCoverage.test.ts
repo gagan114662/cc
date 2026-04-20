@@ -137,7 +137,7 @@ describe('commitCounter & prCounter — tools/shared/gitOperationTracking', () =
     })
     const calls = spies.get('claude_code.commit.count') ?? []
     expect(calls.length).toBe(1)
-    expect((calls[0]!.attrs as Record<string, string>)['tenant.id']).toBe('acme')
+    expect((calls[0].attrs as Record<string, string>)['tenant.id']).toBe('acme')
   })
 
   test('gh pr create emission tags tenant.id', async () => {
@@ -150,7 +150,7 @@ describe('commitCounter & prCounter — tools/shared/gitOperationTracking', () =
     })
     const calls = spies.get('claude_code.pull_request.count') ?? []
     expect(calls.length).toBe(1)
-    expect((calls[0]!.attrs as Record<string, string>)['tenant.id']).toBe(
+    expect((calls[0].attrs as Record<string, string>)['tenant.id']).toBe(
       'globex',
     )
   })
@@ -165,7 +165,7 @@ describe('commitCounter & prCounter — tools/shared/gitOperationTracking', () =
     })
     const calls = spies.get('claude_code.pull_request.count') ?? []
     expect(calls.length).toBe(1)
-    expect((calls[0]!.attrs as Record<string, string>)['tenant.id']).toBe('acme')
+    expect((calls[0].attrs as Record<string, string>)['tenant.id']).toBe('acme')
   })
 })
 
@@ -185,7 +185,7 @@ describe('activeTimeCounter — utils/activityManager', () => {
     })
     const calls = spies.get('claude_code.active_time.total') ?? []
     expect(calls.length).toBe(1)
-    const attrs = calls[0]!.attrs as Record<string, string>
+    const attrs = calls[0].attrs as Record<string, string>
     expect(attrs.type).toBe('cli')
     expect(attrs['tenant.id']).toBe('acme')
   })

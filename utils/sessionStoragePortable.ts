@@ -166,7 +166,7 @@ export function extractFirstPromptFromHead(head: string): string {
       } else if (Array.isArray(content)) {
         for (const block of content as Record<string, unknown>[]) {
           if (block.type === 'text' && typeof block.text === 'string') {
-            texts.push(block.text as string)
+            texts.push(block.text)
           }
         }
       }
@@ -184,7 +184,7 @@ export function extractFirstPromptFromHead(head: string): string {
 
         // Format bash input with ! prefix before the generic XML skip
         const bashMatch = /<bash-input>([\s\S]*?)<\/bash-input>/.exec(result)
-        if (bashMatch) return `! ${bashMatch[1]!.trim()}`
+        if (bashMatch) return `! ${bashMatch[1].trim()}`
 
         if (SKIP_FIRST_PROMPT_PATTERN.test(result)) continue
 

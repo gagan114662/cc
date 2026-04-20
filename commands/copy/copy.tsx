@@ -353,7 +353,7 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
     }
     age = n - 1;
   }
-  const text = texts[age]!;
+  const text = texts[age];
   const codeBlocks = extractCodeBlocks(text);
   const config = getGlobalConfig();
   if (codeBlocks.length === 0 || config.copyFullResponse) {

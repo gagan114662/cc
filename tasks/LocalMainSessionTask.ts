@@ -76,7 +76,7 @@ function generateMainSessionTaskId(): string {
   const bytes = randomBytes(8)
   let id = 's'
   for (let i = 0; i < 8; i++) {
-    id += TASK_ID_ALPHABET[bytes[i]! % TASK_ID_ALPHABET.length]
+    id += TASK_ID_ALPHABET[bytes[i] % TASK_ID_ALPHABET.length]
   }
   return id
 }

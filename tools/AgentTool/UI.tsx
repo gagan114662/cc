@@ -693,7 +693,7 @@ export function renderGroupedAgentToolUse(toolUses: Array<{
       description = isCustomSubagentType(subagentType) ? subagentType : undefined;
       taskDescription = parsedInput.data.description;
       // Use the custom agent definition's color on the type, not the name
-      descriptionColor = isCustomSubagentType(subagentType) ? getAgentColor(subagentType) as keyof Theme | undefined : undefined;
+      descriptionColor = isCustomSubagentType(subagentType) ? getAgentColor(subagentType) : undefined;
     } else {
       agentType = parsedInput.success ? userFacingName(parsedInput.data) : 'Agent';
       description = parsedInput.success ? parsedInput.data.description : undefined;
@@ -783,7 +783,7 @@ export function userFacingNameBackgroundColor(input: Partial<{
   }
 
   // Get the color for this agent
-  return getAgentColor(input.subagent_type) as keyof Theme | undefined;
+  return getAgentColor(input.subagent_type);
 }
 export function extractLastToolInfo(progressMessages: ProgressMessage<Progress>[], tools: Tools): string | null {
   // Build tool_use lookup from all progress messages (needed for reverse iteration)

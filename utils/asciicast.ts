@@ -190,7 +190,7 @@ export function installAsciicastRecorder(): void {
   // Wrap process.stdout.write to capture output
   const originalWrite = process.stdout.write.bind(
     process.stdout,
-  ) as typeof process.stdout.write
+  )
   process.stdout.write = function (
     chunk: string | Uint8Array,
     encodingOrCb?: BufferEncoding | ((err?: Error) => void),

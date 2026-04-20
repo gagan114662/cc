@@ -300,7 +300,7 @@ export function CollapsedReadSearchContent({
     const isFirst = nonMemParts.length === 0;
     if (!isFirst) nonMemParts.push(<Text key={`comma-${key}`}>, </Text>);
     nonMemParts.push(<Text key={key}>
-        {isFirst ? verb[0]!.toUpperCase() + verb.slice(1) : verb} {body}
+        {isFirst ? verb[0].toUpperCase() + verb.slice(1) : verb} {body}
       </Text>);
   }
   if (isFullscreenEnvEnabled() && message.commits?.length) {

@@ -122,11 +122,11 @@ export class YogaLayoutNode implements LayoutNode {
   }
 
   getComputedBorder(edge: LayoutEdge): number {
-    return this.yoga.getComputedBorder(EDGE_MAP[edge]!)
+    return this.yoga.getComputedBorder(EDGE_MAP[edge])
   }
 
   getComputedPadding(edge: LayoutEdge): number {
-    return this.yoga.getComputedPadding(EDGE_MAP[edge]!)
+    return this.yoga.getComputedPadding(EDGE_MAP[edge])
   }
 
   // Style setters
@@ -181,7 +181,7 @@ export class YogaLayoutNode implements LayoutNode {
       column: FlexDirection.Column,
       'column-reverse': FlexDirection.ColumnReverse,
     }
-    this.yoga.setFlexDirection(map[dir]!)
+    this.yoga.setFlexDirection(map[dir])
   }
 
   setFlexGrow(value: number): void {
@@ -203,7 +203,7 @@ export class YogaLayoutNode implements LayoutNode {
       wrap: Wrap.Wrap,
       'wrap-reverse': Wrap.WrapReverse,
     }
-    this.yoga.setFlexWrap(map[wrap]!)
+    this.yoga.setFlexWrap(map[wrap])
   }
 
   setAlignItems(align: LayoutAlign): void {
@@ -214,7 +214,7 @@ export class YogaLayoutNode implements LayoutNode {
       center: Align.Center,
       'flex-end': Align.FlexEnd,
     }
-    this.yoga.setAlignItems(map[align]!)
+    this.yoga.setAlignItems(map[align])
   }
 
   setAlignSelf(align: LayoutAlign): void {
@@ -225,7 +225,7 @@ export class YogaLayoutNode implements LayoutNode {
       center: Align.Center,
       'flex-end': Align.FlexEnd,
     }
-    this.yoga.setAlignSelf(map[align]!)
+    this.yoga.setAlignSelf(map[align])
   }
 
   setJustifyContent(justify: LayoutJustify): void {
@@ -237,7 +237,7 @@ export class YogaLayoutNode implements LayoutNode {
       'space-around': Justify.SpaceAround,
       'space-evenly': Justify.SpaceEvenly,
     }
-    this.yoga.setJustifyContent(map[justify]!)
+    this.yoga.setJustifyContent(map[justify])
   }
 
   setDisplay(display: LayoutDisplay): void {
@@ -257,11 +257,11 @@ export class YogaLayoutNode implements LayoutNode {
   }
 
   setPosition(edge: LayoutEdge, value: number): void {
-    this.yoga.setPosition(EDGE_MAP[edge]!, value)
+    this.yoga.setPosition(EDGE_MAP[edge], value)
   }
 
   setPositionPercent(edge: LayoutEdge, value: number): void {
-    this.yoga.setPositionPercent(EDGE_MAP[edge]!, value)
+    this.yoga.setPositionPercent(EDGE_MAP[edge], value)
   }
 
   setOverflow(overflow: LayoutOverflow): void {
@@ -270,20 +270,20 @@ export class YogaLayoutNode implements LayoutNode {
       hidden: Overflow.Hidden,
       scroll: Overflow.Scroll,
     }
-    this.yoga.setOverflow(map[overflow]!)
+    this.yoga.setOverflow(map[overflow])
   }
 
   setMargin(edge: LayoutEdge, value: number): void {
-    this.yoga.setMargin(EDGE_MAP[edge]!, value)
+    this.yoga.setMargin(EDGE_MAP[edge], value)
   }
   setPadding(edge: LayoutEdge, value: number): void {
-    this.yoga.setPadding(EDGE_MAP[edge]!, value)
+    this.yoga.setPadding(EDGE_MAP[edge], value)
   }
   setBorder(edge: LayoutEdge, value: number): void {
-    this.yoga.setBorder(EDGE_MAP[edge]!, value)
+    this.yoga.setBorder(EDGE_MAP[edge], value)
   }
   setGap(gutter: LayoutGutter, value: number): void {
-    this.yoga.setGap(GUTTER_MAP[gutter]!, value)
+    this.yoga.setGap(GUTTER_MAP[gutter], value)
   }
 
   // Lifecycle

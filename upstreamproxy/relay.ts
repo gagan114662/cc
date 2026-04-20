@@ -91,7 +91,7 @@ export function decodeChunk(buf: Uint8Array): Uint8Array | null {
   let shift = 0
   let i = 1
   while (i < buf.length) {
-    const b = buf[i]!
+    const b = buf[i]
     len |= (b & 0x7f) << shift
     i++
     if ((b & 0x80) === 0) break
@@ -215,7 +215,7 @@ function startBunRelay(
       drain(sock) {
         const st = sock.data
         while (st.writeBuf.length > 0) {
-          const chunk = st.writeBuf[0]!
+          const chunk = st.writeBuf[0]
           const n = sock.write(chunk)
           if (n < chunk.length) {
             st.writeBuf[0] = chunk.subarray(n)

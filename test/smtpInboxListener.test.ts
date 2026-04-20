@@ -69,9 +69,9 @@ describe('SMTP inbox listener', () => {
         tenantId: 'acme',
       })
       expect(inbox).toHaveLength(1)
-      expect(inbox[0]!.subject).toBe('Welcome')
-      expect(inbox[0]!.from).toBe('sender@example.com')
-      expect(inbox[0]!.message).toContain('Hello from SMTP')
+      expect(inbox[0].subject).toBe('Welcome')
+      expect(inbox[0].from).toBe('sender@example.com')
+      expect(inbox[0].message).toContain('Hello from SMTP')
 
       const audit = readAuditTail(10, { dir: auditDir })
       expect(audit.at(-1)?.kind).toBe(SMTP_EMAIL_RECEIVED_AUDIT_KIND)

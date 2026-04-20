@@ -65,7 +65,7 @@ async function createFork(customTitle?: string): Promise<{
   serializedMessages: SerializedMessage[]
   contentReplacementRecords: ContentReplacementEntry['replacements']
 }> {
-  const forkSessionId = randomUUID() as UUID
+  const forkSessionId = randomUUID()
   const originalSessionId = getSessionId()
   const projectDir = getProjectDir(getOriginalCwd())
   const forkSessionPath = getTranscriptPathForSession(forkSessionId)
@@ -257,7 +257,7 @@ export async function call(
     })
 
     const forkLog: LogOption = {
-      date: now.toISOString().split('T')[0]!,
+      date: now.toISOString().split('T')[0],
       messages: serializedMessages,
       fullPath: forkPath,
       value: now.getTime(),

@@ -57,7 +57,7 @@ describe('durableAuditLog', () => {
     )
 
     const tail = readAuditTail(1, { dir, now })
-    expect(tail[0]!.tenant).toEqual({
+    expect(tail[0].tenant).toEqual({
       id: 'acme',
       name: 'Acme Robotics',
       role: 'developer',
@@ -80,7 +80,7 @@ describe('durableAuditLog', () => {
     )
 
     const tail = readAuditTail(1, { dir, now })
-    expect((tail[0]!.tenant as { id: string }).id).toBe('explicit')
+    expect((tail[0].tenant as { id: string }).id).toBe('explicit')
   })
 
   test('multiple entries stack on the same day', () => {
@@ -91,7 +91,7 @@ describe('durableAuditLog', () => {
 
     const lines = readFileSync(auditFilePath({ dir, now }), 'utf8').split('\n').filter(Boolean)
     expect(lines).toHaveLength(3)
-    expect(JSON.parse(lines[2]!).kind).toBe('duty.start')
+    expect(JSON.parse(lines[2]).kind).toBe('duty.start')
   })
 
   test('rotates across UTC day boundary to a new file', () => {

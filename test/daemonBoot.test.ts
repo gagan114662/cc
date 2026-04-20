@@ -110,8 +110,8 @@ describe('daemon boot', () => {
       })
       // Only the enabled duty hydrates into the scheduler.
       expect(body.duties.map(d => d.id)).toEqual(['d-alpha'])
-      expect(body.duties[0]!.tokenBudget).toBe(8000)
-      expect(body.duties[0]!.costCap).toBe(0.5)
+      expect(body.duties[0].tokenBudget).toBe(8000)
+      expect(body.duties[0].costCap).toBe(0.5)
 
       const ready = await fetchJson(`http://127.0.0.1:${actualPort}/ready`)
       expect(ready.status).toBe(200)

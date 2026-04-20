@@ -27,7 +27,7 @@ export function collapseTeammateShutdowns(
       let count = 0
       while (
         i < messages.length &&
-        isTeammateShutdownAttachment(messages[i]!)
+        isTeammateShutdownAttachment(messages[i])
       ) {
         count++
         i++

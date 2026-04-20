@@ -227,7 +227,7 @@ export function applyTaskOffsetsAndEvictions(
       // Re-check status on fresh state — task may have completed during the
       // await. If it's no longer running, the offset update is moot.
       if (fresh?.status === 'running') {
-        newTasks[id] = { ...fresh, outputOffset: updatedTaskOffsets[id]! }
+        newTasks[id] = { ...fresh, outputOffset: updatedTaskOffsets[id] }
         changed = true
       }
     }

@@ -848,7 +848,7 @@ export function transformCommandAst(
   // Remove-Item deny), allow rules are separately gated by nameType.
   let nameType: 'cmdlet' | 'application' | 'unknown' = 'unknown'
   if (cmdElements.length > 0) {
-    const first = cmdElements[0]!
+    const first = cmdElements[0]
     // SECURITY: only trust .value for string-literal element types with a
     // string-typed value. Numeric ConstantExpressionAst (e.g. `& 1`) emits an
     // integer .value that crashes stripModulePrefix() → parser falls through
@@ -888,7 +888,7 @@ export function transformCommandAst(
     elementTypes.push(mapElementType(first.type, first.expressionType))
 
     for (let i = 1; i < cmdElements.length; i++) {
-      const ce = cmdElements[i]!
+      const ce = cmdElements[i]
       // Use resolved .value for string constants (strips quotes, resolves
       // backtick escapes like `n -> newline) but keep raw .text for parameters
       // (where .value loses the dash prefix, e.g. '-Path' -> 'Path'),
@@ -1651,7 +1651,7 @@ export function isPowerShellParameter(
   if (elementType !== undefined) {
     return elementType === 'Parameter'
   }
-  return arg.length > 0 && PS_TOKENIZER_DASH_CHARS.has(arg[0]!)
+  return arg.length > 0 && PS_TOKENIZER_DASH_CHARS.has(arg[0])
 }
 
 /**

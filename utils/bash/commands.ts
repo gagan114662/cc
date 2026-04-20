@@ -783,7 +783,7 @@ export function extractOutputRedirections(cmd: string): {
     commandWithoutRedirections: restoreHeredocs(
       [reconstructCommand(kept, processedCommand)],
       heredocs,
-    )[0]!,
+    )[0],
     redirections,
     hasDangerousRedirection,
   }
@@ -949,7 +949,7 @@ function handleRedirection(
 
     // >| force overwrite (parsed as > followed by |)
     if (isOperator(next, '|') && isSimpleTarget(nextNext)) {
-      redirections.push({ target: nextNext as string, operator })
+      redirections.push({ target: nextNext, operator })
       return { skip: 2, dangerous: false }
     }
     // >| with dangerous expansion target
@@ -960,7 +960,7 @@ function handleRedirection(
     // >! ZSH force clobber (parsed as > followed by "!")
     // In ZSH, >! forces overwrite even when noclobber is set
     if (next === '!' && isSimpleTarget(nextNext)) {
-      redirections.push({ target: nextNext as string, operator })
+      redirections.push({ target: nextNext, operator })
       return { skip: 2, dangerous: false }
     }
     // >! with dangerous expansion target
@@ -1009,7 +1009,7 @@ function handleRedirection(
     if (isOperator(next, '&')) {
       // >>&! pattern
       if (nextNext === '!' && isSimpleTarget(nextNextNext)) {
-        redirections.push({ target: nextNextNext as string, operator })
+        redirections.push({ target: nextNextNext, operator })
         return { skip: 3, dangerous: false }
       }
       // >>&! with dangerous expansion target
@@ -1018,7 +1018,7 @@ function handleRedirection(
       }
       // >>&| pattern
       if (isOperator(nextNext, '|') && isSimpleTarget(nextNextNext)) {
-        redirections.push({ target: nextNextNext as string, operator })
+        redirections.push({ target: nextNextNext, operator })
         return { skip: 3, dangerous: false }
       }
       // >>&| with dangerous expansion target
@@ -1027,7 +1027,7 @@ function handleRedirection(
       }
       // >>& pattern (plain combined append without force modifier)
       if (isSimpleTarget(nextNext)) {
-        redirections.push({ target: nextNext as string, operator })
+        redirections.push({ target: nextNext, operator })
         return { skip: 2, dangerous: false }
       }
       // Check for dangerous expansion in target (>>& $VAR or >>& %VAR%)
@@ -1057,7 +1057,7 @@ function handleRedirection(
 
     // >&| POSIX force clobber for combined stdout/stderr
     if (isOperator(next, '|') && isSimpleTarget(nextNext)) {
-      redirections.push({ target: nextNext as string, operator: '>' })
+      redirections.push({ target: nextNext, operator: '>' })
       return { skip: 2, dangerous: false }
     }
     // >&| with dangerous expansion target
@@ -1067,7 +1067,7 @@ function handleRedirection(
 
     // >&! ZSH force clobber for combined stdout/stderr
     if (next === '!' && isSimpleTarget(nextNext)) {
-      redirections.push({ target: nextNext as string, operator: '>' })
+      redirections.push({ target: nextNext, operator: '>' })
       return { skip: 2, dangerous: false }
     }
     // >&! with dangerous expansion target
@@ -1117,11 +1117,11 @@ function handleFileDescriptorRedirection(
 
   // Handle file redirection (simple targets like 2>/tmp/file)
   if (isFileTarget) {
-    redirections.push({ target: target as string, operator })
+    redirections.push({ target: target, operator })
 
     // Non-stdout: preserve the redirection in the command
     if (!isStdout) {
-      kept.push(fd + operator, target as string)
+      kept.push(fd + operator, target)
     }
     return { skip: skipCount, dangerous: false }
   }
@@ -1246,7 +1246,7 @@ function reconstructCommand(kept: ParseEntry[], originalCmd: string): string {
 
     // Handle glob patterns
     if (op === 'glob' && 'pattern' in part) {
-      result = addToken(result, part.pattern as string)
+      result = addToken(result, part.pattern)
       continue
     }
 

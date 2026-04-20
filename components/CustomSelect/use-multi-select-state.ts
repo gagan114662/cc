@@ -385,7 +385,7 @@ export function useMultiSelectState<T>({
       if (!hideIndexes && /^[0-9]+$/.test(normalizedInput)) {
         const index = parseInt(normalizedInput) - 1
         if (index >= 0 && index < options.length) {
-          const value = options[index]!.value
+          const value = options[index].value
           const newValues = selectedValues.includes(value)
             ? selectedValues.filter(v => v !== value)
             : [...selectedValues, value]

@@ -95,7 +95,7 @@ export function shouldHideTasksFooter(tasks: {
 }, showSpinnerTree: boolean): boolean {
   if (!showSpinnerTree) return false;
   let hasVisibleTask = false;
-  for (const t of Object.values(tasks) as TaskState[]) {
+  for (const t of Object.values(tasks)) {
     if (!isBackgroundTask(t) || "external" === 'ant' && isPanelAgentTask(t)) {
       continue;
     }

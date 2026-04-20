@@ -186,7 +186,7 @@ function isSubstitutionCommand(
     return false
   }
 
-  const expr = expressions[0]!.trim()
+  const expr = expressions[0].trim()
 
   // STRICT ALLOWLIST: Must be exactly a substitution command starting with 's'
   // This rejects standalone commands like 'e', 'w file', etc.
@@ -201,7 +201,7 @@ function isSubstitutionCommand(
     return false
   }
 
-  const rest = substitutionMatch[1]!
+  const rest = substitutionMatch[1]
 
   // Find the positions of / delimiters
   let delimiterCount = 0

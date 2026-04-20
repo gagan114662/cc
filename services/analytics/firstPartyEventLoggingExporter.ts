@@ -398,13 +398,13 @@ export class FirstPartyEventLoggingExporter implements LogRecordExporter {
     const failedBatchEvents: FirstPartyEventLoggingEvent[] = []
     let lastErrorContext: string | undefined
     for (let i = 0; i < batches.length; i++) {
-      const batch = batches[i]!
+      const batch = batches[i]
       try {
         await this.sendBatchWithRetry({ events: batch })
       } catch (error) {
         lastErrorContext = getAxiosErrorContext(error)
         for (let j = i; j < batches.length; j++) {
-          failedBatchEvents.push(...batches[j]!)
+          failedBatchEvents.push(...batches[j])
         }
         if (process.env.USER_TYPE === 'ant') {
           const skipped = batches.length - 1 - i

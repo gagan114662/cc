@@ -2170,7 +2170,7 @@ export const getMarketplace = memoize(
     }
 
     // Update lastUpdated only when we actually fetch
-    config[name]!.lastUpdated = new Date().toISOString()
+    config[name].lastUpdated = new Date().toISOString()
     await saveKnownMarketplacesConfig(config)
 
     return marketplace
@@ -2317,7 +2317,7 @@ export async function refreshAllMarketplaces(): Promise<void> {
         getMarketplacesCacheDir(),
       )
       if (sha !== null) {
-        config[name]!.lastUpdated = new Date().toISOString()
+        config[name].lastUpdated = new Date().toISOString()
         continue
       }
       if (
@@ -2335,8 +2335,8 @@ export async function refreshAllMarketplaces(): Promise<void> {
     }
     try {
       const { cachePath } = await loadAndCacheMarketplace(entry.source)
-      config[name]!.lastUpdated = new Date().toISOString()
-      config[name]!.installLocation = cachePath
+      config[name].lastUpdated = new Date().toISOString()
+      config[name].installLocation = cachePath
     } catch (error) {
       logForDebugging(
         `Failed to refresh marketplace ${name}: ${errorMessage(error)}`,
@@ -2561,7 +2561,7 @@ export async function refreshMarketplace(
     }
 
     // Update lastUpdated timestamp
-    config[name]!.lastUpdated = new Date().toISOString()
+    config[name].lastUpdated = new Date().toISOString()
     await saveKnownMarketplacesConfig(config)
 
     logForDebugging(`Successfully refreshed marketplace: ${name}`)

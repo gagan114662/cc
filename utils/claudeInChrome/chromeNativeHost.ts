@@ -182,7 +182,7 @@ class ChromeNativeHost {
     // Set permissions on Unix (after listen resolves so socket file exists)
     if (platform() !== 'win32') {
       try {
-        await chmod(this.socketPath!, 0o600)
+        await chmod(this.socketPath, 0o600)
         log('Socket permissions set to 0600')
       } catch (e) {
         log('Failed to set socket permissions:', e)

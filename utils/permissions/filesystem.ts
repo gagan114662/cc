@@ -449,7 +449,7 @@ function isDangerousFilePathToAutoEdit(path: string): boolean {
 
   // Check if path is within dangerous directories (case-insensitive to prevent bypasses)
   for (let i = 0; i < pathSegments.length; i++) {
-    const segment = pathSegments[i]!
+    const segment = pathSegments[i]
     const normalizedSegment = normalizeCaseForComparison(segment)
 
     for (const dir of DANGEROUS_DIRECTORIES) {

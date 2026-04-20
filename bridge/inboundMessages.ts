@@ -30,7 +30,7 @@ export function extractInboundMessageFields(
 
   const uuid =
     'uuid' in msg && typeof msg.uuid === 'string'
-      ? (msg.uuid as UUID)
+      ? (msg.uuid)
       : undefined
 
   return {

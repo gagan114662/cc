@@ -391,13 +391,13 @@ export function getFileExtensionsFromBashCommand(
     const tokens = subcmd.split(WHITESPACE_REGEX)
     if (tokens.length < 2) continue
 
-    const firstToken = tokens[0]!
+    const firstToken = tokens[0]
     const slashIdx = firstToken.lastIndexOf('/')
     const baseCmd = slashIdx >= 0 ? firstToken.slice(slashIdx + 1) : firstToken
     if (!FILE_COMMANDS.has(baseCmd)) continue
 
     for (let i = 1; i < tokens.length; i++) {
-      const arg = tokens[i]!
+      const arg = tokens[i]
       if (arg.charCodeAt(0) === 45 /* - */) continue
       const ext = getFileExtensionForAnalytics(arg)
       if (ext && !seen.has(ext)) {

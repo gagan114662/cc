@@ -135,7 +135,7 @@ async function updateMagicDoc(
       { file_path: docInfo.path },
       clonedToolUseContext,
     )
-    const output = result.data as FileReadToolOutput
+    const output = result.data
     if (output.type === 'text') {
       currentDoc = output.file.content
     }

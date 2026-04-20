@@ -122,7 +122,7 @@ export function extractClaudeCodeHints(
 function parseAttrs(tagBody: string): Record<string, string> {
   const attrs: Record<string, string> = {}
   for (const m of tagBody.matchAll(ATTR_RE)) {
-    attrs[m[1]!] = m[2] ?? m[3] ?? ''
+    attrs[m[1]] = m[2] ?? m[3] ?? ''
   }
   return attrs
 }

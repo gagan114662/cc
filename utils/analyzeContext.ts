@@ -262,7 +262,7 @@ function extractSectionName(content: string): string {
   // Try to find first markdown heading
   const headingMatch = content.match(/^#+\s+(.+)$/m)
   if (headingMatch) {
-    return headingMatch[1]!.trim()
+    return headingMatch[1].trim()
   }
   // Fall back to a truncated preview of the first non-empty line
   const firstLine = content.split('\n').find(l => l.trim().length > 0) ?? ''
@@ -428,7 +428,7 @@ async function countBuiltInToolTokens(
       systemToolDetails = toolsForBreakdown
         .map((t, i) => ({
           name: t.name,
-          tokens: Math.round((estimates[i]! / estimateTotal) * distributable),
+          tokens: Math.round((estimates[i] / estimateTotal) * distributable),
         }))
         .sort((a, b) => b.tokens - a.tokens)
     }
@@ -703,7 +703,7 @@ export async function countMcpToolTokens(
     mcpToolDetails.push({
       name: tool.name,
       serverName: tool.name.split('__')[1] || 'unknown',
-      tokens: mcpToolTokensByTool[i]!,
+      tokens: mcpToolTokensByTool[i],
       isLoaded: loadedMcpToolNames.has(tool.name) || !isDeferredTool(tool),
     })
   }

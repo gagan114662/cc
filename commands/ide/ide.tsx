@@ -494,7 +494,7 @@ export async function call(onDone: (result?: string, options?: {
         });
       }} />;
     } else if (runningIDEs.length === 1) {
-      return <InstallOnMount ide={runningIDEs[0]!} onInstall={onInstall} />;
+      return <InstallOnMount ide={runningIDEs[0]} onInstall={onInstall} />;
     }
   }
   const availableIDEs = detectedIDEs.filter(ide => ide.isValid);

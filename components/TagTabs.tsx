@@ -121,7 +121,7 @@ export function TagTabs({
           {hiddenLeft}
         </Text>}
       {visibleTabs.map((tab_0, i_1) => {
-      const actualIndex = visibleIndices[i_1]!;
+      const actualIndex = visibleIndices[i_1];
       const isSelected = actualIndex === safeSelectedIndex;
       const displayText = tab_0 === ALL_TAB_LABEL ? tab_0 : `#${truncateTag(tab_0, maxSingleTabWidth - TAB_PADDING)}`;
       return <Text key={tab_0} backgroundColor={isSelected ? 'suggestion' : undefined} color={isSelected ? 'inverseText' : undefined} bold={isSelected}>

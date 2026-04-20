@@ -1077,7 +1077,7 @@ function ElicitationURLDialog({
         setFocusedButton(prev_0 => {
           const idx = waitingButtons.indexOf(prev_0);
           const delta = key.rightArrow ? 1 : -1;
-          return waitingButtons[(idx + delta + waitingButtons.length) % waitingButtons.length]!;
+          return waitingButtons[(idx + delta + waitingButtons.length) % waitingButtons.length];
         });
         return;
       }

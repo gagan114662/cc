@@ -220,7 +220,7 @@ async function setupSessionMemoryFile(
   )
   let currentMemory = ''
 
-  const output = result.data as FileReadToolOutput
+  const output = result.data
   if (output.type === 'text') {
     currentMemory = output.file.content
   }

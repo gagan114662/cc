@@ -293,8 +293,8 @@ export function getPluginInstallationFromV2(pluginId: string): {
 
   // Fall back to first installation (could be managed)
   return {
-    scope: installations[0]!.scope,
-    projectPath: installations[0]!.projectPath,
+    scope: installations[0].scope,
+    projectPath: installations[0].projectPath,
   }
 }
 

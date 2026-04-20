@@ -1085,7 +1085,7 @@ export function summarizeRecentActivities(
   let searchCount = 0
   let readCount = 0
   for (let i = activities.length - 1; i >= 0; i--) {
-    const activity = activities[i]!
+    const activity = activities[i]
     if (activity.isSearch) {
       searchCount++
     } else if (activity.isRead) {
@@ -1102,7 +1102,7 @@ export function summarizeRecentActivities(
   // SendMessage don't implement getActivityDescription, so search backward)
   for (let i = activities.length - 1; i >= 0; i--) {
     if (activities[i]?.activityDescription) {
-      return activities[i]!.activityDescription
+      return activities[i].activityDescription
     }
   }
   return undefined

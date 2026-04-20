@@ -390,7 +390,7 @@ export function parseSkillFrontmatterFields(
     frontmatter.model === 'inherit'
       ? undefined
       : frontmatter.model
-        ? parseUserSpecifiedModel(frontmatter.model as string)
+        ? parseUserSpecifiedModel(frontmatter.model)
         : undefined
 
   const effortRaw = frontmatter['effort']
@@ -724,7 +724,7 @@ function transformSkillFiles(files: MarkdownFile[]): MarkdownFile[] {
   for (const [dir, dirFiles] of filesByDir) {
     const skillFiles = dirFiles.filter(f => isSkillFile(f.filePath))
     if (skillFiles.length > 0) {
-      const skillFile = skillFiles[0]!
+      const skillFile = skillFiles[0]
       if (skillFiles.length > 1) {
         logForDebugging(
           `Multiple skill files found in ${dir}, using ${basename(skillFile.filePath)}`,
