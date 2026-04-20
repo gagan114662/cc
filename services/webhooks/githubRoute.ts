@@ -24,6 +24,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
+import { writeAuditEntry } from '../audit/durableAuditLog.js'
 import { getQueueBackend } from '../assignmentQueue/backend.js'
 import { DEFAULT_TENANT } from '../tenant/tenantContext.js'
 import { verifyHmacSignature } from './signatureVerification.js'
@@ -35,7 +36,13 @@ export type HandleGithubWebhookOptions = {
   projectRoot?: string
   secret: string
   idFactory?: () => string
+  auditDir?: string
+  now?: () => Date
 }
+
+export const GITHUB_WEBHOOK_QUEUED_AUDIT_KIND = 'webhook.github.queued'
+export const GITHUB_WEBHOOK_IGNORED_AUDIT_KIND = 'webhook.github.ignored'
+export const GITHUB_WEBHOOK_PING_AUDIT_KIND = 'webhook.github.ping'
 
 type RawBody = { kind: 'ok'; text: string } | { kind: 'too_large' }
 
@@ -190,13 +197,35 @@ export async function handleGithubWebhookRequest(
   }
 
   const translation = translateEvent(event, payload)
+  const ts = (opts.now ?? (() => new Date()))().toISOString()
+  const auditWriteOpts = {
+    ...(opts.auditDir ? { dir: opts.auditDir } : {}),
+    tenant: DEFAULT_TENANT,
+  }
 
   if (translation.kind === 'pong') {
+    writeAuditEntry(
+      {
+        ts,
+        kind: GITHUB_WEBHOOK_PING_AUDIT_KIND,
+        source: 'github.webhook',
+      },
+      auditWriteOpts,
+    )
     writeJson(res, 200, { pong: true })
     return
   }
 
   if (translation.kind === 'ignore') {
+    writeAuditEntry(
+      {
+        ts,
+        kind: GITHUB_WEBHOOK_IGNORED_AUDIT_KIND,
+        source: 'github.webhook',
+        event: translation.event,
+      },
+      auditWriteOpts,
+    )
     writeJson(res, 202, { status: 'ignored', event: translation.event })
     return
   }
@@ -206,6 +235,16 @@ export async function handleGithubWebhookRequest(
   await backend.enqueue(
     { id, assignment: translation.assignment },
     { projectRoot: opts.projectRoot, tenantId: DEFAULT_TENANT.id },
+  )
+  writeAuditEntry(
+    {
+      ts,
+      kind: GITHUB_WEBHOOK_QUEUED_AUDIT_KIND,
+      source: 'github.webhook',
+      event: translation.event,
+      assignmentId: id,
+    },
+    auditWriteOpts,
   )
 
   writeJson(res, 202, { id, status: 'queued', event: translation.event })

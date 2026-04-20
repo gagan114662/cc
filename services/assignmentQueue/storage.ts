@@ -19,7 +19,7 @@
 // 'running' crash is recoverable by appending a 'pending' record
 // (see recoverCrashedAssignments) rather than rewriting the file.
 
-import { appendFileSync, mkdirSync, readFileSync } from 'node:fs'
+import { appendFileSync, existsSync, mkdirSync, readFileSync, readdirSync } from 'node:fs'
 import { dirname, join } from 'node:path'
 import { getProjectRoot } from '../../bootstrap/state.js'
 import {
@@ -186,4 +186,29 @@ export async function recoverCrashedAssignments(
     }
   }
   return recovered
+}
+
+export function listAssignmentQueueTenants(projectRoot?: string): string[] {
+  const root = projectRoot ?? getProjectRoot()
+  const tenants = new Set<string>()
+
+  const defaultQueuePath = getAssignmentQueuePath(root, DEFAULT_TENANT_ID)
+  if (existsSync(defaultQueuePath)) {
+    tenants.add(DEFAULT_TENANT_ID)
+  }
+
+  const tenantsDir = join(root, '.claude', TENANTS_DIR_NAME)
+  try {
+    for (const entry of readdirSync(tenantsDir, { withFileTypes: true })) {
+      if (!entry.isDirectory()) continue
+      const queuePath = getAssignmentQueuePath(root, entry.name)
+      if (existsSync(queuePath)) {
+        tenants.add(entry.name)
+      }
+    }
+  } catch {
+    // No tenant queue dir yet — that's a valid empty state.
+  }
+
+  return Array.from(tenants).sort()
 }
