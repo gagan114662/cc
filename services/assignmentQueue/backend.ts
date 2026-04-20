@@ -23,6 +23,9 @@ import type { AssignmentRecord, AssignmentState } from './storage.js'
 import type { TenantContext } from '../tenant/tenantContext.js'
 
 export type QueueBackendKind = 'jsonl' | 'redis'
+export type QueueCoordinationMode =
+  | 'local-append-only'
+  | 'shared-substrate'
 
 export type EnqueueInput = { id: string; assignment: string }
 export type EnqueueContext = { projectRoot?: string; tenantId: string }
@@ -73,6 +76,12 @@ export function getQueueBackendKind(): QueueBackendKind {
   const raw = process.env.CC_QUEUE_BACKEND?.toLowerCase()
   if (raw === 'redis') return 'redis'
   return 'jsonl'
+}
+
+export function coordinationModeForQueueBackend(
+  kind: QueueBackendKind,
+): QueueCoordinationMode {
+  return kind === 'redis' ? 'shared-substrate' : 'local-append-only'
 }
 
 // Lazy import of the concrete backend so a single-daemon deployment

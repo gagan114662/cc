@@ -25,6 +25,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
 import { writeAuditEntry } from '../audit/durableAuditLog.js'
 import { getQueueBackend } from '../assignmentQueue/backend.js'
+import type { QueueBackend } from '../assignmentQueue/backend.js'
 import { withAssignmentSpan } from '../observability/dutySpans.js'
 import { denyAssignIfUnauthorized } from '../tenant/assignmentAuthorization.js'
 import {
@@ -59,6 +60,11 @@ export type HandleEmployeeAssignOptions = {
   // passes its own projectRoot so the HTTP handler enqueues into the
   // same file the daemon drainer watches.
   projectRoot?: string
+  // Lets callers inject a concrete backend instance. The daemon uses
+  // this in distributed-queue tests so one process can accept onto one
+  // Redis-backed backend instance while a second daemon drains through
+  // another, mirroring two machines on the same shared substrate.
+  queueBackend?: QueueBackend
 }
 
 type ParsedBody =
@@ -206,7 +212,7 @@ export async function handleEmployeeAssignRequest(
             },
             opts.auditDir ? { dir: opts.auditDir } : undefined,
           )
-          const backend = await getQueueBackend()
+          const backend = opts.queueBackend ?? (await getQueueBackend())
           await backend.enqueue(
             { id, assignment: body.assignment },
             { projectRoot: opts.projectRoot, tenantId: tenant.id },

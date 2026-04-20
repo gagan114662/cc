@@ -1,6 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { loadAssignmentQueue, listAssignmentQueueTenants, type AssignmentRecord } from '../assignmentQueue/storage.js'
 import { readAuditTail, type AuditEntry } from '../audit/durableAuditLog.js'
+import {
+  coordinationModeForQueueBackend,
+  type QueueBackendKind,
+} from '../assignmentQueue/backend.js'
 import { listConfiguredTenants } from '../../utils/employeeConfig.js'
 import {
   DEFAULT_TENANT,
@@ -15,6 +19,7 @@ export type HandleOutcomeDashboardOptions = {
   auditDir?: string
   startedAt?: string
   status?: 'ok' | 'draining'
+  queueBackendKind?: QueueBackendKind
   scheduledDutyCount?: number
   drainerTenantIds?: string[]
 }
@@ -182,6 +187,16 @@ export async function handleOutcomeDashboardRequest(
     status: opts.status ?? 'ok',
     projectRoot: opts.projectRoot,
     ...(opts.startedAt ? { startedAt: opts.startedAt } : {}),
+    ...(opts.queueBackendKind
+      ? {
+          queueBackend: {
+            kind: opts.queueBackendKind,
+            coordinationMode: coordinationModeForQueueBackend(
+              opts.queueBackendKind,
+            ),
+          },
+        }
+      : {}),
     ...(opts.scheduledDutyCount !== undefined
       ? { liveScheduler: { scheduledDutyCount: opts.scheduledDutyCount, drainerTenantIds: opts.drainerTenantIds ?? [] } }
       : {}),
