@@ -4,7 +4,7 @@ import React, { useMemo } from 'react';
 import { Ansi, Box, Text } from '../../ink.js';
 import type { Attachment } from 'src/utils/attachments.js';
 import type { NullRenderingAttachmentType } from './nullRenderingAttachments.js';
-import { useAppState } from '../../state/AppState.js';
+import { type AppState, useAppState } from '../../state/AppState.js';
 import { getDisplayPath } from 'src/utils/file.js';
 import { formatFileSize } from 'src/utils/format.js';
 import { MessageResponse } from '../MessageResponse.js';
@@ -358,7 +358,7 @@ export function AttachmentMessage({
 type TaskStatusAttachment = Extract<Attachment, {
   type: 'task_status';
 }>;
-function TaskStatusMessage(t0) {
+function TaskStatusMessage(t0: { attachment: TaskStatusAttachment }) {
   const $ = _c(4);
   const {
     attachment
@@ -387,7 +387,7 @@ function TaskStatusMessage(t0) {
   }
   return t1;
 }
-function GenericTaskStatus(t0) {
+function GenericTaskStatus(t0: { attachment: TaskStatusAttachment }) {
   const $ = _c(9);
   const {
     attachment
@@ -429,7 +429,7 @@ function GenericTaskStatus(t0) {
   }
   return t4;
 }
-function TeammateTaskStatus(t0) {
+function TeammateTaskStatus(t0: { attachment: TaskStatusAttachment }) {
   const $ = _c(16);
   const {
     attachment
@@ -437,7 +437,7 @@ function TeammateTaskStatus(t0) {
   const bg = useSelectedMessageBg();
   let t1;
   if ($[0] !== attachment.taskId) {
-    t1 = s => s.tasks[attachment.taskId];
+    t1 = (s: AppState) => s.tasks[attachment.taskId];
     $[0] = attachment.taskId;
     $[1] = t1;
   } else {
@@ -503,7 +503,7 @@ function TeammateTaskStatus(t0) {
 }
 // We allow setting dimColor to false here to help work around the dim-bold bug.
 // https://github.com/chalk/chalk/issues/290
-function Line(t0) {
+function Line(t0: { dimColor?: boolean; children?: React.ReactNode; color?: string }) {
   const $ = _c(7);
   const {
     dimColor: t1,

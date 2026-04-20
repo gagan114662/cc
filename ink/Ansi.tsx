@@ -66,7 +66,7 @@ export const Ansi = React.memo(function Ansi(t0) {
       }
       let t3;
       if ($[7] !== dimColor) {
-        t3 = (span, i) => {
+        t3 = (span: Span, i: number) => {
           const hyperlink = span.props.hyperlink;
           if (dimColor) {
             span.props.dim = true;
@@ -230,7 +230,7 @@ type BaseTextStyleProps = {
 };
 
 // Wrapper component that handles bold/dim mutual exclusivity for Text
-function StyledText(t0) {
+function StyledText(t0: BaseTextStyleProps & { bold?: boolean; dim?: boolean; children?: React.ReactNode }) {
   const $ = _c(14);
   let bold;
   let children;

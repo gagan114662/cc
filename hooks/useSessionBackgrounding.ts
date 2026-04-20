@@ -9,6 +9,7 @@
 
 import { useCallback, useEffect, useRef } from 'react'
 import { useAppState, useSetAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import type { Message } from '../types/message.js'
 
 type UseSessionBackgroundingProps = {
@@ -31,8 +32,8 @@ export function useSessionBackgrounding({
   setAbortController,
   onBackgroundQuery,
 }: UseSessionBackgroundingProps): UseSessionBackgroundingResult {
-  const foregroundedTaskId = useAppState(s => s.foregroundedTaskId)
-  const foregroundedTask = useAppState(s =>
+  const foregroundedTaskId = useAppState((s: AppState) => s.foregroundedTaskId)
+  const foregroundedTask = useAppState((s: AppState) =>
     s.foregroundedTaskId ? s.tasks[s.foregroundedTaskId] : undefined,
   )
   const setAppState = useSetAppState()

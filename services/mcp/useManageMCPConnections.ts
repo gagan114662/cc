@@ -150,12 +150,12 @@ export function useManageMCPConnections(
   isStrictMcpConfig = false,
 ) {
   const store = useAppStateStore()
-  const _authVersion = useAppState(s => s.authVersion)
+  const _authVersion = useAppState((s: AppState) => s.authVersion)
   // Incremented by /reload-plugins (refreshActivePlugins) to pick up newly
   // enabled plugin MCP servers. getClaudeCodeMcpConfigs() reads loadAllPlugins()
   // which has been cleared by refreshActivePlugins, so the effects below see
   // fresh plugin data on re-run.
-  const _pluginReconnectKey = useAppState(s => s.mcp.pluginReconnectKey)
+  const _pluginReconnectKey = useAppState((s: AppState) => s.mcp.pluginReconnectKey)
   const setAppState = useSetAppState()
 
   // Track active reconnection attempts to allow cancellation

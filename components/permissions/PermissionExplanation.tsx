@@ -89,7 +89,7 @@ function createExplanationPromise(props: PermissionExplanationProps): Promise<Pe
  * Creates the fetch promise lazily (only when user hits Ctrl+E)
  * to avoid consuming tokens for explanations users never view.
  */
-export function usePermissionExplainerUI(props) {
+export function usePermissionExplainerUI(props: PermissionExplanationProps) {
   const $ = _c(9);
   let t0;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
@@ -150,10 +150,12 @@ export function usePermissionExplainerUI(props) {
  * Inner component that uses React 19's use() to read the promise.
  * Suspends while loading, returns null on error.
  */
-function _temp(v) {
+function _temp(v: boolean) {
   return !v;
 }
-function ExplanationResult(t0) {
+function ExplanationResult(t0: {
+  promise: Promise<PermissionExplanationType | null>;
+}) {
   const $ = _c(21);
   const {
     promise
@@ -243,7 +245,10 @@ function ExplanationResult(t0) {
 /**
  * Content component - shows loading (via Suspense) or explanation when visible
  */
-export function PermissionExplainerContent(t0) {
+export function PermissionExplainerContent(t0: {
+  visible: boolean;
+  promise: Promise<PermissionExplanationType | null> | null;
+}) {
   const $ = _c(3);
   const {
     visible,

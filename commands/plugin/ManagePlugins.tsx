@@ -23,6 +23,8 @@ import type { MCPServerConnection, McpClaudeAIProxyServerConfig, McpHTTPServerCo
 import { filterToolsByServer } from '../../services/mcp/utils.js';
 import { disablePluginOp, enablePluginOp, getPluginInstallationFromV2, isInstallableScope, isPluginEnabledAtProjectScope, uninstallPluginOp, updatePluginOp } from '../../services/plugins/pluginOperations.js';
 import { useAppState } from '../../state/AppState.js';
+import type { AppState } from '../../state/AppStateStore.js';
+import type { PluginOptionValues } from '../../utils/plugins/pluginOptionsStorage.js';
 import type { Tool } from '../../Tool.js';
 import type { LoadedPlugin, PluginError } from '../../types/plugin.js';
 import { count } from '../../utils/array.js';
@@ -404,9 +406,9 @@ export function ManagePlugins({
   action
 }: Props): React.ReactNode {
   // App state for MCP access
-  const mcpClients = useAppState(s => s.mcp.clients);
-  const mcpTools = useAppState(s_0 => s_0.mcp.tools);
-  const pluginErrors = useAppState(s_1 => s_1.plugins.errors);
+  const mcpClients = useAppState((s: AppState) => s.mcp.clients);
+  const mcpTools = useAppState((s_0: AppState) => s_0.mcp.tools);
+  const pluginErrors = useAppState((s_1: AppState) => s_1.plugins.errors);
   const flaggedPlugins = getFlaggedPlugins();
 
   // Search state
@@ -559,7 +561,7 @@ export function ManagePlugins({
     for (const state of pluginStates) {
       const pluginId = `${state.plugin.name}@${state.marketplace}`;
       const isEnabled = mergedSettings?.enabledPlugins?.[pluginId] !== false;
-      const errors = pluginErrors.filter(e => 'plugin' in e && e.plugin === state.plugin.name || e.source === pluginId || e.source.startsWith(`${state.plugin.name}@`));
+      const errors = pluginErrors.filter((e: PluginError) => 'plugin' in e && e.plugin === state.plugin.name || e.source === pluginId || e.source.startsWith(`${state.plugin.name}@`));
 
       // Built-in plugins use 'builtin' scope; others look up from V2 data.
       const originalScope = state.plugin.isBuiltin ? 'builtin' : state.scope || 'user';
@@ -1660,7 +1662,7 @@ export function ManagePlugins({
   // Configure options (from the Manage menu)
   if (typeof viewState === 'object' && viewState.type === 'configuring-options' && selectedPlugin) {
     const pluginId_11 = `${selectedPlugin.plugin.name}@${selectedPlugin.marketplace}`;
-    return <PluginOptionsDialog title={`Configure ${selectedPlugin.plugin.name}`} subtitle="Plugin options" configSchema={viewState.schema} initialValues={loadPluginOptions(pluginId_11)} onSave={values => {
+    return <PluginOptionsDialog title={`Configure ${selectedPlugin.plugin.name}`} subtitle="Plugin options" configSchema={viewState.schema} initialValues={loadPluginOptions(pluginId_11)} onSave={(values: PluginOptionValues) => {
       try {
         savePluginOptions(pluginId_11, values, viewState.schema);
         clearAllCaches();
@@ -1816,13 +1818,13 @@ export function ManagePlugins({
     const isEnabled_2 = mergedSettings_2?.enabledPlugins?.[pluginId_13] !== false;
 
     // Compute plugin errors section
-    const filteredPluginErrors = pluginErrors.filter(e_1 => 'plugin' in e_1 && e_1.plugin === selectedPlugin.plugin.name || e_1.source === pluginId_13 || e_1.source.startsWith(`${selectedPlugin.plugin.name}@`));
+    const filteredPluginErrors = pluginErrors.filter((e_1: PluginError) => 'plugin' in e_1 && e_1.plugin === selectedPlugin.plugin.name || e_1.source === pluginId_13 || e_1.source.startsWith(`${selectedPlugin.plugin.name}@`));
     const pluginErrorsSection = filteredPluginErrors.length === 0 ? null : <Box flexDirection="column" marginBottom={1}>
           <Text bold color="error">
             {filteredPluginErrors.length}{' '}
             {plural(filteredPluginErrors.length, 'error')}:
           </Text>
-          {filteredPluginErrors.map((error_3, i_0) => {
+          {filteredPluginErrors.map((error_3: PluginError, i_0: number) => {
         const guidance = getErrorGuidance(error_3);
         return <Box key={i_0} flexDirection="column" marginLeft={2}>
                 <Text color="error">{formatErrorMessage(error_3)}</Text>

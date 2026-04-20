@@ -117,12 +117,12 @@ describe('inMemoryErrorLog partitioning by tenant', () => {
       getInMemoryErrors(),
     )
 
-    const acmeMessages = acmeEntries.map(e => e.error)
-    const globexMessages = globexEntries.map(e => e.error)
-    expect(acmeMessages.some(m => m.includes('acme-boom'))).toBe(true)
-    expect(acmeMessages.some(m => m.includes('globex-boom'))).toBe(false)
-    expect(globexMessages.some(m => m.includes('globex-boom'))).toBe(true)
-    expect(globexMessages.some(m => m.includes('acme-boom'))).toBe(false)
+    const acmeMessages = acmeEntries.map((e: { error: string; timestamp: string }) => e.error)
+    const globexMessages = globexEntries.map((e: { error: string; timestamp: string }) => e.error)
+    expect(acmeMessages.some((m: string) => m.includes('acme-boom'))).toBe(true)
+    expect(acmeMessages.some((m: string) => m.includes('globex-boom'))).toBe(false)
+    expect(globexMessages.some((m: string) => m.includes('globex-boom'))).toBe(true)
+    expect(globexMessages.some((m: string) => m.includes('acme-boom'))).toBe(false)
   })
 
   test('no-scope reads fall back to DEFAULT_TENANT bucket (legacy CLI path)', () => {

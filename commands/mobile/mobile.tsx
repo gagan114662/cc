@@ -21,7 +21,7 @@ const PLATFORMS: Record<Platform, {
     url: 'https://play.google.com/store/apps/details?id=com.anthropic.claude'
   }
 };
-function MobileQRCode(t0) {
+function MobileQRCode(t0: Props) {
   const $ = _c(52);
   const {
     onDone
@@ -92,7 +92,7 @@ function MobileQRCode(t0) {
   useKeybinding("confirm:no", handleClose, t5);
   let t6;
   if ($[6] !== onDone) {
-    t6 = function handleKeyDown(e) {
+    t6 = function handleKeyDown(e: KeyboardEvent) {
       if (e.key === "q" || e.ctrl && e.key === "c") {
         e.preventDefault();
         onDone();
@@ -258,13 +258,13 @@ function MobileQRCode(t0) {
   }
   return t28;
 }
-function _temp4(line_0, i) {
+function _temp4(line_0: string, i: number) {
   return <Text key={i}>{line_0}</Text>;
 }
-function _temp3(line) {
+function _temp3(line: string) {
   return line.length > 0;
 }
-function _temp2(prev) {
+function _temp2(prev: Platform): Platform {
   return prev === "ios" ? "android" : "ios";
 }
 function _temp() {}

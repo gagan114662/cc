@@ -1,5 +1,6 @@
 import { useMemo } from 'react'
 import { useAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import {
   hasVoiceAuth,
   isVoiceGrowthBookEnabled,
@@ -17,8 +18,8 @@ import {
  * (user is still authed), so the auth memo stays correct without re-eval.
  */
 export function useVoiceEnabled(): boolean {
-  const userIntent = useAppState(s => s.settings.voiceEnabled === true)
-  const authVersion = useAppState(s => s.authVersion)
+  const userIntent = useAppState((s: AppState) => s.settings.voiceEnabled === true)
+  const authVersion = useAppState((s: AppState) => s.authVersion)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const authed = useMemo(hasVoiceAuth, [authVersion])
   return userIntent && authed && isVoiceGrowthBookEnabled()

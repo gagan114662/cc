@@ -6,6 +6,7 @@ import {
 } from '../services/analytics/index.js'
 import { abortSpeculation } from '../services/PromptSuggestion/speculation.js'
 import { useAppState, useSetAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 
 type Props = {
   inputValue: string
@@ -24,7 +25,7 @@ export function usePromptSuggestion({
     opts?: { skipReset: boolean },
   ) => void
 } {
-  const promptSuggestion = useAppState(s => s.promptSuggestion)
+  const promptSuggestion = useAppState((s: AppState) => s.promptSuggestion)
   const setAppState = useSetAppState()
   const isTerminalFocused = useTerminalFocus()
   const {

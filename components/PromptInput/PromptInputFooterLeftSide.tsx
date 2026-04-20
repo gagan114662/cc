@@ -23,7 +23,7 @@ import { shouldHideTasksFooter } from '../tasks/taskStatusUtils.js';
 import { isAgentSwarmsEnabled } from '../../utils/agentSwarmsEnabled.js';
 import { TeamStatus } from '../teams/TeamStatus.js';
 import { isInProcessEnabled } from '../../utils/swarm/backends/registry.js';
-import { useAppState, useAppStateStore } from 'src/state/AppState.js';
+import { type AppState, useAppState, useAppStateStore } from 'src/state/AppState.js';
 import { getIsRemoteMode } from '../../bootstrap/state.js';
 import HistorySearchInput from './HistorySearchInput.js';
 import { usePrStatus } from '../../hooks/usePrStatus.js';
@@ -34,7 +34,7 @@ import { useTasksV2 } from '../../hooks/useTasksV2.js';
 import { formatDuration } from '../../utils/format.js';
 import { VoiceWarmupHint } from './VoiceIndicator.js';
 import { useVoiceEnabled } from '../../hooks/useVoiceEnabled.js';
-import { useVoiceState } from '../../context/voice.js';
+import { type VoiceState, useVoiceState } from '../../context/voice.js';
 import { isFullscreenEnvEnabled } from '../../utils/fullscreen.js';
 import { isXtermJs } from '../../ink/terminal.js';
 import { useHasSelection, useSelection } from '../../ink/hooks/use-selection.js';
@@ -124,7 +124,7 @@ function ProactiveCountdown() {
   }
   return t4;
 }
-export function PromptInputFooterLeftSide(t0) {
+export function PromptInputFooterLeftSide(t0: Props) {
   const $ = _c(27);
   const {
     exitMessage,
@@ -249,27 +249,27 @@ function ModeIndicator({
     columns
   } = useTerminalSize();
   const modeCycleShortcut = useShortcutDisplay('chat:cycleMode', 'Chat', 'shift+tab');
-  const tasks = useAppState(s => s.tasks);
-  const teamContext = useAppState(s_0 => s_0.teamContext);
+  const tasks = useAppState((s: AppState) => s.tasks);
+  const teamContext = useAppState((s_0: AppState) => s_0.teamContext);
   // Set once in initialState (main.tsx --remote mode) and never mutated — lazy
   // init captures the immutable value without a subscription.
   const store = useAppStateStore();
   const [remoteSessionUrl] = useState(() => store.getState().remoteSessionUrl);
-  const viewSelectionMode = useAppState(s_1 => s_1.viewSelectionMode);
-  const viewingAgentTaskId = useAppState(s_2 => s_2.viewingAgentTaskId);
-  const expandedView = useAppState(s_3 => s_3.expandedView);
+  const viewSelectionMode = useAppState((s_1: AppState) => s_1.viewSelectionMode);
+  const viewingAgentTaskId = useAppState((s_2: AppState) => s_2.viewingAgentTaskId);
+  const expandedView = useAppState((s_3: AppState) => s_3.expandedView);
   const showSpinnerTree = expandedView === 'teammates';
   const prStatus = usePrStatus(isLoading, isPrStatusEnabled());
-  const hasTmuxSession = useAppState(s_4 => "external" === 'ant' && s_4.tungstenActiveSession !== undefined);
+  const hasTmuxSession = useAppState((s_4: AppState) => "external" === 'ant' && s_4.tungstenActiveSession !== undefined);
   const nextTickAt = useSyncExternalStore(proactiveModule?.subscribeToProactiveChanges ?? NO_OP_SUBSCRIBE, proactiveModule?.getNextTickAt ?? NULL, NULL);
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
   const voiceState = feature('VOICE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s_5 => s_5.voiceState) : 'idle' as const;
+  useVoiceState((s_5: VoiceState) => s_5.voiceState) : 'idle' as const;
   const voiceWarmingUp = feature('VOICE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s_6 => s_6.voiceWarmingUp) : false;
+  useVoiceState((s_6: VoiceState) => s_6.voiceWarmingUp) : false;
   const hasSelection = useHasSelection();
   const selGetState = useSelection().getState;
   const hasNextTick = nextTickAt !== null;
@@ -308,7 +308,7 @@ function ModeIndicator({
       });
     }
   }, [voiceEnabled, voiceHintUnderCap]);
-  const isKillAgentsConfirmShowing = useAppState(s_7 => s_7.notifications.current?.key === 'kill-agents-confirm');
+  const isKillAgentsConfirmShowing = useAppState((s_7: AppState) => s_7.notifications.current?.key === 'kill-agents-confirm');
 
   // Derive team info from teamContext (no filesystem I/O needed)
   // Match the same logic as TeamStatus to avoid trailing separator

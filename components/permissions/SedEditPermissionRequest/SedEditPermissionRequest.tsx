@@ -18,7 +18,7 @@ type FileReadResult = {
   oldContent: string;
   fileExists: boolean;
 };
-export function SedEditPermissionRequest(t0) {
+export function SedEditPermissionRequest(t0: SedEditPermissionRequestProps) {
   const $ = _c(9);
   let props;
   let sedInfo;
@@ -67,7 +67,7 @@ export function SedEditPermissionRequest(t0) {
   }
   return t2;
 }
-function _temp(e) {
+function _temp(e: unknown): FileReadResult {
   if (!isENOENT(e)) {
     throw e;
   }
@@ -76,7 +76,7 @@ function _temp(e) {
     fileExists: false
   };
 }
-function SedEditPermissionRequestInner(t0) {
+function SedEditPermissionRequestInner(t0: SedEditPermissionRequestProps & { contentPromise: Promise<FileReadResult> }) {
   const $ = _c(35);
   let contentPromise;
   let props;
@@ -153,7 +153,7 @@ function SedEditPermissionRequestInner(t0) {
   const noChangesMessage = t3;
   let t4;
   if ($[11] !== filePath || $[12] !== newContent) {
-    t4 = input => {
+    t4 = (input: unknown) => {
       const parsed = BashTool.inputSchema.parse(input);
       return {
         ...parsed,

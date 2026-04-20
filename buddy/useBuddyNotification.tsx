@@ -19,7 +19,7 @@ export function isBuddyLive(): boolean {
   const d = new Date();
   return d.getFullYear() > 2026 || d.getFullYear() === 2026 && d.getMonth() >= 3;
 }
-function RainbowText(t0) {
+function RainbowText(t0: { text: string }) {
   const $ = _c(2);
   const {
     text
@@ -37,7 +37,7 @@ function RainbowText(t0) {
 
 // Rainbow /buddy teaser shown on startup when no companion hatched yet.
 // Idle presence and reactions are handled by CompanionSprite directly.
-function _temp(ch, i) {
+function _temp(ch: string, i: number) {
   return <Text key={i} color={getRainbowColor(i)}>{ch}</Text>;
 }
 export function useBuddyNotification() {

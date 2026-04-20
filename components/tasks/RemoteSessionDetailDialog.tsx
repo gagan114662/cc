@@ -78,7 +78,7 @@ const AGENT_VERB = {
   needs_input: 'waiting',
   plan_ready: 'done'
 } as const;
-function UltraplanSessionDetail(t0) {
+function UltraplanSessionDetail(t0: { session: DeepImmutable<RemoteAgentTaskState>; onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void; onBack?: () => void; onKill?: () => void }) {
   const $ = _c(70);
   const {
     session,
@@ -195,7 +195,7 @@ function UltraplanSessionDetail(t0) {
     }
     let t10;
     if ($[15] !== goBackOrClose || $[16] !== onKill) {
-      t10 = <Dialog title="Stop ultraplan?" onCancel={t6} color="background"><Box flexDirection="column" gap={1}>{t7}<Select options={t9} onChange={v => {
+      t10 = <Dialog title="Stop ultraplan?" onCancel={t6} color="background"><Box flexDirection="column" gap={1}>{t7}<Select options={t9} onChange={(v: string) => {
             if (v === "stop") {
               onKill?.();
               goBackOrClose();
@@ -350,7 +350,7 @@ function UltraplanSessionDetail(t0) {
   }
   let t23;
   if ($[54] !== goBackOrClose || $[55] !== onDone || $[56] !== sessionUrl) {
-    t23 = v_0 => {
+    t23 = (v_0: string) => {
       switch (v_0) {
         case "open":
           {
@@ -421,7 +421,7 @@ const STAGE_LABELS: Record<(typeof STAGES)[number], string> = {
 // "Setup" label shows before the orchestrator writes its first progress
 // snapshot (container boot + repo clone), so the 0-found display doesn't
 // look like a hung finder.
-function StagePipeline(t0) {
+function StagePipeline(t0: { stage: (typeof STAGES)[number] | undefined; completed: boolean; hasProgress: boolean }) {
   const $ = _c(15);
   const {
     stage,
@@ -505,7 +505,7 @@ function reviewCountsLine(session: DeepImmutable<RemoteAgentTaskState>): string 
   return formatReviewStageCounts(p.stage, p.bugsFound, verified, refuted);
 }
 type MenuAction = 'open' | 'stop' | 'back' | 'dismiss';
-function ReviewSessionDetail(t0) {
+function ReviewSessionDetail(t0: { session: DeepImmutable<RemoteAgentTaskState>; onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void; onBack?: () => void; onKill?: () => void }) {
   const $ = _c(56);
   const {
     session,
@@ -576,7 +576,7 @@ function ReviewSessionDetail(t0) {
     }
     let t7;
     if ($[8] !== goBackOrClose || $[9] !== onKill) {
-      t7 = <Dialog title="Stop ultrareview?" onCancel={t3} color="background"><Box flexDirection="column" gap={1}>{t4}<Select options={t6} onChange={v => {
+      t7 = <Dialog title="Stop ultrareview?" onCancel={t3} color="background"><Box flexDirection="column" gap={1}>{t4}<Select options={t6} onChange={(v: string) => {
             if (v === "stop") {
               onKill?.();
               goBackOrClose();
@@ -620,7 +620,7 @@ function ReviewSessionDetail(t0) {
   const options = t3;
   let t4;
   if ($[15] !== goBackOrClose || $[16] !== handleClose || $[17] !== onDone || $[18] !== sessionUrl) {
-    t4 = action => {
+    t4 = (action: MenuAction) => {
       bb45: switch (action) {
         case "open":
           {
@@ -772,7 +772,7 @@ function ReviewSessionDetail(t0) {
   }
   return t20;
 }
-function _temp(exitState) {
+function _temp(exitState: { pending: boolean; keyName: string }) {
   return exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : <Byline><KeyboardShortcutHint shortcut="Enter" action="select" /><KeyboardShortcutHint shortcut="Esc" action="go back" /></Byline>;
 }
 export function RemoteSessionDetailDialog({
@@ -846,7 +846,7 @@ export function RemoteSessionDetailDialog({
   // Map TaskStatus to display status (handle 'pending')
   const displayStatus = session.status === 'pending' ? 'starting' : session.status;
   return <Box flexDirection="column" tabIndex={0} autoFocus onKeyDown={handleKeyDown}>
-      <Dialog title="Remote session details" onCancel={handleClose} color="background" inputGuide={exitState => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : <Byline>
+      <Dialog title="Remote session details" onCancel={handleClose} color="background" inputGuide={(exitState: { pending: boolean; keyName: string }) => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : <Byline>
               {onBack && <KeyboardShortcutHint shortcut="←" action="go back" />}
               <KeyboardShortcutHint shortcut="Esc/Enter/Space" action="close" />
               {!isTeleporting && <KeyboardShortcutHint shortcut="t" action="teleport" />}

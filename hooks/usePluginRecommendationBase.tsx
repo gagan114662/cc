@@ -27,7 +27,10 @@ export function usePluginRecommendationBase() {
   const isCheckingRef = React.useRef(false);
   let t0;
   if ($[0] !== recommendation) {
-    t0 = resolve => {
+    // FIXME: tighten — original source had a generic <TRec> param that is
+    // lost in compiled output. Using unknown until the compiled JS preserves
+    // the generic.
+    t0 = (resolve: () => Promise<unknown>) => {
       if (getIsRemoteMode()) {
         return;
       }
@@ -38,9 +41,9 @@ export function usePluginRecommendationBase() {
         return;
       }
       isCheckingRef.current = true;
-      resolve().then(rec => {
+      resolve().then((rec: unknown) => {
         if (rec) {
-          setRecommendation(rec);
+          setRecommendation(rec as never);
         }
       }).catch(logError).finally(() => {
         isCheckingRef.current = false;

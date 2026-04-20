@@ -14,7 +14,7 @@ import type { AgentWizardData } from '../types.js';
 type Props = {
   existingAgents: AgentDefinition[];
 };
-export function TypeStep(_props) {
+export function TypeStep(_props: Props) {
   const $ = _c(15);
   const {
     goNext,
@@ -37,7 +37,7 @@ export function TypeStep(_props) {
   useKeybinding("confirm:no", goBack, t0);
   let t1;
   if ($[1] !== goNext || $[2] !== updateWizardData) {
-    t1 = value => {
+    t1 = (value: string) => {
       const trimmedValue = value.trim();
       const validationError = validateAgentType(trimmedValue);
       if (validationError) {

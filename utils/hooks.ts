@@ -4915,7 +4915,7 @@ export function hasWorktreeCreateHook(): boolean {
   // Mirror getHooksConfig(): skip plugin hooks in managed-only mode
   const managedOnly = shouldAllowManagedHooksOnly()
   return registeredHooks.some(
-    matcher => !(managedOnly && 'pluginRoot' in matcher),
+    (matcher: HookMatcher) => !(managedOnly && 'pluginRoot' in matcher),
   )
 }
 

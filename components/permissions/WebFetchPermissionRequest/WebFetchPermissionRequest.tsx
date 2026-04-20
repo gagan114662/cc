@@ -26,7 +26,7 @@ function inputToPermissionRuleContent(input: {
     return `input:${input.toString()}`;
   }
 }
-export function WebFetchPermissionRequest(t0) {
+export function WebFetchPermissionRequest(t0: PermissionRequestProps) {
   const $ = _c(41);
   const {
     toolUseConfirm,
@@ -117,7 +117,7 @@ export function WebFetchPermissionRequest(t0) {
   const options = result;
   let t5;
   if ($[10] !== onDone || $[11] !== onReject || $[12] !== toolUseConfirm) {
-    t5 = function onChange(newValue) {
+    t5 = function onChange(newValue: 'yes' | 'yes-dont-ask-again-domain' | 'no') {
       bb8: switch (newValue) {
         case "yes":
           {

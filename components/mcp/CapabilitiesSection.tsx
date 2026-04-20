@@ -9,7 +9,7 @@ type Props = {
   serverWorkflowsCount: number;
   serverResourcesCount: number;
 };
-export function CapabilitiesSection(t0) {
+export function CapabilitiesSection(t0: Props) {
   const $ = _c(13);
   const {
     serverToolsCount,

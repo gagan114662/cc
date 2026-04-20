@@ -11,6 +11,7 @@ import {
   useAppStateStore,
   useSetAppState,
 } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import { findToolByName } from '../Tool.js'
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js'
 import { getAllBaseTools } from '../tools.js'
@@ -133,7 +134,7 @@ export function useInboxPoller({
   const onSubmitTeammateMessage = onSubmitMessage
   const store = useAppStateStore()
   const setAppState = useSetAppState()
-  const inboxMessageCount = useAppState(s => s.inbox.messages.length)
+  const inboxMessageCount = useAppState((s: AppState) => s.inbox.messages.length)
   const terminal = useTerminalNotification()
 
   const poll = useCallback(async () => {

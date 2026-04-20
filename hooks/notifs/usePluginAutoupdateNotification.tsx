@@ -76,7 +76,7 @@ export function usePluginAutoupdateNotification() {
   }
   useEffect(t3, t4);
 }
-function _temp(id) {
+function _temp(id: string) {
   const atIndex = id.indexOf("@");
   return atIndex > 0 ? id.substring(0, atIndex) : id;
 }

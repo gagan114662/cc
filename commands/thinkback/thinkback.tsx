@@ -268,7 +268,7 @@ function ThinkbackInstaller({
 }
 type MenuAction = 'play' | 'edit' | 'fix' | 'regenerate';
 type GenerativeAction = Exclude<MenuAction, 'play'>;
-function ThinkbackMenu(t0) {
+function ThinkbackMenu(t0: { onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void; onAction: (action: GenerativeAction) => void; skillDir: string; hasGenerated: boolean }) {
   const $ = _c(19);
   const {
     onDone,
@@ -308,7 +308,7 @@ function ThinkbackMenu(t0) {
   const options = t1;
   let t2;
   if ($[2] !== onAction || $[3] !== onDone || $[4] !== skillDir) {
-    t2 = function handleSelect(value) {
+    t2 = function handleSelect(value: MenuAction) {
       setHasSelected(true);
       if (value === "play") {
         playAnimation(skillDir).then(() => {
@@ -384,7 +384,7 @@ function ThinkbackMenu(t0) {
 const EDIT_PROMPT = 'Use the Skill tool to invoke the "thinkback" skill with mode=edit to modify my existing Claude Code year in review animation. Ask me what I want to change. When the animation is ready, tell the user to run /think-back again to play it.';
 const FIX_PROMPT = 'Use the Skill tool to invoke the "thinkback" skill with mode=fix to fix validation or rendering errors in my existing Claude Code year in review animation. Run the validator, identify errors, and fix them. When the animation is ready, tell the user to run /think-back again to play it.';
 const REGENERATE_PROMPT = 'Use the Skill tool to invoke the "thinkback" skill with mode=regenerate to create a completely new Claude Code year in review animation from scratch. Delete the existing animation and start fresh. When the animation is ready, tell the user to run /think-back again to play it.';
-function ThinkbackFlow(t0) {
+function ThinkbackFlow(t0: { onDone: (result?: string, options?: { display?: CommandResultDisplay; shouldQuery?: boolean }) => void }) {
   const $ = _c(27);
   const {
     onDone
@@ -405,7 +405,7 @@ function ThinkbackFlow(t0) {
   const handleReady = t1;
   let t2;
   if ($[1] !== onDone) {
-    t2 = message => {
+    t2 = (message: string) => {
       setInstallError(message);
       onDone(`Error with thinkback: ${message}. Try running /plugin to manually install the think-back plugin.`, {
         display: "system"
@@ -468,7 +468,7 @@ function ThinkbackFlow(t0) {
   useEffect(t5, t6);
   let t7;
   if ($[12] !== onDone) {
-    t7 = function handleAction(action) {
+    t7 = function handleAction(action: GenerativeAction) {
       const prompts = {
         edit: EDIT_PROMPT,
         fix: FIX_PROMPT,

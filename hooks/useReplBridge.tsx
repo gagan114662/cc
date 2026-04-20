@@ -15,6 +15,7 @@ import type { SDKControlResponse } from '../entrypoints/sdk/controlTypes.js';
 import { Text } from '../ink.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js';
 import { useAppState, useAppStateStore, useSetAppState } from '../state/AppState.js';
+import type { AppState } from '../state/AppStateStore.js';
 import type { Message } from '../types/message.js';
 import { getCwd } from '../utils/cwd.js';
 import { logForDebugging } from '../utils/debug.js';
@@ -78,16 +79,16 @@ export function useReplBridge(messages: Message[], setMessages: (action: React.S
   } = useNotifications();
   const replBridgeEnabled = feature('BRIDGE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s => s.replBridgeEnabled) : false;
+  useAppState((s: AppState) => s.replBridgeEnabled) : false;
   const replBridgeConnected = feature('BRIDGE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s_0 => s_0.replBridgeConnected) : false;
+  useAppState((s_0: AppState) => s_0.replBridgeConnected) : false;
   const replBridgeOutboundOnly = feature('BRIDGE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s_1 => s_1.replBridgeOutboundOnly) : false;
+  useAppState((s_1: AppState) => s_1.replBridgeOutboundOnly) : false;
   const replBridgeInitialName = feature('BRIDGE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s_2 => s_2.replBridgeInitialName) : undefined;
+  useAppState((s_2: AppState) => s_2.replBridgeInitialName) : undefined;
 
   // Initialize/teardown bridge when enabled state changes.
   // Passes current messages as initialMessages so the remote session

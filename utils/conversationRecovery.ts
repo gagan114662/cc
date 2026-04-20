@@ -494,7 +494,7 @@ export async function loadConversationForResume(
           const { listAllLiveSessions } = await import('./udsClient.js')
           const live = await listAllLiveSessions()
           skip = new Set(
-            live.flatMap(s =>
+            live.flatMap((s: { kind?: string; sessionId?: string }) =>
               s.kind && s.kind !== 'interactive' && s.sessionId
                 ? [s.sessionId]
                 : [],

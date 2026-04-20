@@ -12,6 +12,7 @@ import type { Screen } from '../screens/REPL.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../services/analytics/growthbook.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../services/analytics/index.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
+import type { AppState } from '../state/AppStateStore.js';
 import { count } from '../utils/array.js';
 import { getTerminalPanel } from '../utils/terminalPanel.js';
 type Props = {
@@ -44,7 +45,7 @@ export function GlobalKeybindingHandlers({
   virtualScrollActive,
   searchBarOpen = false
 }: Props): null {
-  const expandedView = useAppState(s => s.expandedView);
+  const expandedView = useAppState((s: AppState) => s.expandedView);
   const setAppState = useSetAppState();
 
   // Toggle todo list (ctrl+t) - cycles through views
@@ -91,7 +92,7 @@ export function GlobalKeybindingHandlers({
   // Brief view has its own dedicated toggle on ctrl+shift+b.
   const isBriefOnly = feature('KAIROS') || feature('KAIROS_BRIEF') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s_0 => s_0.isBriefOnly) : false;
+  useAppState((s_0: AppState) => s_0.isBriefOnly) : false;
   const handleToggleTranscript = useCallback(() => {
     if (feature('KAIROS') || feature('KAIROS_BRIEF')) {
       // Escape hatch: GB kill-switch while defaultView=chat was persisted

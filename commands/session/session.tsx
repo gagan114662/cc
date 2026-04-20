@@ -6,12 +6,13 @@ import { Pane } from '../../components/design-system/Pane.js';
 import { Box, Text } from '../../ink.js';
 import { useKeybinding } from '../../keybindings/useKeybinding.js';
 import { useAppState } from '../../state/AppState.js';
+import type { AppState } from '../../state/AppStateStore.js';
 import type { LocalJSXCommandCall } from '../../types/command.js';
 import { logForDebugging } from '../../utils/debug.js';
 type Props = {
   onDone: () => void;
 };
-function SessionInfo(t0) {
+function SessionInfo(t0: Props) {
   const $ = _c(19);
   const {
     onDone
@@ -122,16 +123,16 @@ function SessionInfo(t0) {
   }
   return t9;
 }
-function _temp4(line_0, i) {
+function _temp4(line_0: string, i: number) {
   return <Text key={i}>{line_0}</Text>;
 }
-function _temp3(line) {
+function _temp3(line: string) {
   return line.length > 0;
 }
-function _temp2(e) {
+function _temp2(e: unknown) {
   logForDebugging("QR code generation failed", e);
 }
-function _temp(s) {
+function _temp(s: AppState) {
   return s.remoteSessionUrl;
 }
 export const call: LocalJSXCommandCall = async onDone => {

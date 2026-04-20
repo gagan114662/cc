@@ -5,6 +5,7 @@ import {
   useNotifications,
 } from '../../context/notifications.js'
 import { useAppState } from '../../state/AppState.js'
+import type { AppState } from '../../state/AppStateStore.js'
 import { isInProcessTeammateTask } from '../../tasks/InProcessTeammateTask/types.js'
 
 function parseCount(notif: Notification): number {
@@ -52,7 +53,7 @@ function makeShutdownNotif(count: number): Notification {
  * like "3 agents spawned" or "2 agents shut down".
  */
 export function useTeammateLifecycleNotification(): void {
-  const tasks = useAppState(s => s.tasks)
+  const tasks = useAppState((s: AppState) => s.tasks)
   const { addNotification } = useNotifications()
   const seenRunningRef = useRef<Set<string>>(new Set())
   const seenCompletedRef = useRef<Set<string>>(new Set())

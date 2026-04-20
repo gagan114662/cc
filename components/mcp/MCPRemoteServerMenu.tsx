@@ -53,7 +53,7 @@ export function MCPRemoteServerMenu({
   } = useTerminalSize();
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const mcp = useAppState(s => s.mcp);
+  const mcp = useAppState((s: import('../../state/AppState.js').AppState) => s.mcp);
   const setAppState = useSetAppState();
   const [authorizationUrl, setAuthorizationUrl] = React.useState<string | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -597,7 +597,7 @@ export function MCPRemoteServerMenu({
           </Box>}
 
         {menuOptions.length > 0 && <Box marginTop={1}>
-            <Select options={menuOptions} onChange={async value_0 => {
+            <Select options={menuOptions} onChange={async (value_0: string) => {
           switch (value_0) {
             case 'tools':
               onViewTools();

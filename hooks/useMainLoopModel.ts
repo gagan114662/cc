@@ -1,6 +1,7 @@
 import { useEffect, useReducer } from 'react'
 import { onGrowthBookRefresh } from '../services/analytics/growthbook.js'
 import { useAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import {
   getDefaultMainLoopModelSetting,
   type ModelName,
@@ -11,8 +12,8 @@ import {
 // API calls. Use this over getMainLoopModel() when the component needs to
 // update upon a model config change.
 export function useMainLoopModel(): ModelName {
-  const mainLoopModel = useAppState(s => s.mainLoopModel)
-  const mainLoopModelForSession = useAppState(s => s.mainLoopModelForSession)
+  const mainLoopModel = useAppState((s: AppState) => s.mainLoopModel)
+  const mainLoopModelForSession = useAppState((s: AppState) => s.mainLoopModelForSession)
 
   // parseUserSpecifiedModel reads tengu_ant_model_override via
   // _CACHED_MAY_BE_STALE (in resolveAntModel). Until GB init completes,

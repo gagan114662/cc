@@ -899,7 +899,7 @@ export function collapseReadSearchGroups(
       currentGroup.hookCount += msg.hookCount
       currentGroup.hookTotalMs +=
         msg.totalDurationMs ??
-        msg.hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0)
+        msg.hookInfos.reduce((sum: number, h: StopHookInfo) => sum + (h.durationMs ?? 0), 0)
       currentGroup.hookInfos.push(...msg.hookInfos)
     } else if (
       currentGroup.messages.length > 0 &&

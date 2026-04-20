@@ -15,7 +15,8 @@ import { checkOpus1mAccess, checkSonnet1mAccess } from '../../utils/model/check1
 import { getDefaultMainLoopModelSetting, isOpus1mMergeEnabled, renderDefaultModelSetting } from '../../utils/model/model.js';
 import { isModelAllowed } from '../../utils/model/modelAllowlist.js';
 import { validateModel } from '../../utils/model/validateModel.js';
-function ModelPickerWrapper(t0) {
+import type { AppState } from '../../state/AppStateStore.js';
+function ModelPickerWrapper(t0: { onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void }) {
   const $ = _c(17);
   const {
     onDone
@@ -44,7 +45,7 @@ function ModelPickerWrapper(t0) {
   const handleCancel = t1;
   let t2;
   if ($[3] !== isFastMode || $[4] !== mainLoopModel || $[5] !== onDone || $[6] !== setAppState) {
-    t2 = function handleSelect(model, effort) {
+    t2 = function handleSelect(model: string | null, effort: EffortLevel | undefined) {
       logEvent("tengu_model_command_menu", {
         action: model as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
         from_model: mainLoopModel as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -112,19 +113,19 @@ function ModelPickerWrapper(t0) {
   }
   return t4;
 }
-function _temp4(prev_0) {
+function _temp4(prev_0: AppState) {
   return {
     ...prev_0,
     fastMode: false
   };
 }
-function _temp3(s_1) {
+function _temp3(s_1: AppState) {
   return s_1.fastMode;
 }
-function _temp2(s_0) {
+function _temp2(s_0: AppState) {
   return s_0.mainLoopModelForSession;
 }
-function _temp(s) {
+function _temp(s: AppState) {
   return s.mainLoopModel;
 }
 function SetModelAndClose({
@@ -136,7 +137,7 @@ function SetModelAndClose({
     display?: CommandResultDisplay;
   }) => void;
 }): React.ReactNode {
-  const isFastMode = useAppState(s => s.fastMode);
+  const isFastMode = useAppState((s: AppState) => s.fastMode);
   const setAppState = useSetAppState();
   const model = args === 'default' ? null : args;
   React.useEffect(() => {
@@ -243,7 +244,7 @@ function isSonnet1mUnavailable(model: string): boolean {
   // a different access criteria.
   return !checkSonnet1mAccess() && (m.includes('sonnet[1m]') || m.includes('sonnet-4-6[1m]'));
 }
-function ShowModelAndClose(t0) {
+function ShowModelAndClose(t0: { onDone: (result?: string, options?: { display?: CommandResultDisplay }) => void }) {
   const {
     onDone
   } = t0;
@@ -259,13 +260,13 @@ function ShowModelAndClose(t0) {
   }
   return null;
 }
-function _temp9(s_1) {
+function _temp9(s_1: AppState) {
   return s_1.effortValue;
 }
-function _temp8(s_0) {
+function _temp8(s_0: AppState) {
   return s_0.mainLoopModelForSession;
 }
-function _temp7(s) {
+function _temp7(s: AppState) {
   return s.mainLoopModel;
 }
 export const call: LocalJSXCommandCall = async (onDone, _context, args) => {

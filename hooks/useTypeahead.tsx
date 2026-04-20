@@ -15,6 +15,7 @@ import { useOptionalKeybindingContext, useRegisterKeybindingContext } from '../k
 import { useKeybindings } from '../keybindings/useKeybinding.js';
 import { useShortcutDisplay } from '../keybindings/useShortcutDisplay.js';
 import { useAppState, useAppStateStore } from '../state/AppState.js';
+import type { AppState } from '../state/AppStateStore.js';
 import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js';
 import type { InlineGhostText, PromptInputMode } from '../types/textInputTypes.js';
 import { isAgentSwarmsEnabled } from '../utils/agentSwarmsEnabled.js';
@@ -384,12 +385,12 @@ export function useTypeahead({
     return maxLen + 6; // +1 for "/" prefix, +5 for padding
   }, [commands]);
   const [maxColumnWidth, setMaxColumnWidth] = useState<number | undefined>(undefined);
-  const mcpResources = useAppState(s => s.mcp.resources);
+  const mcpResources = useAppState((s: AppState) => s.mcp.resources);
   const store = useAppStateStore();
-  const promptSuggestion = useAppState(s => s.promptSuggestion);
+  const promptSuggestion = useAppState((s: AppState) => s.promptSuggestion);
   // PromptInput hides suggestion ghost text in teammate view — mirror that
   // gate here so Tab/rightArrow can't accept what isn't displayed.
-  const isViewingTeammate = useAppState(s => !!s.viewingAgentTaskId);
+  const isViewingTeammate = useAppState((s: AppState) => !!s.viewingAgentTaskId);
 
   // Access keybinding context to check for pending chord sequences
   const keybindingContext = useOptionalKeybindingContext();

@@ -18,7 +18,7 @@ type Props = {
   minContentHeight?: number;
   onFinalResponse: (value: 'submit' | 'cancel') => void;
 };
-export function SubmitQuestionsView(t0) {
+export function SubmitQuestionsView(t0: Props) {
   const $ = _c(27);
   const {
     questions,
@@ -63,7 +63,7 @@ export function SubmitQuestionsView(t0) {
   }
   let t5;
   if ($[8] !== answers || $[9] !== questions) {
-    t5 = Object.keys(answers).length > 0 && <Box flexDirection="column" marginBottom={1}>{questions.filter(q => q?.question && answers[q.question]).map(q_0 => {
+    t5 = Object.keys(answers).length > 0 && <Box flexDirection="column" marginBottom={1}>{questions.filter((q: Question) => q?.question && answers[q.question]).map((q_0: Question) => {
         const answer = answers[q_0?.question];
         return <Box key={q_0?.question || "answer"} flexDirection="column" marginLeft={1}><Text>{figures.bullet} {q_0?.question || "Question"}</Text><Box marginLeft={2}><Text color="success">{figures.arrowRight} {answer}</Text></Box></Box>;
       })}</Box>;
@@ -112,7 +112,7 @@ export function SubmitQuestionsView(t0) {
   }
   let t10;
   if ($[16] !== onFinalResponse) {
-    t10 = <Box marginTop={1}><Select options={t9} onChange={value => onFinalResponse(value as 'submit' | 'cancel')} onCancel={() => onFinalResponse("cancel")} /></Box>;
+    t10 = <Box marginTop={1}><Select options={t9} onChange={(value: string) => onFinalResponse(value as 'submit' | 'cancel')} onCancel={() => onFinalResponse("cancel")} /></Box>;
     $[16] = onFinalResponse;
     $[17] = t10;
   } else {

@@ -37,7 +37,7 @@ export function MCPStdioServerMenu({
 }: Props): React.ReactNode {
   const [theme] = useTheme();
   const exitState = useExitOnCtrlCDWithKeybindings();
-  const mcp = useAppState(s => s.mcp);
+  const mcp = useAppState((s: import('../../state/AppState.js').AppState) => s.mcp);
   const reconnectMcpServer = useMcpReconnect();
   const toggleMcpServer = useMcpToggleEnabled();
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -153,7 +153,7 @@ export function MCPStdioServerMenu({
         </Box>
 
         {menuOptions.length > 0 && <Box marginTop={1}>
-            <Select options={menuOptions} onChange={async value => {
+            <Select options={menuOptions} onChange={async (value: string) => {
           if (value === 'tools') {
             onViewTools();
           } else if (value === 'reconnectMcpServer') {

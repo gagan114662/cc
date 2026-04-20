@@ -122,7 +122,7 @@ export function ExitPlanModePermissionRequest({
   workerBadge,
   setStickyFooter
 }: PermissionRequestProps): React.ReactNode {
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext);
+  const toolPermissionContext = useAppState((s: AppState) => s.toolPermissionContext);
   const setAppState = useSetAppState();
   const store = useAppStateStore();
   const {
@@ -134,9 +134,9 @@ export function ExitPlanModePermissionRequest({
   const [planFeedback, setPlanFeedback] = useState('');
   const [pastedContents, setPastedContents] = useState<Record<number, PastedContent>>({});
   const nextPasteIdRef = useRef(0);
-  const showClearContext = useAppState(s => s.settings.showClearContextOnPlanAccept) ?? false;
-  const ultraplanSessionUrl = useAppState(s => s.ultraplanSessionUrl);
-  const ultraplanLaunching = useAppState(s => s.ultraplanLaunching);
+  const showClearContext = useAppState((s: AppState) => s.settings.showClearContextOnPlanAccept) ?? false;
+  const ultraplanSessionUrl = useAppState((s: AppState) => s.ultraplanSessionUrl);
+  const ultraplanLaunching = useAppState((s: AppState) => s.ultraplanLaunching);
   // Hide the Ultraplan button while a session is active or launching —
   // selecting it would dismiss the dialog and reject locally before
   // launchUltraplan can notice the session exists and return "already polling".
@@ -535,7 +535,7 @@ export function ExitPlanModePermissionRequest({
     setStickyFooter(<Box flexDirection="column" borderStyle="round" borderColor="planMode" borderLeft={false} borderRight={false} borderBottom={false} paddingX={1}>
         <Text dimColor>Would you like to proceed?</Text>
         <Box marginTop={1}>
-          <Select options={options} onChange={v => void handleResponseRef.current(v)} onCancel={() => handleCancelRef.current?.()} onImagePaste={onImagePaste} pastedContents={pastedContents} onRemoveImage={onRemoveImage} />
+          <Select options={options} onChange={(v: ResponseValue) => void handleResponseRef.current(v)} onCancel={() => handleCancelRef.current?.()} onImagePaste={onImagePaste} pastedContents={pastedContents} onRemoveImage={onRemoveImage} />
         </Box>
         {editorName && <Box flexDirection="row" gap={1} marginTop={1}>
             <Text dimColor>ctrl-g to edit in </Text>

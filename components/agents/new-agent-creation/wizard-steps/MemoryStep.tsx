@@ -69,7 +69,7 @@ export function MemoryStep() {
   const memoryOptions = t1;
   let t2;
   if ($[3] !== goNext || $[4] !== updateWizardData || $[5] !== wizardData.finalAgent || $[6] !== wizardData.systemPrompt) {
-    t2 = value => {
+    t2 = (value: string) => {
       const memory = value === "none" ? undefined : value as AgentMemoryScope;
       const agentType = wizardData.finalAgent?.agentType;
       updateWizardData({

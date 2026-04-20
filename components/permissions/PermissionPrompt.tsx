@@ -4,7 +4,7 @@ import { Box, Text } from '../../ink.js';
 import type { KeybindingAction } from '../../keybindings/types.js';
 import { useKeybindings } from '../../keybindings/useKeybinding.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
-import { useSetAppState } from '../../state/AppState.js';
+import { type AppState, useSetAppState } from '../../state/AppState.js';
 import { type OptionWithDescription, Select } from '../CustomSelect/select.js';
 export type FeedbackType = 'accept' | 'reject';
 export type PermissionPromptOption<T extends string> = {
@@ -42,7 +42,7 @@ const DEFAULT_PLACEHOLDERS: Record<FeedbackType, string> = {
  * - Analytics events for feedback interactions
  * - Transforming options to Select-compatible format
  */
-export function PermissionPrompt(t0) {
+export function PermissionPrompt<T extends string>(t0: PermissionPromptProps<T>) {
   const $ = _c(54);
   const {
     options,
@@ -64,7 +64,7 @@ export function PermissionPrompt(t0) {
   if ($[0] !== focusedValue || $[1] !== options) {
     let t3;
     if ($[3] !== focusedValue) {
-      t3 = opt => opt.value === focusedValue;
+      t3 = (opt: PermissionPromptOption<T>) => opt.value === focusedValue;
       $[3] = focusedValue;
       $[4] = t3;
     } else {
@@ -84,7 +84,7 @@ export function PermissionPrompt(t0) {
   if ($[5] !== acceptInputMode || $[6] !== options || $[7] !== rejectInputMode) {
     let t4;
     if ($[9] !== acceptInputMode || $[10] !== rejectInputMode) {
-      t4 = opt_0 => {
+      t4 = (opt_0: PermissionPromptOption<T>) => {
         const {
           value,
           label,
@@ -135,8 +135,8 @@ export function PermissionPrompt(t0) {
   const selectOptions = t3;
   let t4;
   if ($[12] !== acceptInputMode || $[13] !== options || $[14] !== rejectInputMode || $[15] !== toolAnalyticsContext?.isMcp || $[16] !== toolAnalyticsContext?.toolName) {
-    t4 = value_0 => {
-      const option = options.find(opt_1 => opt_1.value === value_0);
+    t4 = (value_0: T) => {
+      const option = options.find((opt_1: PermissionPromptOption<T>) => opt_1.value === value_0);
       if (!option?.feedbackConfig) {
         return;
       }
@@ -181,8 +181,8 @@ export function PermissionPrompt(t0) {
   const handleInputModeToggle = t4;
   let t5;
   if ($[18] !== acceptFeedback || $[19] !== acceptFeedbackModeEntered || $[20] !== onSelect || $[21] !== options || $[22] !== rejectFeedback || $[23] !== rejectFeedbackModeEntered || $[24] !== toolAnalyticsContext?.isMcp || $[25] !== toolAnalyticsContext?.toolName) {
-    t5 = value_1 => {
-      const option_0 = options.find(opt_2 => opt_2.value === value_1);
+    t5 = (value_1: T) => {
+      const option_0 = options.find((opt_2: PermissionPromptOption<T>) => opt_2.value === value_1);
       if (!option_0) {
         return;
       }
@@ -272,8 +272,8 @@ export function PermissionPrompt(t0) {
   }
   let t9;
   if ($[36] !== acceptFeedback || $[37] !== acceptInputMode || $[38] !== options || $[39] !== rejectFeedback || $[40] !== rejectInputMode) {
-    t9 = value_2 => {
-      const newOption = options.find(opt_4 => opt_4.value === value_2);
+    t9 = (value_2: T) => {
+      const newOption = options.find((opt_4: PermissionPromptOption<T>) => opt_4.value === value_2);
       if (newOption?.feedbackConfig?.type !== "accept" && acceptInputMode && !acceptFeedback.trim()) {
         setAcceptInputMode(false);
       }
@@ -324,7 +324,7 @@ export function PermissionPrompt(t0) {
   }
   return t13;
 }
-function _temp(prev) {
+function _temp(prev: AppState) {
   return {
     ...prev,
     attribution: {

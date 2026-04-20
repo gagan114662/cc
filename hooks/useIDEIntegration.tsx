@@ -12,7 +12,7 @@ type UseIDEIntegrationProps = {
   setShowIdeOnboarding: React.Dispatch<React.SetStateAction<boolean>>;
   setIDEInstallationState: React.Dispatch<React.SetStateAction<IDEExtensionInstallationStatus | null>>;
 };
-export function useIDEIntegration(t0) {
+export function useIDEIntegration(t0: UseIDEIntegrationProps) {
   const $ = _c(7);
   const {
     autoConnectIdeFlag,
@@ -25,7 +25,7 @@ export function useIDEIntegration(t0) {
   let t2;
   if ($[0] !== autoConnectIdeFlag || $[1] !== ideToInstallExtension || $[2] !== setDynamicMcpConfig || $[3] !== setIDEInstallationState || $[4] !== setShowIdeOnboarding) {
     t1 = () => {
-      const addIde = function addIde(ide) {
+      const addIde = function addIde(ide: DetectedIDEInfo | null | undefined) {
         if (!ide) {
           return;
         }
@@ -34,7 +34,7 @@ export function useIDEIntegration(t0) {
         if (!autoConnectEnabled) {
           return;
         }
-        setDynamicMcpConfig(prev => {
+        setDynamicMcpConfig((prev: Record<string, ScopedMcpServerConfig> | undefined) => {
           if (prev?.ide) {
             return prev;
           }

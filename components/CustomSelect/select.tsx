@@ -189,7 +189,17 @@ export type SelectProps<T> = {
    */
   readonly onRemoveImage?: (id: number) => void;
 };
-export function Select(t0) {
+type OptionDataRow<T> = {
+  option: OptionWithDescription<T> & { index: number };
+  index: number;
+  label: ReactNode;
+  isFocused: boolean;
+  isSelected: boolean;
+  isOptionDisabled: boolean;
+  shouldShowDownArrow: boolean;
+  shouldShowUpArrow: boolean;
+};
+export function Select<T>(t0: SelectProps<T>) {
   const $ = _c(72);
   const {
     isDisabled: t1,
@@ -225,7 +235,7 @@ export function Select(t0) {
   if ($[0] !== options) {
     t7 = () => {
       const initialMap = new Map();
-      options.forEach(option => {
+      options.forEach((option: OptionWithDescription<T>) => {
         if (option.type === "input" && option.initialValue) {
           initialMap.set(option.value, option.initialValue);
         }
@@ -256,7 +266,7 @@ export function Select(t0) {
           const currentValue = inputValues.get(option_0.value) ?? "";
           const newInitial = option_0.initialValue;
           if (newInitial !== lastInitial && currentValue === lastInitial) {
-            setInputValues(prev => {
+            setInputValues((prev: Map<T, string>) => {
               const next = new Map(prev);
               next.set(option_0.value, newInitial);
               return next;
@@ -377,13 +387,13 @@ export function Select(t0) {
             const isSelected = state.value === option_1.value;
             if (option_1.type === "input") {
               const inputValue = inputValues.has(option_1.value) ? inputValues.get(option_1.value) : option_1.initialValue || "";
-              return <SelectInputOption key={String(option_1.value)} option={option_1} isFocused={isFocused} isSelected={isSelected} shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption} shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption} maxIndexWidth={maxIndexWidth} index={i} inputValue={inputValue} onInputChange={value => {
-                setInputValues(prev_0 => {
+              return <SelectInputOption key={String(option_1.value)} option={option_1} isFocused={isFocused} isSelected={isSelected} shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption} shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption} maxIndexWidth={maxIndexWidth} index={i} inputValue={inputValue} onInputChange={(value: string) => {
+                setInputValues((prev_0: Map<T, string>) => {
                   const next_0 = new Map(prev_0);
                   next_0.set(option_1.value, value);
                   return next_0;
                 });
-              }} onSubmit={value_0 => {
+              }} onSubmit={(value_0: string) => {
                 const hasImageAttachments = pastedContents && Object.values(pastedContents).some(_temp5);
                 if (value_0.trim() || hasImageAttachments || option_1.allowEmptySubmitToCancel) {
                   onChange?.(option_1.value);
@@ -425,13 +435,13 @@ export function Select(t0) {
             const isSelected_0 = state.value === option_2.value;
             if (option_2.type === "input") {
               const inputValue_0 = inputValues.has(option_2.value) ? inputValues.get(option_2.value) : option_2.initialValue || "";
-              return <SelectInputOption key={String(option_2.value)} option={option_2} isFocused={isFocused_0} isSelected={isSelected_0} shouldShowDownArrow={areMoreOptionsBelow_0 && isLastVisibleOption_0} shouldShowUpArrow={areMoreOptionsAbove_0 && isFirstVisibleOption_0} maxIndexWidth={maxIndexWidth_0} index={i_0} inputValue={inputValue_0} onInputChange={value_1 => {
-                setInputValues(prev_1 => {
+              return <SelectInputOption key={String(option_2.value)} option={option_2} isFocused={isFocused_0} isSelected={isSelected_0} shouldShowDownArrow={areMoreOptionsBelow_0 && isLastVisibleOption_0} shouldShowUpArrow={areMoreOptionsAbove_0 && isFirstVisibleOption_0} maxIndexWidth={maxIndexWidth_0} index={i_0} inputValue={inputValue_0} onInputChange={(value_1: string) => {
+                setInputValues((prev_1: Map<T, string>) => {
                   const next_1 = new Map(prev_1);
                   next_1.set(option_2.value, value_1);
                   return next_1;
                 });
-              }} onSubmit={value_2 => {
+              }} onSubmit={(value_2: string) => {
                 const hasImageAttachments_0 = pastedContents && Object.values(pastedContents).some(_temp6);
                 if (value_2.trim() || hasImageAttachments_0 || option_2.allowEmptySubmitToCancel) {
                   onChange?.(option_2.value);
@@ -492,7 +502,7 @@ export function Select(t0) {
       if (hasDescriptions) {
         let t19;
         if ($[61] !== hideIndexes || $[62] !== maxIndexWidth_1) {
-          t19 = data => {
+          t19 = (data: OptionDataRow<T>) => {
             if (data.option.type === "input") {
               return 0;
             }
@@ -510,7 +520,7 @@ export function Select(t0) {
         const maxLabelWidth = Math.max(...optionData.map(t19));
         let t20;
         if ($[64] !== hideIndexes || $[65] !== maxIndexWidth_1 || $[66] !== maxLabelWidth) {
-          t20 = data_0 => {
+          t20 = (data_0: OptionDataRow<T>) => {
             if (data_0.option.type === "input") {
               return null;
             }
@@ -543,13 +553,13 @@ export function Select(t0) {
           const i_2 = state.visibleFromIndex + index_4 + 1;
           const isFocused_2 = !isDisabled && state.focusedValue === option_4.value;
           const isSelected_2 = state.value === option_4.value;
-          return <SelectInputOption key={String(option_4.value)} option={option_4} isFocused={isFocused_2} isSelected={isSelected_2} shouldShowDownArrow={areMoreOptionsBelow_2 && isLastVisibleOption_2} shouldShowUpArrow={areMoreOptionsAbove_2 && isFirstVisibleOption_2} maxIndexWidth={maxIndexWidth_1} index={i_2} inputValue={inputValue_1} onInputChange={value_3 => {
-            setInputValues(prev_2 => {
+          return <SelectInputOption key={String(option_4.value)} option={option_4} isFocused={isFocused_2} isSelected={isSelected_2} shouldShowDownArrow={areMoreOptionsBelow_2 && isLastVisibleOption_2} shouldShowUpArrow={areMoreOptionsAbove_2 && isFirstVisibleOption_2} maxIndexWidth={maxIndexWidth_1} index={i_2} inputValue={inputValue_1} onInputChange={(value_3: string) => {
+            setInputValues((prev_2: Map<T, string>) => {
               const next_2 = new Map(prev_2);
               next_2.set(option_4.value, value_3);
               return next_2;
             });
-          }} onSubmit={value_4 => {
+          }} onSubmit={(value_4: string) => {
             const hasImageAttachments_1 = pastedContents && Object.values(pastedContents).some(_temp9);
             if (value_4.trim() || hasImageAttachments_1 || option_4.allowEmptySubmitToCancel) {
               onChange?.(option_4.value);
@@ -626,19 +636,19 @@ export function Select(t0) {
 // the other Select layouts, this one doesn't render through SelectOption →
 // ListItem, so it declares the native cursor directly. Parks the cursor
 // on the pointer indicator so screen readers / magnifiers track focus.
-function _temp9(c_3) {
+function _temp9(c_3: PastedContent) {
   return c_3.type === "image";
 }
-function _temp8(opt_0) {
+function _temp8(opt_0: OptionWithDescription<unknown> & { index: number }) {
   return opt_0.description;
 }
-function _temp7(opt) {
+function _temp7(opt: OptionWithDescription<unknown> & { index: number }) {
   return opt.type === "input";
 }
-function _temp6(c_2) {
+function _temp6(c_2: PastedContent) {
   return c_2.type === "image";
 }
-function _temp5(c_1) {
+function _temp5(c_1: PastedContent) {
   return c_1.type === "image";
 }
 function _temp4() {
@@ -651,13 +661,17 @@ function _temp3() {
     flexDirection: "column" as const
   };
 }
-function _temp2(c) {
+function _temp2(c: PastedContent) {
   return c.type === "image";
 }
-function _temp(c_0) {
+function _temp(c_0: PastedContent) {
   return c_0.type === "image";
 }
-function TwoColumnRow(t0) {
+type TwoColumnRowProps = {
+  isFocused: boolean;
+  children: ReactNode;
+};
+function TwoColumnRow(t0: TwoColumnRowProps) {
   const $ = _c(5);
   const {
     isFocused,

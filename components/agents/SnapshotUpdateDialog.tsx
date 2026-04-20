@@ -42,7 +42,7 @@ export function SnapshotUpdateDialog({
           { label: 'Replace current', value: 'replace' },
           { label: 'Cancel', value: 'cancel' },
         ]}
-        onChange={value => {
+        onChange={(value: string) => {
           if (value === 'cancel') {
             onCancel()
             return

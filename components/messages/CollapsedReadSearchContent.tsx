@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import type { ToolUseBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import { feature } from 'bun:bundle';
 import { basename } from 'path';
 import React, { useRef } from 'react';
@@ -39,7 +40,14 @@ type Props = {
 };
 
 /** Render a single tool use in verbose mode */
-function VerboseToolUse(t0) {
+function VerboseToolUse(t0: {
+  content: ToolUseBlockParam;
+  tools: Tools;
+  lookups: ReturnType<typeof buildMessageLookups>;
+  inProgressToolUseIDs: Set<string>;
+  shouldAnimate: boolean;
+  theme: ThemeName;
+}) {
   const $ = _c(24);
   const {
     content,
@@ -239,7 +247,7 @@ export function CollapsedReadSearchContent({
               {message.hookCount === 1 ? 'hook' : 'hooks'} (
               {formatSecondsShort(message.hookTotalMs ?? 0)})
             </Text>
-            {message.hookInfos.map((info, idx) => <Text key={`hook-${idx}`} dimColor>
+            {message.hookInfos.map((info: { command: string; durationMs?: number }, idx: number) => <Text key={`hook-${idx}`} dimColor>
                 {'     ⎿ '}
                 {info.command} ({formatSecondsShort(info.durationMs ?? 0)})
               </Text>)}
@@ -310,14 +318,14 @@ export function CollapsedReadSearchContent({
       'cherry-picked': 'cherry-picked'
     };
     for (const kind of ['committed', 'amended', 'cherry-picked'] as const) {
-      const shas = message.commits.filter(c => c.kind === kind).map(c_0 => c_0.sha);
+      const shas = message.commits.filter((c: { kind: string; sha: string }) => c.kind === kind).map((c_0: { kind: string; sha: string }) => c_0.sha);
       if (shas.length) {
         pushPart(kind, byKind[kind], <Text bold>{shas.join(', ')}</Text>);
       }
     }
   }
   if (isFullscreenEnvEnabled() && message.pushes?.length) {
-    const branches = uniq(message.pushes.map(p => p.branch));
+    const branches = uniq(message.pushes.map((p: { branch: string }) => p.branch));
     pushPart('push', 'pushed to', <Text bold>{branches.join(', ')}</Text>);
   }
   if (isFullscreenEnvEnabled() && message.branches?.length) {
@@ -386,7 +394,7 @@ export function CollapsedReadSearchContent({
       </Text>);
   }
   if (mcpCallCount > 0) {
-    const serverLabel = message.mcpServerNames?.map(n => n.replace(/^claude\.ai /, '')).join(', ') || 'MCP';
+    const serverLabel = message.mcpServerNames?.map((n: string) => n.replace(/^claude\.ai /, '')).join(', ') || 'MCP';
     const isFirst_3 = nonMemParts.length === 0;
     const verb_0 = isActiveGroup ? isFirst_3 ? 'Querying' : 'querying' : isFirst_3 ? 'Queried' : 'queried';
     if (!isFirst_3) {
@@ -468,7 +476,7 @@ export function CollapsedReadSearchContent({
             <Text dimColor>{'  ⎿  '}</Text>
           </Box>
           <Box flexDirection="column" flexGrow={1}>
-            {displayedHint.split('\n').map((line, i, arr) => <Text key={`hint-${i}`} dimColor>
+            {displayedHint.split('\n').map((line: string, i: number, arr: string[]) => <Text key={`hint-${i}`} dimColor>
                 {line}
                 {i === arr.length - 1 && shellProgressSuffix}
               </Text>)}

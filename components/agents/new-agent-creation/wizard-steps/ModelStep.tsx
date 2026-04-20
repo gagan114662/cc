@@ -17,7 +17,7 @@ export function ModelStep() {
   } = useWizard();
   let t0;
   if ($[0] !== goNext || $[1] !== updateWizardData) {
-    t0 = model => {
+    t0 = (model: string | undefined) => {
       updateWizardData({
         selectedModel: model
       });

@@ -39,7 +39,7 @@ export function MethodStep() {
   }
   let t2;
   if ($[2] !== goNext || $[3] !== goToStep || $[4] !== updateWizardData) {
-    t2 = value => {
+    t2 = (value: string) => {
       const method = value as 'generate' | 'manual';
       updateWizardData({
         method,

@@ -168,6 +168,8 @@ import { resolveAgentTools } from '../tools/AgentTool/agentToolUtils.js';
 import { resumeAgentBackground } from '../tools/AgentTool/resumeAgent.js';
 import { useMainLoopModel } from '../hooks/useMainLoopModel.js';
 import { useAppState, useSetAppState, useAppStateStore } from '../state/AppState.js';
+import type { AppState } from '../state/AppStateStore.js';
+import type { ElicitResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ContentBlockParam, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs';
 import type { ProcessUserInputContext } from '../utils/processUserInput/processUserInput.js';
 import type { PastedContent } from '../utils/config.js';
@@ -215,7 +217,7 @@ import { diagnosticTracker } from '../services/diagnosticTracking.js';
 import { handleSpeculationAccept, type ActiveSpeculationState } from '../services/PromptSuggestion/speculation.js';
 import { IdeOnboardingDialog } from '../components/IdeOnboardingDialog.js';
 import { EffortCallout, shouldShowEffortCallout } from '../components/EffortCallout.js';
-import type { EffortValue } from '../utils/effort.js';
+import type { EffortLevel, EffortValue } from '../utils/effort.js';
 import { RemoteCallout } from '../components/RemoteCallout.js';
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 const AntModelSwitchCallout = "external" === 'ant' ? require('../components/AntModelSwitchCallout.js').AntModelSwitchCallout : null;
@@ -318,7 +320,13 @@ function median(values: number[]): number {
  * Small component to display transcript mode footer with dynamic keybinding.
  * Must be rendered inside KeybindingSetup to access keybinding context.
  */
-function TranscriptModeFooter(t0) {
+function TranscriptModeFooter(t0: {
+  showAllInTranscript: boolean;
+  virtualScroll: boolean;
+  searchBadge?: { text: string; color?: string } | null | undefined | false | '';
+  suppressShowAll?: boolean;
+  status?: string | undefined;
+}) {
   const $ = _c(9);
   const {
     showAllInTranscript,
@@ -481,7 +489,12 @@ const TITLE_ANIMATION_INTERVAL_MS = 960;
  * entire REPL tree. Before extraction, the tick was ~1 REPL render/sec for
  * the duration of every turn, dragging PromptInput and friends along.
  */
-function AnimatedTerminalTitle(t0) {
+function AnimatedTerminalTitle(t0: {
+  isAnimating: boolean;
+  title: string;
+  disabled: boolean;
+  noPrefix: boolean;
+}) {
   const $ = _c(6);
   const {
     isAnimating,
@@ -517,10 +530,10 @@ function AnimatedTerminalTitle(t0) {
   useTerminalTitle(disabled ? null : noPrefix ? title : `${prefix} ${title}`);
   return null;
 }
-function _temp2(setFrame_0) {
+function _temp2(setFrame_0: React.Dispatch<React.SetStateAction<number>>) {
   return setFrame_0(_temp);
 }
-function _temp(f) {
+function _temp(f: number) {
   return (f + 1) % TITLE_ANIMATION_FRAMES.length;
 }
 export type Props = {
@@ -615,28 +628,28 @@ export function REPL({
 
   // Agent definition is state so /resume can update it mid-session
   const [mainThreadAgentDefinition, setMainThreadAgentDefinition] = useState(initialMainThreadAgentDefinition);
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext);
-  const verbose = useAppState(s => s.verbose);
-  const mcp = useAppState(s => s.mcp);
-  const plugins = useAppState(s => s.plugins);
-  const agentDefinitions = useAppState(s => s.agentDefinitions);
-  const fileHistory = useAppState(s => s.fileHistory);
-  const initialMessage = useAppState(s => s.initialMessage);
+  const toolPermissionContext = useAppState((s: AppState) => s.toolPermissionContext);
+  const verbose = useAppState((s: AppState) => s.verbose);
+  const mcp = useAppState((s: AppState) => s.mcp);
+  const plugins = useAppState((s: AppState) => s.plugins);
+  const agentDefinitions = useAppState((s: AppState) => s.agentDefinitions);
+  const fileHistory = useAppState((s: AppState) => s.fileHistory);
+  const initialMessage = useAppState((s: AppState) => s.initialMessage);
   const queuedCommands = useCommandQueue();
   // feature() is a build-time constant — dead code elimination removes the hook
   // call entirely in external builds, so this is safe despite looking conditional.
   // These fields contain excluded strings that must not appear in external builds.
-  const spinnerTip = useAppState(s => s.spinnerTip);
-  const showExpandedTodos = useAppState(s => s.expandedView) === 'tasks';
-  const pendingWorkerRequest = useAppState(s => s.pendingWorkerRequest);
-  const pendingSandboxRequest = useAppState(s => s.pendingSandboxRequest);
-  const teamContext = useAppState(s => s.teamContext);
-  const tasks = useAppState(s => s.tasks);
-  const workerSandboxPermissions = useAppState(s => s.workerSandboxPermissions);
-  const elicitation = useAppState(s => s.elicitation);
-  const ultraplanPendingChoice = useAppState(s => s.ultraplanPendingChoice);
-  const ultraplanLaunchPending = useAppState(s => s.ultraplanLaunchPending);
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId);
+  const spinnerTip = useAppState((s: AppState) => s.spinnerTip);
+  const showExpandedTodos = useAppState((s: AppState) => s.expandedView) === 'tasks';
+  const pendingWorkerRequest = useAppState((s: AppState) => s.pendingWorkerRequest);
+  const pendingSandboxRequest = useAppState((s: AppState) => s.pendingSandboxRequest);
+  const teamContext = useAppState((s: AppState) => s.teamContext);
+  const tasks = useAppState((s: AppState) => s.tasks);
+  const workerSandboxPermissions = useAppState((s: AppState) => s.workerSandboxPermissions);
+  const elicitation = useAppState((s: AppState) => s.elicitation);
+  const ultraplanPendingChoice = useAppState((s: AppState) => s.ultraplanPendingChoice);
+  const ultraplanLaunchPending = useAppState((s: AppState) => s.ultraplanLaunchPending);
+  const viewingAgentTaskId = useAppState((s: AppState) => s.viewingAgentTaskId);
   const setAppState = useSetAppState();
 
   // Bootstrap: retained local_agent that hasn't loaded disk yet → read
@@ -692,7 +705,7 @@ export function REPL({
   // the AppState mirror that triggers the re-render. Without this, toggling
   // /brief mid-session leaves the stale tool list (no SendUserMessage) and
   // the model emits plain text the brief filter hides.
-  const isBriefOnly = useAppState(s => s.isBriefOnly);
+  const isBriefOnly = useAppState((s: AppState) => s.isBriefOnly);
   const localTools = useMemo(() => getTools(toolPermissionContext), [toolPermissionContext, proactiveActive, isBriefOnly]);
   useKickOffCheckAndDisableBypassPermissionsIfNeeded();
   useKickOffCheckAndDisableAutoModeIfNeeded();
@@ -739,7 +752,7 @@ export function REPL({
     return false;
   });
   const [showEffortCallout, setShowEffortCallout] = useState(() => shouldShowEffortCallout(mainLoopModel));
-  const showRemoteCallout = useAppState(s => s.showRemoteCallout);
+  const showRemoteCallout = useAppState((s: AppState) => s.showRemoteCallout);
   const [showDesktopUpsellStartup, setShowDesktopUpsellStartup] = useState(() => shouldShowDesktopUpsellStartup());
   // notifications
   useModelMigrationNotifications();
@@ -1124,7 +1137,7 @@ export function REPL({
   // Session title (set via /rename or restored on resume) wins over
   // the agent name, which wins over the Haiku-extracted topic;
   // all fall back to the product name.
-  const terminalTitleFromRename = useAppState(s => s.settings.terminalTitleFromRename) !== false;
+  const terminalTitleFromRename = useAppState((s: AppState) => s.settings.terminalTitleFromRename) !== false;
   const sessionTitle = terminalTitleFromRename ? getCurrentSessionTitle(getSessionId()) : undefined;
   const [haikuTitle, setHaikuTitle] = useState<string>();
   // Gates the one-shot Haiku call that generates the tab title. Seeded true
@@ -1459,7 +1472,7 @@ export function REPL({
   // throttle batches rapid updates). Cleared on message arrival (messages.ts)
   // so displayedMessages switches from deferredMessages to messages atomically.
   const [streamingText, setStreamingText] = useState<string | null>(null);
-  const reducedMotion = useAppState(s => s.settings.prefersReducedMotion) ?? false;
+  const reducedMotion = useAppState((s: AppState) => s.settings.prefersReducedMotion) ?? false;
   const showStreamingText = !reducedMotion && !hasCursorUpViewportYankBug();
   const onStreamingText = useCallback((f: (current: string | null) => string | null) => {
     if (!showStreamingText) return;
@@ -2802,7 +2815,7 @@ export function REPL({
       onQueryEvent(event);
     }
     if (feature('BUDDY')) {
-      void fireCompanionObserver(messagesRef.current, reaction => setAppState(prev => prev.companionReaction === reaction ? prev : {
+      void fireCompanionObserver(messagesRef.current, (reaction: string) => setAppState(prev => prev.companionReaction === reaction ? prev : {
         ...prev,
         companionReaction: reaction
       }));
@@ -4655,7 +4668,7 @@ export function REPL({
               sandboxBridgeCleanupRef.current.delete(approvedHost);
             }
           }} />}
-                {focusedInputDialog === 'prompt' && <PromptDialog key={promptQueue[0].request.prompt} title={promptQueue[0].title} toolInputSummary={promptQueue[0].toolInputSummary} request={promptQueue[0].request} onRespond={selectedKey => {
+                {focusedInputDialog === 'prompt' && <PromptDialog key={promptQueue[0].request.prompt} title={promptQueue[0].title} toolInputSummary={promptQueue[0].toolInputSummary} request={promptQueue[0].request} onRespond={(selectedKey: string) => {
             const item = promptQueue[0];
             if (!item) return;
             item.resolve({
@@ -4718,7 +4731,7 @@ export function REPL({
               }
             }));
           }} />}
-                {focusedInputDialog === 'elicitation' && <ElicitationDialog key={elicitation.queue[0]!.serverName + ':' + String(elicitation.queue[0]!.requestId)} event={elicitation.queue[0]!} onResponse={(action, content) => {
+                {focusedInputDialog === 'elicitation' && <ElicitationDialog key={elicitation.queue[0]!.serverName + ':' + String(elicitation.queue[0]!.requestId)} event={elicitation.queue[0]!} onResponse={(action: ElicitResult['action'], content?: ElicitResult['content']) => {
             const currentRequest = elicitation.queue[0];
             if (!currentRequest) return;
             // Call respond callback to resolve Promise
@@ -4736,7 +4749,7 @@ export function REPL({
                 }
               }));
             }
-          }} onWaitingDismiss={action => {
+          }} onWaitingDismiss={(action: 'dismiss' | 'retry' | 'cancel') => {
             const currentRequest = elicitation.queue[0];
             // Remove from queue
             setAppState(prev => ({
@@ -4756,7 +4769,7 @@ export function REPL({
             }));
             logEvent('tengu_cost_threshold_acknowledged', {});
           }} />}
-                {focusedInputDialog === 'idle-return' && idleReturnPending && <IdleReturnDialog idleMinutes={idleReturnPending.idleMinutes} totalInputTokens={getTotalInputTokens()} onDone={async action => {
+                {focusedInputDialog === 'idle-return' && idleReturnPending && <IdleReturnDialog idleMinutes={idleReturnPending.idleMinutes} totalInputTokens={getTotalInputTokens()} onDone={async (action: 'continue' | 'clear' | 'dismiss' | 'never') => {
             const pending = idleReturnPending;
             setIdleReturnPending(null);
             logEvent('tengu_idle_return_action', {
@@ -4815,7 +4828,7 @@ export function REPL({
             }
           }} />}
                 {"external" === 'ant' && focusedInputDialog === 'undercover-callout' && UndercoverAutoCallout && <UndercoverAutoCallout onDone={() => setShowUndercoverCallout(false)} />}
-                {focusedInputDialog === 'effort-callout' && <EffortCallout model={mainLoopModel} onDone={selection => {
+                {focusedInputDialog === 'effort-callout' && <EffortCallout model={mainLoopModel} onDone={(selection: EffortLevel | undefined | 'dismiss') => {
             setShowEffortCallout(false);
             if (selection !== 'dismiss') {
               setAppState(prev => ({
@@ -4824,7 +4837,7 @@ export function REPL({
               }));
             }
           }} />}
-                {focusedInputDialog === 'remote-callout' && <RemoteCallout onDone={selection => {
+                {focusedInputDialog === 'remote-callout' && <RemoteCallout onDone={(selection: 'enable' | 'dismiss') => {
             setAppState(prev => {
               if (!prev.showRemoteCallout) return prev;
               return {
@@ -4849,7 +4862,7 @@ export function REPL({
 
                 {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-choice' && ultraplanPendingChoice && <UltraplanChoiceDialog plan={ultraplanPendingChoice.plan} sessionId={ultraplanPendingChoice.sessionId} taskId={ultraplanPendingChoice.taskId} setMessages={setMessages} readFileState={readFileState.current} getAppState={() => store.getState()} setConversationId={setConversationId} /> : null}
 
-                {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-launch' && ultraplanLaunchPending && <UltraplanLaunchDialog onChoice={(choice, opts) => {
+                {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-launch' && ultraplanLaunchPending && <UltraplanLaunchDialog onChoice={(choice: 'cancel' | 'foreground' | 'background', opts: unknown) => {
             const blurb = ultraplanLaunchPending.blurb;
             setAppState(prev => prev.ultraplanLaunchPending ? {
               ...prev,

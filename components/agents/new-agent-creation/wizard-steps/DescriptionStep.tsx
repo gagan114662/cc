@@ -58,7 +58,7 @@ export function DescriptionStep() {
   useKeybinding("chat:externalEditor", handleExternalEditor, t2);
   let t3;
   if ($[4] !== goNext || $[5] !== updateWizardData) {
-    t3 = value => {
+    t3 = (value: string) => {
       const trimmedValue = value.trim();
       if (!trimmedValue) {
         setError("Description is required");

@@ -14,6 +14,7 @@ import { useKeybinding } from '../keybindings/useKeybinding.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../services/analytics/index.js';
 import type { MCPServerConnection, ScopedMcpServerConfig } from '../services/mcp/types.js';
 import { useAppState, useSetAppState } from '../state/AppState.js';
+import type { AppState } from '../state/AppStateStore.js';
 import type { Tool } from '../Tool.js';
 import type { AgentColorName } from '../tools/AgentTool/agentColorManager.js';
 import type { AgentDefinition } from '../tools/AgentTool/loadAgentsDir.js';
@@ -87,7 +88,7 @@ export function ResumeConversation({
   const {
     rows
   } = useTerminalSize();
-  const agentDefinitions = useAppState(s => s.agentDefinitions);
+  const agentDefinitions = useAppState((s: AppState) => s.agentDefinitions);
   const setAppState = useSetAppState();
   const [logs, setLogs] = React.useState<LogOption[]>([]);
   const [loading, setLoading] = React.useState(true);
@@ -337,7 +338,7 @@ function NoConversationsMessage() {
 function _temp() {
   process.exit(1);
 }
-function CrossProjectMessage(t0) {
+function CrossProjectMessage(t0: { command: string }) {
   const $ = _c(8);
   const {
     command

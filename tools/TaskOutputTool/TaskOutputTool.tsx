@@ -350,7 +350,7 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
     return <FallbackToolUseErrorMessage result={result} verbose={verbose} />;
   }
 } satisfies ToolDef<InputSchema, TaskOutputToolOutput>);
-function TaskOutputResultDisplay(t0) {
+function TaskOutputResultDisplay(t0: { content: string | TaskOutputToolOutput; verbose?: boolean; theme: ThemeName }) {
   const $ = _c(54);
   const {
     content,

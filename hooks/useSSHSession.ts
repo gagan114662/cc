@@ -20,6 +20,7 @@ import {
   convertSDKMessage,
   isSessionEndMessage,
 } from '../remote/sdkMessageAdapter.js'
+import type { SDKControlPermissionRequest } from '../entrypoints/sdk/controlTypes.js'
 import type { SSHSession } from '../ssh/createSSHSession.js'
 import type { SSHSessionManager } from '../ssh/SSHSessionManager.js'
 import type { Tool } from '../Tool.js'
@@ -88,7 +89,7 @@ export function useSSHSession({
           setMessages(prev => [...prev, converted.message])
         }
       },
-      onPermissionRequest: (request, requestId) => {
+      onPermissionRequest: (request: SDKControlPermissionRequest, requestId: string) => {
         logForDebugging(
           `[useSSHSession] permission request: ${request.tool_name}`,
         )

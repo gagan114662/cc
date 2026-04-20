@@ -167,7 +167,7 @@ function BrowserHarnessDialog({
             { label: 'Open remote browser key page', value: 'open-cloud' },
             { label: 'Done', value: 'done' },
           ]}
-          onChange={value => {
+          onChange={(value: string) => {
             void handleAction(value as Action)
           }}
           hideIndexes={true}

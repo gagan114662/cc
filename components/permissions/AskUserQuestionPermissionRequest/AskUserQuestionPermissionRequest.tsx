@@ -8,7 +8,7 @@ import { useTheme } from '../../../ink.js';
 import { useKeybindings } from '../../../keybindings/useKeybinding.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../../services/analytics/index.js';
 import { useAppState } from '../../../state/AppState.js';
-import type { Question } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js';
+import type { Question, QuestionOption } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js';
 import { AskUserQuestionTool } from '../../../tools/AskUserQuestionTool/AskUserQuestionTool.js';
 import { type CliHighlight, getCliHighlightPromise } from '../../../utils/cliHighlight.js';
 import type { PastedContent } from '../../../utils/config.js';
@@ -27,7 +27,7 @@ const MIN_CONTENT_HEIGHT = 12;
 const MIN_CONTENT_WIDTH = 40;
 // Lines used by chrome around the content area (nav bar, title, footer, help text, etc.)
 const CONTENT_CHROME_OVERHEAD = 15;
-export function AskUserQuestionPermissionRequest(props) {
+export function AskUserQuestionPermissionRequest(props: PermissionRequestProps) {
   const $ = _c(4);
   const settings = useSettings();
   if (settings.syntaxHighlightingDisabled) {
@@ -51,7 +51,7 @@ export function AskUserQuestionPermissionRequest(props) {
   }
   return t0;
 }
-function AskUserQuestionWithHighlight(props) {
+function AskUserQuestionWithHighlight(props: PermissionRequestProps) {
   const $ = _c(4);
   let t0;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
@@ -72,7 +72,7 @@ function AskUserQuestionWithHighlight(props) {
   }
   return t1;
 }
-function AskUserQuestionPermissionRequestBody(t0) {
+function AskUserQuestionPermissionRequestBody(t0: PermissionRequestProps & { highlight: CliHighlight | null }) {
   const $ = _c(115);
   const {
     toolUseConfirm,
@@ -172,7 +172,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
   const nextPasteIdRef = useRef(0);
   let t7;
   if ($[16] === Symbol.for("react.memo_cache_sentinel")) {
-    t7 = function onImagePaste(questionText, base64Image, mediaType, filename, dimensions, _sourcePath) {
+    t7 = function onImagePaste(questionText: string, base64Image: string, mediaType: string | undefined, filename: string | undefined, dimensions: ImageDimensions | undefined, _sourcePath: string | undefined) {
       nextPasteIdRef.current = nextPasteIdRef.current + 1;
       const pasteId = nextPasteIdRef.current;
       const newContent = {
@@ -185,7 +185,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
       };
       cacheImagePath(newContent);
       storeImage(newContent);
-      setPastedContentsByQuestion(prev => ({
+      setPastedContentsByQuestion((prev: Record<string, Record<number, PastedContent>>) => ({
         ...prev,
         [questionText]: {
           ...(prev[questionText] ?? {}),
@@ -200,8 +200,8 @@ function AskUserQuestionPermissionRequestBody(t0) {
   const onImagePaste = t7;
   let t8;
   if ($[17] === Symbol.for("react.memo_cache_sentinel")) {
-    t8 = (questionText_0, id) => {
-      setPastedContentsByQuestion(prev_0 => {
+    t8 = (questionText_0: string, id: number) => {
+      setPastedContentsByQuestion((prev_0: Record<string, Record<number, PastedContent>>) => {
         const questionContents = {
           ...(prev_0[questionText_0] ?? {})
         };
@@ -253,7 +253,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
   const isInSubmitView = currentQuestionIndex === (questions?.length || 0);
   let t11;
   if ($[22] !== answers || $[23] !== questions) {
-    t11 = questions?.every(q_0 => q_0?.question && !!answers[q_0.question]) ?? false;
+    t11 = questions?.every((q_0: Question) => q_0?.question && !!answers[q_0.question]) ?? false;
     $[22] = answers;
     $[23] = questions;
     $[24] = t11;
@@ -291,7 +291,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
   let t13;
   if ($[32] !== allImageAttachments || $[33] !== answers || $[34] !== isInPlanMode || $[35] !== metadataSource || $[36] !== onDone || $[37] !== questions || $[38] !== toolUseConfirm) {
     t13 = async () => {
-      const questionsWithAnswers = questions.map(q_1 => {
+      const questionsWithAnswers = questions.map((q_1: Question) => {
         const answer = answers[q_1.question];
         if (answer) {
           return `- "${q_1.question}"\n  Answer: ${answer}`;
@@ -331,7 +331,7 @@ function AskUserQuestionPermissionRequestBody(t0) {
   let t14;
   if ($[40] !== allImageAttachments || $[41] !== answers || $[42] !== isInPlanMode || $[43] !== metadataSource || $[44] !== onDone || $[45] !== questions || $[46] !== toolUseConfirm) {
     t14 = async () => {
-      const questionsWithAnswers_0 = questions.map(q_2 => {
+      const questionsWithAnswers_0 = questions.map((q_2: Question) => {
         const answer_0 = answers[q_2.question];
         if (answer_0) {
           return `- "${q_2.question}"\n  Answer: ${answer_0}`;
@@ -368,7 +368,7 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
   const handleFinishPlanInterview = t14;
   let t15;
   if ($[48] !== allImageAttachments || $[49] !== isInPlanMode || $[50] !== metadataSource || $[51] !== onDone || $[52] !== questionStates || $[53] !== questions || $[54] !== toolUseConfirm) {
-    t15 = async answersToSubmit => {
+    t15 = async (answersToSubmit: Record<string, string>) => {
       if (metadataSource) {
         logEvent("tengu_ask_user_question_accepted", {
           source: metadataSource as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -378,11 +378,11 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
           interviewPhaseEnabled: isInPlanMode && isPlanModeInterviewPhaseEnabled()
         });
       }
-      const annotations = {};
+      const annotations: Record<string, { preview?: string; notes?: string }> = {};
       for (const q_3 of questions) {
         const answer_1 = answersToSubmit[q_3.question];
         const notes = questionStates[q_3.question]?.textInputValue;
-        const selectedOption = answer_1 ? q_3.options.find(opt_1 => opt_1.label === answer_1) : undefined;
+        const selectedOption = answer_1 ? q_3.options.find((opt_1: QuestionOption) => opt_1.label === answer_1) : undefined;
         const preview = selectedOption?.preview;
         if (preview || notes?.trim()) {
           annotations[q_3.question] = {
@@ -420,7 +420,7 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
   const submitAnswers = t15;
   let t16;
   if ($[56] !== answers || $[57] !== pastedContentsByQuestion || $[58] !== questions.length || $[59] !== setAnswer || $[60] !== submitAnswers) {
-    t16 = (questionText_1, label, textInput, t17) => {
+    t16 = (questionText_1: string, label: string | string[], textInput: string | undefined, t17: boolean | undefined) => {
       const shouldAdvance = t17 === undefined ? true : t17;
       let answer_2;
       const isMultiSelect = Array.isArray(label);
@@ -462,7 +462,7 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
   const handleQuestionAnswer = t16;
   let t17;
   if ($[62] !== answers || $[63] !== handleCancel || $[64] !== submitAnswers) {
-    t17 = function handleFinalResponse(value) {
+    t17 = function handleFinalResponse(value: string) {
       if (value === "cancel") {
         handleCancel();
         return;
@@ -537,7 +537,7 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
   if (currentQuestion) {
     let t23;
     if ($[78] !== currentQuestion.question) {
-      t23 = (base64, mediaType_0, filename_0, dims, path) => onImagePaste(currentQuestion.question, base64, mediaType_0, filename_0, dims, path);
+      t23 = (base64: string, mediaType_0: string | undefined, filename_0: string | undefined, dims: ImageDimensions | undefined, path: string | undefined) => onImagePaste(currentQuestion.question, base64, mediaType_0, filename_0, dims, path);
       $[78] = currentQuestion.question;
       $[79] = t23;
     } else {
@@ -554,7 +554,7 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
     }
     let t25;
     if ($[83] !== currentQuestion.question) {
-      t25 = id_0 => onRemoveImage(currentQuestion.question, id_0);
+      t25 = (id_0: number) => onRemoveImage(currentQuestion.question, id_0);
       $[83] = currentQuestion.question;
       $[84] = t25;
     } else {
@@ -609,22 +609,22 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
   }
   return null;
 }
-function _temp6(c_1) {
+function _temp6(c_1: PastedContent) {
   return c_1.type === "image";
 }
-function _temp5(c_0) {
+function _temp5(c_0: PastedContent) {
   return c_0.type === "image";
 }
-function _temp4(s) {
+function _temp4(s: { toolPermissionContext: { mode: string } }) {
   return s.toolPermissionContext.mode;
 }
-function _temp3(c) {
+function _temp3(c: PastedContent) {
   return c.type === "image";
 }
-function _temp2(contents) {
+function _temp2(contents: Record<number, PastedContent>) {
   return Object.values(contents);
 }
-function _temp(opt) {
+function _temp(opt: QuestionOption) {
   return opt.preview;
 }
 async function convertImagesToBlocks(images: PastedContent[]): Promise<ImageBlockParam[] | undefined> {

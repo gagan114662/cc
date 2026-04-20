@@ -6,6 +6,7 @@ import {
   logEvent,
 } from '../services/analytics/index.js'
 import { useAppState, useSetAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import type { Message } from '../types/message.js'
 import type { SkillUpdate } from '../utils/hooks/skillImprovement.js'
 import { applySkillImprovement } from '../utils/hooks/skillImprovement.js'
@@ -23,7 +24,7 @@ export function useSkillImprovementSurvey(setMessages: SetMessages): {
   suggestion: SkillImprovementSuggestion | null
   handleSelect: (selected: FeedbackSurveyResponse) => void
 } {
-  const suggestion = useAppState(s => s.skillImprovement.suggestion)
+  const suggestion = useAppState((s: AppState) => s.skillImprovement.suggestion)
   const setAppState = useSetAppState()
   const [isOpen, setIsOpen] = useState(false)
   const lastSuggestionRef = useRef(suggestion)

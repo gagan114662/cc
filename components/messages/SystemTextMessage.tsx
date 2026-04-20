@@ -16,7 +16,7 @@ const teamMemSaved = feature('TEAMMEM') ? require('./teamMemSaved.js') as typeof
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { TURN_COMPLETION_VERBS } from '../../constants/turnCompletionVerbs.js';
 import { useTerminalSize } from '../../hooks/useTerminalSize.js';
-import type { SystemMessage, SystemStopHookSummaryMessage, SystemBridgeStatusMessage, SystemTurnDurationMessage, SystemThinkingMessage, SystemMemorySavedMessage } from '../../types/message.js';
+import type { StopHookInfo, SystemMessage, SystemStopHookSummaryMessage, SystemBridgeStatusMessage, SystemTurnDurationMessage, SystemThinkingMessage, SystemMemorySavedMessage } from '../../types/message.js';
 import { SystemAPIErrorMessage } from './SystemAPIErrorMessage.js';
 import { formatDuration, formatNumber, formatSecondsShort } from '../../utils/format.js';
 import { getGlobalConfig } from '../../utils/config.js';
@@ -33,7 +33,7 @@ type Props = {
   verbose: boolean;
   isTranscriptMode?: boolean;
 };
-export function SystemTextMessage(t0) {
+export function SystemTextMessage(t0: Props) {
   const $ = _c(51);
   const {
     message,
@@ -248,7 +248,7 @@ export function SystemTextMessage(t0) {
   }
   return t4;
 }
-function StopHookSummaryMessage(t0) {
+function StopHookSummaryMessage(t0: { message: SystemStopHookSummaryMessage; addMargin: boolean; verbose: boolean; isTranscriptMode?: boolean }) {
   const $ = _c(47);
   const {
     message,
@@ -384,7 +384,7 @@ function StopHookSummaryMessage(t0) {
   }
   let t13;
   if ($[34] !== hookErrors || $[35] !== message.hookLabel) {
-    t13 = hookErrors.length > 0 && hookErrors.map((err, idx_1) => <Text key={idx_1}><Text dimColor={true}>⎿  </Text>{message.hookLabel ?? "Stop"} hook error: {err}</Text>);
+    t13 = hookErrors.length > 0 && hookErrors.map((err: unknown, idx_1: number) => <Text key={idx_1}><Text dimColor={true}>⎿  </Text>{message.hookLabel ?? "Stop"} hook error: {err as React.ReactNode}</Text>);
     $[34] = hookErrors;
     $[35] = message.hookLabel;
     $[36] = t13;
@@ -415,18 +415,20 @@ function StopHookSummaryMessage(t0) {
   }
   return t15;
 }
-function _temp3(info_0, idx_0) {
+function _temp3(info_0: StopHookInfoWithCommand, idx_0: number) {
   const durationStr_0 = false && info_0.durationMs !== undefined ? ` (${formatSecondsShort(info_0.durationMs)})` : "";
   return <Text key={`cmd-${idx_0}`} dimColor={true}>⎿  {info_0.command === "prompt" ? `prompt: ${info_0.promptText || ""}` : info_0.command}{durationStr_0}</Text>;
 }
-function _temp2(info, idx) {
+function _temp2(info: StopHookInfoWithCommand, idx: number) {
   const durationStr = false && info.durationMs !== undefined ? ` (${formatSecondsShort(info.durationMs)})` : "";
   return <Text key={`cmd-${idx}`} dimColor={true}>{"     \u23BF "}{info.command === "prompt" ? `prompt: ${info.promptText || ""}` : info.command}{durationStr}</Text>;
 }
-function _temp(sum, h) {
+function _temp(sum: number, h: StopHookInfo) {
   return sum + (h.durationMs ?? 0);
 }
-function SystemTextMessageInner(t0) {
+// FIXME: tighten — hookInfos are augmented at runtime with command/promptText
+type StopHookInfoWithCommand = StopHookInfo & { command?: string; promptText?: string };
+function SystemTextMessageInner(t0: { content: React.ReactNode; addMargin: boolean; dot: React.ReactNode; color?: TextProps["color"]; dimColor?: boolean }) {
   const $ = _c(18);
   const {
     content,
@@ -491,7 +493,7 @@ function SystemTextMessageInner(t0) {
   }
   return t7;
 }
-function TurnDurationMessage(t0) {
+function TurnDurationMessage(t0: { message: SystemTurnDurationMessage; addMargin: boolean }) {
   const $ = _c(17);
   const {
     message,
@@ -591,7 +593,7 @@ function TurnDurationMessage(t0) {
 function _temp4() {
   return sample(TURN_COMPLETION_VERBS) ?? "Worked";
 }
-function MemorySavedMessage(t0) {
+function MemorySavedMessage(t0: { message: SystemMemorySavedMessage; addMargin: boolean }) {
   const $ = _c(16);
   const {
     message,
@@ -663,10 +665,10 @@ function MemorySavedMessage(t0) {
   }
   return t11;
 }
-function _temp5(p) {
+function _temp5(p: string) {
   return <MemoryFileRow key={p} path={p} />;
 }
-function MemoryFileRow(t0) {
+function MemoryFileRow(t0: { path: string }) {
   const $ = _c(16);
   const {
     path
@@ -730,7 +732,7 @@ function MemoryFileRow(t0) {
   }
   return t8;
 }
-function ThinkingMessage(t0) {
+function ThinkingMessage(t0: { message: SystemThinkingMessage; addMargin: boolean }) {
   const $ = _c(7);
   const {
     message,
@@ -765,7 +767,7 @@ function ThinkingMessage(t0) {
   }
   return t4;
 }
-function BridgeStatusMessage(t0) {
+function BridgeStatusMessage(t0: { message: SystemBridgeStatusMessage; addMargin: boolean }) {
   const $ = _c(13);
   const {
     message,

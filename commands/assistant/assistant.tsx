@@ -52,7 +52,7 @@ export function NewInstallWizard({
           { label: 'Enable assistant mode', value: 'install' },
           { label: 'Cancel', value: 'cancel' },
         ]}
-        onChange={value => {
+        onChange={(value: string) => {
           if (value === 'cancel') {
             onCancel()
             return
