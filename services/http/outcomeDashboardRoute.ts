@@ -1,16 +1,21 @@
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { loadAssignmentQueue, listAssignmentQueueTenants, type AssignmentRecord } from '../assignmentQueue/storage.js'
 import { readAuditTail, type AuditEntry } from '../audit/durableAuditLog.js'
+import { summarizeAlertDeliveries } from '../alerting/dispatcher.js'
 import {
   coordinationModeForQueueBackend,
   type QueueBackendKind,
 } from '../assignmentQueue/backend.js'
+import { summarizeUsageLedger } from '../billing/usageLedger.js'
+import { summarizeInboxStore } from '../email/inboxStore.js'
+import { buildSoc2EncryptionArtifact } from '../security/artifacts.js'
 import { listConfiguredTenants } from '../../utils/employeeConfig.js'
 import {
   DEFAULT_TENANT,
   DEFAULT_TENANT_ID,
   type TenantContext,
 } from '../tenant/tenantContext.js'
+import { summarizeWorkspaceLifecycle } from '../workspaces/lifecycleLog.js'
 
 export const OUTCOME_DASHBOARD_ROUTE = '/v1/outcomes'
 
@@ -181,6 +186,13 @@ export async function handleOutcomeDashboardRequest(
     auditLimit,
     opts.auditDir ? { dir: opts.auditDir } : undefined,
   )
+  const inbox = summarizeInboxStore(opts.projectRoot, { recentLimit: 5 })
+  const billing = summarizeUsageLedger(opts.projectRoot, { recentLimit: 5 })
+  const alerts = summarizeAlertDeliveries(opts.projectRoot, { recentLimit: 10 })
+  const workspaces = summarizeWorkspaceLifecycle(opts.projectRoot, {
+    recentLimit: 10,
+  })
+  const security = buildSoc2EncryptionArtifact()
 
   writeJson(res, 200, {
     generatedAt: new Date().toISOString(),
@@ -203,6 +215,16 @@ export async function handleOutcomeDashboardRequest(
     totals,
     recentAuditKinds: summarizeAuditKinds(recentAudit),
     recentAudit,
+    inbox: {
+      tenantCount: inbox.length,
+      employeeCount: inbox.reduce((sum, tenant) => sum + tenant.employeeCount, 0),
+      messageCount: inbox.reduce((sum, tenant) => sum + tenant.messageCount, 0),
+      tenants: inbox,
+    },
+    billing,
+    alerts,
+    workspaceLifecycle: workspaces,
+    security,
     tenants: tenantSummaries,
   })
 }

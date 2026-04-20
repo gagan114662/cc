@@ -78,6 +78,7 @@
     "honeycomb:slos:plan": "bun ./scripts/honeycombDeploySLOs.ts --dry-run",
     "honeycomb:alerts:deploy": "bun ./scripts/honeycombDeployBurnAlerts.ts",
     "honeycomb:alerts:plan": "bun ./scripts/honeycombDeployBurnAlerts.ts --dry-run",
+    "security:artifact": "bun ./scripts/soc2EncryptionArtifact.ts --json",
     "test": "bun test ./test",
     "test:repo": "bun run test && bun run test:test-quality",
     "test:test-quality": "bun ./scripts/testQualityCheck.ts --root .",

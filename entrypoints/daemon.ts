@@ -47,6 +47,11 @@ import {
   OUTCOME_DASHBOARD_ROUTE,
   handleOutcomeDashboardRequest,
 } from '../services/http/outcomeDashboardRoute.js'
+import { dispatchConfiguredOperationalAlerts } from '../services/alerting/dispatcher.js'
+import {
+  startSmtpListener,
+  type SmtpListenerHandle,
+} from '../services/email/smtpListener.js'
 import {
   GITHUB_WEBHOOK_ROUTE,
   handleGithubWebhookRequest,
@@ -76,6 +81,8 @@ type DaemonArgs = {
   graceMs: number
   cliBundlePath: string
   once: boolean
+  smtpPort?: number
+  smtpDomain?: string
   // Optional override for the audit-log dir. In production the handler
   // falls through to CACHE_PATHS.audit() (process-cwd-keyed). Tests set
   // this via CC_DAEMON_AUDIT_DIR so assertions don't touch the host cache.
@@ -144,6 +151,7 @@ type DaemonState = {
   // for this to be false before closing the HTTP server, so the
   // subprocess-spawning runner finishes cleanly.
   drainInFlight: Set<string>
+  smtpListener: SmtpListenerHandle | null
   httpServer: Server | null
   shuttingDown: boolean
 }
@@ -215,6 +223,18 @@ async function drainTick(
       tenantId: tenant.id,
       error: err instanceof Error ? err.message : String(err),
     })
+    void dispatchConfiguredOperationalAlerts(
+      {
+        severity: 'error',
+        summary: `Assignment drain failed for tenant ${tenant.id}`,
+        source: 'daemon.assignment-drain',
+        dedupeKey: `daemon.assignment-drain:${tenant.id}`,
+      },
+      {
+        tenant,
+        projectRoot: state.args.projectRoot,
+      },
+    )
   } finally {
     state.drainInFlight.delete(tenant.id)
     if (!state.shuttingDown) scheduleDrainTick(state, tenant)
@@ -252,16 +272,25 @@ function parseArgs(argv: string[]): DaemonArgs {
     : process.cwd()
 
   let port = Number(process.env.CC_DAEMON_HTTP_PORT ?? 8181)
+  let smtpPort =
+    process.env.CC_DAEMON_SMTP_PORT !== undefined
+      ? Number(process.env.CC_DAEMON_SMTP_PORT)
+      : undefined
   let graceMs = Number(process.env.CC_DAEMON_GRACE_MS ?? 10_000)
   let once = false
   let cliBundlePath =
     process.env.CC_DAEMON_CLI_BUNDLE ??
     path.resolve(projectRoot, 'dist', 'cli.js')
+  let smtpDomain = process.env.CC_DAEMON_SMTP_DOMAIN
 
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i]
     if (arg === '--port') {
       port = Number(argv[++i])
+    } else if (arg === '--smtp-port') {
+      smtpPort = Number(argv[++i])
+    } else if (arg === '--smtp-domain') {
+      smtpDomain = argv[++i]
     } else if (arg === '--grace-ms') {
       graceMs = Number(argv[++i])
     } else if (arg === '--cli-bundle') {
@@ -272,6 +301,9 @@ function parseArgs(argv: string[]): DaemonArgs {
   }
 
   if (!Number.isFinite(port) || port <= 0) port = 8181
+  if (smtpPort !== undefined && (!Number.isFinite(smtpPort) || smtpPort < 0)) {
+    smtpPort = undefined
+  }
   if (!Number.isFinite(graceMs) || graceMs < 0) graceMs = 10_000
 
   const auditDir = process.env.CC_DAEMON_AUDIT_DIR
@@ -287,6 +319,8 @@ function parseArgs(argv: string[]): DaemonArgs {
     graceMs,
     cliBundlePath,
     once,
+    ...(smtpPort !== undefined ? { smtpPort } : {}),
+    ...(smtpDomain ? { smtpDomain } : {}),
     auditDir,
     ...(githubWebhookSecret ? { githubWebhookSecret } : {}),
     ...(slackWebhookSecret ? { slackWebhookSecret } : {}),
@@ -393,6 +427,18 @@ async function fireDuty(
       tenantId: dutyTenant.id,
       error: err instanceof Error ? err.message : String(err),
     })
+    void dispatchConfiguredOperationalAlerts(
+      {
+        severity: 'error',
+        summary: `Duty ${scheduled.duty.id} failed for tenant ${dutyTenant.id}`,
+        source: 'daemon.duty',
+        dedupeKey: `daemon.duty:${dutyTenant.id}:${scheduled.duty.id}`,
+      },
+      {
+        tenant: dutyTenant,
+        projectRoot: state.args.projectRoot,
+      },
+    )
   } finally {
     scheduled.lastFinishedAt = new Date()
     if (!state.args.once) scheduleNext(state, scheduled)
@@ -507,6 +553,11 @@ async function buildHealthBody(state: DaemonState): Promise<string> {
       queueBackend: {
         kind: queueBackend.kind,
         coordinationMode: coordinationModeForQueueBackend(queueBackend.kind),
+      },
+      smtp: {
+        enabled: state.smtpListener !== null,
+        port: state.smtpListener?.port ?? null,
+        domain: state.smtpListener?.domain ?? null,
       },
       duties,
       drainerTenantIds: state.drainerTenants.map(t => t.id),
@@ -725,6 +776,12 @@ export async function stopDaemon(
   if (state.httpServer) {
     await new Promise<void>(resolve => state.httpServer!.close(() => resolve()))
   }
+  if (state.smtpListener) {
+    await new Promise<void>(resolve =>
+      state.smtpListener!.server.close(() => resolve()),
+    )
+    state.smtpListener = null
+  }
 
   // Close queue backend after HTTP is down so no late enqueue can
   // race against a closed Redis connection. JSONL's close is a noop.
@@ -768,12 +825,26 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
     drainerTimers: new Map(),
     drainerTenants: [],
     drainInFlight: new Set(),
+    smtpListener: null,
     httpServer: null,
     shuttingDown: false,
   }
 
   state.httpServer = startHttp(state)
   await listenHttp(state.httpServer, state)
+  if (args.smtpPort !== undefined) {
+    state.smtpListener = await startSmtpListener({
+      port: args.smtpPort,
+      domain: args.smtpDomain,
+      projectRoot: args.projectRoot,
+      ...(args.auditDir ? { auditDir: args.auditDir } : {}),
+    })
+    log('info', 'smtp_listening', {
+      host: state.smtpListener.host,
+      port: state.smtpListener.port,
+      domain: state.smtpListener.domain,
+    })
+  }
 
   // Postgres backend: materialize each tenant's config to disk so the
   // synchronous reader in engineeringLeadAgent.ts (which cannot
@@ -859,6 +930,7 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
     drainerTenantCount: state.drainerTenants.length,
     recoveredAssignments: recoveredTotal,
     port: args.port,
+    smtpPort: state.smtpListener?.port ?? null,
   })
 
   return state

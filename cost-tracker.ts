@@ -43,6 +43,14 @@ import {
 } from './utils/context.js'
 import { isFastModeEnabled } from './utils/fastMode.js'
 import { tenantAttributesForTelemetry } from './services/tenant/telemetryAttrs.js'
+import { currentTenantContext } from './services/tenant/tenantScope.js'
+import {
+  BILLING_STRIPE_DELIVERED_AUDIT_KIND,
+  BILLING_STRIPE_FAILED_AUDIT_KIND,
+  postStripeBillingHook,
+  recordUsageFromContext,
+} from './services/billing/usageLedger.js'
+import { writeAuditEntry } from './services/audit/durableAuditLog.js'
 import { formatDuration, formatNumber } from './utils/format.js'
 import type { FpsMetrics } from './utils/fpsTracker.js'
 import { getCanonicalName } from './utils/model/model.js'
@@ -304,6 +312,41 @@ export function addToTotalSessionCost(
   getTokenCounter()?.add(usage.cache_creation_input_tokens ?? 0, {
     ...attrs,
     type: 'cacheCreation',
+  })
+
+  const tenant = currentTenantContext()
+  const dutyId = process.env.CC_DUTY_ID?.trim() || undefined
+  const assignmentId = process.env.CC_ASSIGNMENT_ID?.trim() || undefined
+  const usageRecord = recordUsageFromContext({
+    usage,
+    model,
+    costUSD: cost,
+    tenant,
+    dutyId,
+    assignmentId,
+  })
+  void postStripeBillingHook(usageRecord).then(result => {
+    if (result.delivered) {
+      writeAuditEntry({
+        ts: usageRecord.ts,
+        kind: BILLING_STRIPE_DELIVERED_AUDIT_KIND,
+        source: 'billing.stripe',
+        subjectKind: usageRecord.subjectKind,
+        subjectId: usageRecord.subjectId,
+        responseStatus: result.status,
+      }, { tenant })
+      return
+    }
+    if (result.error === 'stripe_hook_unset') return
+    writeAuditEntry({
+      ts: usageRecord.ts,
+      kind: BILLING_STRIPE_FAILED_AUDIT_KIND,
+      source: 'billing.stripe',
+      subjectKind: usageRecord.subjectKind,
+      subjectId: usageRecord.subjectId,
+      ...(result.status !== undefined ? { responseStatus: result.status } : {}),
+      ...(result.error ? { error: result.error } : {}),
+    }, { tenant })
   })
 
   let totalCost = cost
