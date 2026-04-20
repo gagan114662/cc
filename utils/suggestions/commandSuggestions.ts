@@ -9,6 +9,7 @@ import type { SuggestionItem } from '../../components/PromptInput/PromptInputFoo
 import { getSkillUsageScore } from './skillUsageTracking.js'
 import {
   formatWorkflowCommandSummary,
+  formatWorkflowSelectionDetail,
   isWorkflowCommand,
 } from '../workflowCommands.js'
 import { scoreCapabilityForQuery } from '../capabilityDiscovery.js'
@@ -321,16 +322,24 @@ function createCommandSuggestionItem(
   const aliasText = matchedAlias ? ` (${matchedAlias})` : ''
 
   const isWorkflow = isWorkflowCommand(cmd)
-  const fullDescription =
-    isWorkflow
-      ? formatWorkflowCommandSummary(cmd, {
+  const fullDescription = isWorkflow
+    ? [
+        formatWorkflowSelectionDetail(cmd),
+        formatWorkflowCommandSummary(cmd, {
+          includeOutputs: false,
+          includeArtifactKinds: false,
+          includeInputs: false,
+          includeHandoffFields: false,
           includeTools: true,
           includeArguments: true,
-        })
-      : formatDescriptionWithSource(cmd) +
-        (cmd.type === 'prompt' && cmd.argNames?.length
-          ? ` (arguments: ${cmd.argNames.join(', ')})`
-          : '')
+        }),
+      ]
+        .filter((value): value is string => Boolean(value))
+        .join(' · ')
+    : formatDescriptionWithSource(cmd) +
+      (cmd.type === 'prompt' && cmd.argNames?.length
+        ? ` (arguments: ${cmd.argNames.join(', ')})`
+        : '')
 
   return {
     id: getCommandId(cmd),

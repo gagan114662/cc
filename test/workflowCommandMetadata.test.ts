@@ -19,6 +19,8 @@ function makeWorkflowCommand(): Command {
       'Produces the next highest-leverage actions',
     ],
     handoffFields: ['stale_assumptions', 'priority_segment'],
+    workflowArtifactValidator: 'pipeline-refresh',
+    capabilityGrants: ['discovery', 'workspace', 'cli'],
     workflowSteps: [
       {
         title: 'Gather evidence',
@@ -68,10 +70,11 @@ describe('workflow command metadata', () => {
 
     expect(suggestions).toHaveLength(1)
     expect(suggestions[0]?.tag).toBe('workflow')
-    expect(suggestions[0]?.description).toContain('Operations:')
-    expect(suggestions[0]?.description).toContain('Outputs:')
-    expect(suggestions[0]?.description).toContain('Updated pipeline brief')
+    expect(suggestions[0]?.description).toContain('Produces:')
     expect(suggestions[0]?.description).toContain('Artifacts:')
+    expect(suggestions[0]?.description).toContain('Capabilities:')
+    expect(suggestions[0]?.description).toContain('Operations:')
+    expect(suggestions[0]?.description).toContain('Updated pipeline brief')
     expect(suggestions[0]?.description).toContain('Procedure:')
   })
 

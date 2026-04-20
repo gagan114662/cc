@@ -266,6 +266,23 @@ export function formatWorkflowCommandSummary(
   return parts.join(' · ')
 }
 
+export function formatWorkflowSelectionDetail(
+  cmd: WorkflowCommand,
+): string | null {
+  const parts = [
+    formatLabeledList('Produces', cmd.outputs),
+    formatLabeledList('Artifacts', cmd.artifactKinds),
+    cmd.capabilityGrants?.length
+      ? formatLabeledList(
+          'Capabilities',
+          resolveWorkflowCapabilityGrants(cmd),
+        )
+      : null,
+  ].filter((value): value is string => value !== null)
+
+  return parts.length > 0 ? parts.join(' · ') : null
+}
+
 export function buildWorkflowExecutionContract(
   cmd: WorkflowCommand,
 ): string | null {
