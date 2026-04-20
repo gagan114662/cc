@@ -20,6 +20,7 @@ import type {
   WorkflowFinalState,
   WorkflowStepOutcome,
 } from '../../utils/workflowCommands.js'
+import type { WorkflowAnalyticsTracker } from './workflowAnalytics.js'
 
 type CapabilityDescriptor = {
   name: string
@@ -228,6 +229,7 @@ type CodeModeExecutorArgs = {
   commands: Command[]
   statePath?: string
   sharedStatePath?: string
+  analyticsTracker: WorkflowAnalyticsTracker
   runStep(stepIndex: number): Promise<WorkflowStepOutcome>
   skipStep(stepIndex: number, reason?: string): Promise<WorkflowStepOutcome>
   getOutcomes(): WorkflowStepOutcome[]
@@ -896,63 +898,132 @@ export class CodeModeExecutor {
     })
 
     const cliApi: CodeModeCliApi = Object.freeze({
-      allowedTools: () => [...this.capabilitySnapshot.cli.allowedTools],
+      allowedTools: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('cli', 'allowedTools')
+        return [...this.capabilitySnapshot.cli.allowedTools]
+      },
       listTools: () =>
-        this.capabilitySnapshot.cli.tools.map(tool => ({ ...tool })),
-      isAllowed: toolName =>
-        this.capabilitySnapshot.cli.allowedTools.includes(toolName),
-      isAvailable: toolName =>
-        this.capabilitySnapshot.cli.tools.some(tool => tool.name === toolName),
+        (this.args.analyticsTracker.recordCapabilityUsage('cli', 'listTools'),
+        this.capabilitySnapshot.cli.tools.map(tool => ({ ...tool }))),
+      isAllowed: toolName => {
+        this.args.analyticsTracker.recordCapabilityUsage('cli', 'isAllowed')
+        return this.capabilitySnapshot.cli.allowedTools.includes(toolName)
+      },
+      isAvailable: toolName => {
+        this.args.analyticsTracker.recordCapabilityUsage('cli', 'isAvailable')
+        return this.capabilitySnapshot.cli.tools.some(tool => tool.name === toolName)
+      },
     })
 
     const browserApi: CodeModeBrowserApi = Object.freeze({
-      status: () => ({ ...this.capabilitySnapshot.browser.status }),
-      listWorkflows: () =>
-        this.capabilitySnapshot.browser.workflows.map(cloneCapabilityDescriptor),
-      hasWorkflow: name =>
-        this.capabilitySnapshot.browser.workflows.some(
+      status: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('browser', 'status')
+        return { ...this.capabilitySnapshot.browser.status }
+      },
+      listWorkflows: () => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'browser',
+          'listWorkflows',
+        )
+        return this.capabilitySnapshot.browser.workflows.map(
+          cloneCapabilityDescriptor,
+        )
+      },
+      hasWorkflow: name => {
+        this.args.analyticsTracker.recordCapabilityUsage('browser', 'hasWorkflow')
+        return this.capabilitySnapshot.browser.workflows.some(
           workflow =>
             workflow.name === name || workflow.displayName === name,
-        ),
+        )
+      },
     })
 
     const githubApi: CodeModeGitHubApi = Object.freeze({
-      listWorkflows: () =>
-        this.capabilitySnapshot.github.workflows.map(cloneCapabilityDescriptor),
-      hasWorkflow: name =>
-        this.capabilitySnapshot.github.workflows.some(
+      listWorkflows: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('github', 'listWorkflows')
+        return this.capabilitySnapshot.github.workflows.map(
+          cloneCapabilityDescriptor,
+        )
+      },
+      hasWorkflow: name => {
+        this.args.analyticsTracker.recordCapabilityUsage('github', 'hasWorkflow')
+        return this.capabilitySnapshot.github.workflows.some(
           workflow =>
             workflow.name === name || workflow.displayName === name,
-        ),
-      listRepoCapabilities: () =>
-        this.capabilitySnapshot.github.repoCapabilities.map(
+        )
+      },
+      listRepoCapabilities: () => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'github',
+          'listRepoCapabilities',
+        )
+        return this.capabilitySnapshot.github.repoCapabilities.map(
           cloneCapabilityDescriptor,
-        ),
+        )
+      },
     })
 
     const docsApi: CodeModeDocsApi = Object.freeze({
-      listWorkflows: () =>
-        this.capabilitySnapshot.docs.workflows.map(cloneCapabilityDescriptor),
-      hasWorkflow: name =>
-        this.capabilitySnapshot.docs.workflows.some(
+      listWorkflows: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('docs', 'listWorkflows')
+        return this.capabilitySnapshot.docs.workflows.map(cloneCapabilityDescriptor)
+      },
+      hasWorkflow: name => {
+        this.args.analyticsTracker.recordCapabilityUsage('docs', 'hasWorkflow')
+        return this.capabilitySnapshot.docs.workflows.some(
           workflow =>
             workflow.name === name || workflow.displayName === name,
-        ),
-      listDocCapabilities: () =>
-        this.capabilitySnapshot.docs.docCapabilities.map(
+        )
+      },
+      listDocCapabilities: () => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'docs',
+          'listDocCapabilities',
+        )
+        return this.capabilitySnapshot.docs.docCapabilities.map(
           cloneCapabilityDescriptor,
-        ),
+        )
+      },
     })
 
     const workspaceApi: CodeModeWorkspaceApi = Object.freeze({
-      root: () => this.capabilitySnapshot.workspace.root,
-      sessionId: () => this.capabilitySnapshot.workspace.sessionId,
-      transcriptProjectDir: () =>
-        this.capabilitySnapshot.workspace.transcriptProjectDir,
-      transcriptSubdir: () => this.capabilitySnapshot.workspace.transcriptSubdir,
-      statePath: () => this.capabilitySnapshot.workspace.statePath,
-      sharedStatePath: () => this.capabilitySnapshot.workspace.sharedStatePath,
-      info: () => ({ ...this.capabilitySnapshot.workspace }),
+      root: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('workspace', 'root')
+        return this.capabilitySnapshot.workspace.root
+      },
+      sessionId: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('workspace', 'sessionId')
+        return this.capabilitySnapshot.workspace.sessionId
+      },
+      transcriptProjectDir: () => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'workspace',
+          'transcriptProjectDir',
+        )
+        return this.capabilitySnapshot.workspace.transcriptProjectDir
+      },
+      transcriptSubdir: () => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'workspace',
+          'transcriptSubdir',
+        )
+        return this.capabilitySnapshot.workspace.transcriptSubdir
+      },
+      statePath: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('workspace', 'statePath')
+        return this.capabilitySnapshot.workspace.statePath
+      },
+      sharedStatePath: () => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'workspace',
+          'sharedStatePath',
+        )
+        return this.capabilitySnapshot.workspace.sharedStatePath
+      },
+      info: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('workspace', 'info')
+        return { ...this.capabilitySnapshot.workspace }
+      },
     })
 
     const capabilityGrants = resolveCapabilityGrants(this.args.command)
@@ -967,34 +1038,61 @@ export class CodeModeExecutor {
     )
 
     const discoveryApi: CodeModeDiscoveryApi = Object.freeze({
-      listFamilies: () => [...this.capabilitySnapshot.discovery.families],
-      search: (query, limit) =>
-        rankCapabilities(promptCapabilities, {
+      listFamilies: () => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'discovery',
+          'listFamilies',
+        )
+        return [...this.capabilitySnapshot.discovery.families]
+      },
+      search: (query, limit) => {
+        this.args.analyticsTracker.recordCapabilityUsage('discovery', 'search')
+        const results = rankCapabilities(promptCapabilities, {
           queryText: query,
         })
           .slice(0, clampDiscoveryLimit(limit))
-          .map(summarizeCommand),
+          .map(summarizeCommand)
+        if (results.length === 0) {
+          this.args.analyticsTracker.recordDiscoveryMiss(query)
+        }
+        return results
+      },
       searchByFamily: (family, query, limit) => {
+        this.args.analyticsTracker.recordCapabilityUsage(
+          'discovery',
+          'searchByFamily',
+        )
         const filtered = promptCapabilities.filter(
           capability => getCapabilityFamily(capability) === family,
         )
         const limited = clampDiscoveryLimit(limit)
         if (!query?.trim()) {
-          return filtered.slice(0, limited).map(summarizeCommand)
+          const results = filtered.slice(0, limited).map(summarizeCommand)
+          if (results.length === 0) {
+            this.args.analyticsTracker.recordDiscoveryMiss(String(family), family)
+          }
+          return results
         }
-        return rankCapabilities(filtered, {
+        const results = rankCapabilities(filtered, {
           queryText: query,
         })
           .slice(0, limited)
           .map(summarizeCommand)
+        if (results.length === 0) {
+          this.args.analyticsTracker.recordDiscoveryMiss(query, family)
+        }
+        return results
       },
     })
 
     const mcpApi: CodeModeMcpApi = Object.freeze({
-      listServers: () =>
-        this.capabilitySnapshot.mcp.servers.map(server => ({ ...server })),
-      listWorkflows: serverName =>
-        this.capabilitySnapshot.mcp.workflows
+      listServers: () => {
+        this.args.analyticsTracker.recordCapabilityUsage('mcp', 'listServers')
+        return this.capabilitySnapshot.mcp.servers.map(server => ({ ...server }))
+      },
+      listWorkflows: serverName => {
+        this.args.analyticsTracker.recordCapabilityUsage('mcp', 'listWorkflows')
+        return this.capabilitySnapshot.mcp.workflows
           .filter(workflow =>
             serverName ? workflow.name.startsWith(`${serverName}:`) : true,
           )
@@ -1003,9 +1101,11 @@ export class CodeModeExecutor {
             verbs: [...workflow.verbs],
             outputs: [...workflow.outputs],
             artifactKinds: [...workflow.artifactKinds],
-          })),
-      listSkills: serverName =>
-        this.capabilitySnapshot.mcp.skills
+          }))
+      },
+      listSkills: serverName => {
+        this.args.analyticsTracker.recordCapabilityUsage('mcp', 'listSkills')
+        return this.capabilitySnapshot.mcp.skills
           .filter(skill =>
             serverName ? skill.name.startsWith(`${serverName}:`) : true,
           )
@@ -1014,11 +1114,14 @@ export class CodeModeExecutor {
             verbs: [...skill.verbs],
             outputs: [...skill.outputs],
             artifactKinds: [...skill.artifactKinds],
-          })),
-      hasServer: serverName =>
-        this.capabilitySnapshot.mcp.servers.some(
+          }))
+      },
+      hasServer: serverName => {
+        this.args.analyticsTracker.recordCapabilityUsage('mcp', 'hasServer')
+        return this.capabilitySnapshot.mcp.servers.some(
           server => server.name === serverName,
-        ),
+        )
+      },
     })
 
     const api: CodeModeProgramApi = {

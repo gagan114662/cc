@@ -32,6 +32,7 @@ import { clearInvokedSkillsForAgent } from '../../bootstrap/state.js'
 import type { AgentDefinition } from '../AgentTool/loadAgentsDir.js'
 import { runAgent } from '../AgentTool/runAgent.js'
 import { CodeModeExecutor, type CodeModeStateStore } from './codeModeExecutor.js'
+import { WorkflowAnalyticsTracker } from './workflowAnalytics.js'
 
 type ForkedWorkflowOutput = {
   success: true
@@ -72,6 +73,7 @@ type ExecuteForkedWorkflowArgs = {
   stageRunner?: WorkflowStageRunner
   codeModeStatePath?: string
   codeModeSharedStatePath?: string
+  workflowAnalyticsPath?: string
 }
 
 function buildCombinedHandoff(
@@ -307,6 +309,7 @@ async function executeCodeModeWorkflow(args: {
   context: ToolUseContext
   codeModeStatePath?: string
   codeModeSharedStatePath?: string
+  analyticsTracker: WorkflowAnalyticsTracker
 }): Promise<{
   stepOutcomes: WorkflowStepOutcome[]
   stateStore: CodeModeStateStore
@@ -321,6 +324,7 @@ async function executeCodeModeWorkflow(args: {
     context,
     codeModeStatePath,
     codeModeSharedStatePath,
+    analyticsTracker,
   } = args
 
   const codePrompt = buildWorkflowCodeModePrompt(command, skillContent, argsText)
@@ -345,6 +349,7 @@ async function executeCodeModeWorkflow(args: {
     commands: context.options.commands,
     statePath: codeModeStatePath,
     sharedStatePath: codeModeSharedStatePath,
+    analyticsTracker,
     runStep: async stepIndex =>
       runWorkflowStepByIndex({
         command,
@@ -413,6 +418,7 @@ async function runWorkflowSynthesisWithValidation(args: {
   argsText: string
   runStage: WorkflowStageRunner
   transcriptSubdir: string
+  analyticsTracker?: WorkflowAnalyticsTracker
 }): Promise<WorkflowSynthesisResult> {
   const {
     command,
@@ -447,6 +453,8 @@ async function runWorkflowSynthesisWithValidation(args: {
     if (validation.valid) {
       return { rawResult, finalState }
     }
+
+    args.analyticsTracker?.recordValidatorIssues(validation.issues)
 
     if (attemptIndex === 1) {
       throw new Error(
@@ -577,6 +585,7 @@ export async function executeForkedWorkflow({
   stageRunner,
   codeModeStatePath,
   codeModeSharedStatePath,
+  workflowAnalyticsPath,
 }: ExecuteForkedWorkflowArgs): Promise<ToolResult<ForkedWorkflowOutput>> {
   const workflowSteps = command.workflowSteps ?? []
   if (workflowSteps.length === 0) {
@@ -596,46 +605,50 @@ export async function executeForkedWorkflow({
       agentDefinition,
       command,
     })
+  const analyticsTracker = new WorkflowAnalyticsTracker(
+    command,
+    workflowAnalyticsPath,
+  )
 
   let codeModeStateStore: CodeModeStateStore | undefined
-  const stepOutcomes =
-    command.workflowRuntime === 'code'
-      ? await (async (): Promise<WorkflowStepOutcome[]> => {
-          const result = await executeCodeModeWorkflow({
-            command,
-            workflowSteps,
-            skillContent,
-            argsText: args,
-            runStage,
-            transcriptSubdir,
-            context,
-            codeModeStatePath,
-            codeModeSharedStatePath,
-          })
-          codeModeStateStore = result.stateStore
-          return result.stepOutcomes
-        })()
-      : await (async (): Promise<WorkflowStepOutcome[]> => {
-          const outcomeMap: WorkflowOutcomeMap = new Map()
-          for (const [stepIndex] of workflowSteps.entries()) {
-            await runWorkflowStepByIndex({
+  try {
+    const stepOutcomes =
+      command.workflowRuntime === 'code'
+        ? await (async (): Promise<WorkflowStepOutcome[]> => {
+            const result = await executeCodeModeWorkflow({
               command,
               workflowSteps,
-              outcomeMap,
               skillContent,
-              stepIndex,
               argsText: args,
               runStage,
               transcriptSubdir,
+              context,
+              codeModeStatePath,
+              codeModeSharedStatePath,
+              analyticsTracker,
             })
-          }
+            codeModeStateStore = result.stateStore
+            return result.stepOutcomes
+          })()
+        : await (async (): Promise<WorkflowStepOutcome[]> => {
+            const outcomeMap: WorkflowOutcomeMap = new Map()
+            for (const [stepIndex] of workflowSteps.entries()) {
+              await runWorkflowStepByIndex({
+                command,
+                workflowSteps,
+                outcomeMap,
+                skillContent,
+                stepIndex,
+                argsText: args,
+                runStage,
+                transcriptSubdir,
+              })
+            }
 
-          return materializeWorkflowOutcomes(workflowSteps, outcomeMap)
-        })()
+            return materializeWorkflowOutcomes(workflowSteps, outcomeMap)
+          })()
 
-  const synthesisAgentId = createAgentId()
-  let finalState: WorkflowFinalState
-  try {
+    const synthesisAgentId = createAgentId()
     const synthesisResult = await runWorkflowSynthesisWithValidation({
       command,
       skillContent,
@@ -647,26 +660,29 @@ export async function executeForkedWorkflow({
           agentId: synthesisAgentId,
         }),
       transcriptSubdir,
+      analyticsTracker,
     })
-    finalState = synthesisResult.finalState
+    const finalState = synthesisResult.finalState
     if (codeModeStateStore) {
       await codeModeStateStore.setFinalState(finalState)
+    }
+    await analyticsTracker.flush({ status: 'success' })
+    const finalResult = formatWorkflowFinalResult(finalState)
+
+    return {
+      data: {
+        success: true,
+        commandName,
+        status: 'forked',
+        agentId: synthesisAgentId,
+        result: finalResult,
+      },
     }
   } catch (error) {
     if (codeModeStateStore) {
       await codeModeStateStore.setPhase('failed', summarizeError(error))
     }
+    await analyticsTracker.flush({ status: 'failure' })
     throw error
-  }
-  const finalResult = formatWorkflowFinalResult(finalState)
-
-  return {
-    data: {
-      success: true,
-      commandName,
-      status: 'forked',
-      agentId: synthesisAgentId,
-      result: finalResult,
-    },
   }
 }
