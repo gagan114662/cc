@@ -44,6 +44,10 @@ import {
   handleEmployeeAssignRequest,
 } from '../services/http/employeeAssignRoute.js'
 import {
+  OUTCOME_DASHBOARD_ROUTE,
+  handleOutcomeDashboardRequest,
+} from '../services/http/outcomeDashboardRoute.js'
+import {
   GITHUB_WEBHOOK_ROUTE,
   handleGithubWebhookRequest,
 } from '../services/webhooks/githubRoute.js'
@@ -53,6 +57,7 @@ import {
 } from '../services/webhooks/slackRoute.js'
 import { getQueueBackend } from '../services/assignmentQueue/backend.js'
 import type { AssignmentRunner } from '../services/assignmentQueue/backend.js'
+import { listAssignmentQueueTenants } from '../services/assignmentQueue/storage.js'
 import {
   getEmployeeStore,
   getEmployeeBackendKind,
@@ -208,10 +213,20 @@ async function drainTick(
 // but who has no employee.json yet.
 function resolveDrainerTenants(
   tenantDuties: TenantDuties[],
+  projectRoot: string,
 ): TenantContext[] {
   const byId = new Map<string, TenantContext>()
   byId.set(DEFAULT_TENANT.id, DEFAULT_TENANT)
   for (const { tenant } of tenantDuties) byId.set(tenant.id, tenant)
+  for (const tenantId of listAssignmentQueueTenants(projectRoot)) {
+    if (byId.has(tenantId)) continue
+    byId.set(
+      tenantId,
+      tenantId === DEFAULT_TENANT.id
+        ? DEFAULT_TENANT
+        : { id: tenantId, name: tenantId, role: 'developer' },
+    )
+  }
   return Array.from(byId.values())
 }
 
@@ -499,6 +514,28 @@ function startHttp(state: DaemonState): Server {
       res.end(JSON.stringify({ ready }))
       return
     }
+    if (
+      req.url === OUTCOME_DASHBOARD_ROUTE ||
+      req.url.startsWith(`${OUTCOME_DASHBOARD_ROUTE}?`)
+    ) {
+      void handleOutcomeDashboardRequest(req, res, {
+        projectRoot: state.args.projectRoot,
+        ...(state.args.auditDir ? { auditDir: state.args.auditDir } : {}),
+        startedAt: state.startedAt.toISOString(),
+        status: state.shuttingDown ? 'draining' : 'ok',
+        scheduledDutyCount: state.duties.size,
+        drainerTenantIds: state.drainerTenants.map(t => t.id),
+      }).catch(err => {
+        log('error', 'outcome_dashboard_failed', {
+          error: err instanceof Error ? err.message : String(err),
+        })
+        if (!res.headersSent) {
+          res.writeHead(500, { 'content-type': 'application/json' })
+          res.end(JSON.stringify({ error: 'internal_error' }))
+        }
+      })
+      return
+    }
     if (req.url === EMPLOYEE_ASSIGN_ROUTE) {
       // While draining, refuse new work so callers retry against a
       // different replica (future Phase 3 concern) instead of racing
@@ -539,6 +576,7 @@ function startHttp(state: DaemonState): Server {
       void handleGithubWebhookRequest(req, res, {
         projectRoot: state.args.projectRoot,
         secret: state.args.githubWebhookSecret,
+        ...(state.args.auditDir ? { auditDir: state.args.auditDir } : {}),
       }).catch(err => {
         log('error', 'github_webhook_failed', {
           error: err instanceof Error ? err.message : String(err),
@@ -564,6 +602,7 @@ function startHttp(state: DaemonState): Server {
       void handleSlackWebhookRequest(req, res, {
         projectRoot: state.args.projectRoot,
         secret: state.args.slackWebhookSecret,
+        ...(state.args.auditDir ? { auditDir: state.args.auditDir } : {}),
       }).catch(err => {
         log('error', 'slack_webhook_failed', {
           error: err instanceof Error ? err.message : String(err),
@@ -747,7 +786,7 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
   // up on the next tick. Recovery runs for every drainer tenant, not
   // just those with duties, because an assignment-only tenant can
   // also crash mid-drain.
-  state.drainerTenants = resolveDrainerTenants(tenantDuties)
+  state.drainerTenants = resolveDrainerTenants(tenantDuties, args.projectRoot)
   let recoveredTotal = 0
   const backend = await getQueueBackend()
   for (const tenant of state.drainerTenants) {

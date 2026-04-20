@@ -20,14 +20,18 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { readAuditTail } from 'src/services/audit/durableAuditLog.js'
 import {
   GITHUB_WEBHOOK_ROUTE,
+  GITHUB_WEBHOOK_IGNORED_AUDIT_KIND,
+  GITHUB_WEBHOOK_QUEUED_AUDIT_KIND,
   handleGithubWebhookRequest,
 } from 'src/services/webhooks/githubRoute.js'
 import { loadAssignmentQueue } from 'src/services/assignmentQueue/storage.js'
 import { DEFAULT_TENANT } from 'src/services/tenant/tenantContext.js'
 
 let projectRoot: string
+let auditDir: string
 const SECRET = 'test-secret'
 
 beforeEach(async () => {
@@ -35,11 +39,17 @@ beforeEach(async () => {
     tmpdir(),
     `cc-webhook-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   )
+  auditDir = path.join(
+    tmpdir(),
+    `cc-webhook-audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  )
   await mkdir(projectRoot, { recursive: true })
+  await mkdir(auditDir, { recursive: true })
 })
 
 afterEach(async () => {
   await rm(projectRoot, { recursive: true, force: true })
+  await rm(auditDir, { recursive: true, force: true })
 })
 
 function sign(body: string, secret: string): string {
@@ -90,7 +100,11 @@ function mockReqRes(opts: {
 
 async function drive(body: string, headers: Record<string, string>) {
   const { req, res, captured } = mockReqRes({ body, headers })
-  await handleGithubWebhookRequest(req, res, { projectRoot, secret: SECRET })
+  await handleGithubWebhookRequest(req, res, {
+    projectRoot,
+    secret: SECRET,
+    auditDir,
+  })
   return captured
 }
 
@@ -140,6 +154,8 @@ describe('POST /v1/webhooks/github', () => {
     expect(parsed.event).toBe('marketplace_purchase')
     const queue = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(queue).toEqual([])
+    const audit = readAuditTail(10, { dir: auditDir })
+    expect(audit.at(-1)?.kind).toBe(GITHUB_WEBHOOK_IGNORED_AUDIT_KIND)
   })
 
   test('pull_request.opened: enqueues readable assignment', async () => {
@@ -171,6 +187,9 @@ describe('POST /v1/webhooks/github', () => {
     expect(queue[0]!.assignment).toContain('acme/repo')
     expect(queue[0]!.assignment).toContain('#42')
     expect(queue[0]!.assignment).toContain('Fix widget rendering')
+    const audit = readAuditTail(10, { dir: auditDir })
+    expect(audit.at(-1)?.kind).toBe(GITHUB_WEBHOOK_QUEUED_AUDIT_KIND)
+    expect(audit.at(-1)?.assignmentId).toBe(parsed.id)
   })
 
   test('pull_request.closed (merged=false): 202 ignored, no enqueue', async () => {

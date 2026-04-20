@@ -22,14 +22,19 @@ import { tmpdir } from 'node:os'
 import path from 'node:path'
 import { IncomingMessage, ServerResponse } from 'node:http'
 import { Socket } from 'node:net'
+import { readAuditTail } from 'src/services/audit/durableAuditLog.js'
 import {
   SLACK_WEBHOOK_ROUTE,
+  SLACK_WEBHOOK_CHALLENGE_AUDIT_KIND,
+  SLACK_WEBHOOK_IGNORED_AUDIT_KIND,
+  SLACK_WEBHOOK_QUEUED_AUDIT_KIND,
   handleSlackWebhookRequest,
 } from 'src/services/webhooks/slackRoute.js'
 import { loadAssignmentQueue } from 'src/services/assignmentQueue/storage.js'
 import { DEFAULT_TENANT } from 'src/services/tenant/tenantContext.js'
 
 let projectRoot: string
+let auditDir: string
 const SECRET = 'slack-test-secret'
 // Pinned "now" — all test requests sign with timestamps relative to this,
 // and the route is given a matching clock so skew is deterministic.
@@ -41,11 +46,17 @@ beforeEach(async () => {
     tmpdir(),
     `cc-slack-test-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
   )
+  auditDir = path.join(
+    tmpdir(),
+    `cc-slack-audit-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+  )
   await mkdir(projectRoot, { recursive: true })
+  await mkdir(auditDir, { recursive: true })
 })
 
 afterEach(async () => {
   await rm(projectRoot, { recursive: true, force: true })
+  await rm(auditDir, { recursive: true, force: true })
 })
 
 function slackSign(ts: string, body: string, secret: string): string {
@@ -95,6 +106,7 @@ async function drive(body: string, headers: Record<string, string>) {
     projectRoot,
     secret: SECRET,
     now: () => new Date(FIXED_NOW_MS),
+    auditDir,
   })
   return captured
 }
@@ -144,6 +156,8 @@ describe('POST /v1/webhooks/slack', () => {
     expect(JSON.parse(captured.body)).toEqual({ challenge: 'handshake-nonce-xyz' })
     const queue = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(queue).toEqual([])
+    const audit = readAuditTail(10, { dir: auditDir })
+    expect(audit.at(-1)?.kind).toBe(SLACK_WEBHOOK_CHALLENGE_AUDIT_KIND)
   })
 
   test('app_mention: 202 queued, assignment captures channel/user/text', async () => {
@@ -174,6 +188,9 @@ describe('POST /v1/webhooks/slack', () => {
     expect(queue[0]!.assignment).toContain('C_BUILDS')
     expect(queue[0]!.assignment).toContain('U42')
     expect(queue[0]!.assignment).toContain('investigate the flaky build job')
+    const audit = readAuditTail(10, { dir: auditDir })
+    expect(audit.at(-1)?.kind).toBe(SLACK_WEBHOOK_QUEUED_AUDIT_KIND)
+    expect(audit.at(-1)?.assignmentId).toBe(parsed.id)
   })
 
   test('event_callback with unsupported nested type: 202 ignored, no enqueue', async () => {
@@ -191,6 +208,8 @@ describe('POST /v1/webhooks/slack', () => {
     expect(parsed.event).toBe('reaction_added')
     const queue = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(queue).toEqual([])
+    const audit = readAuditTail(10, { dir: auditDir })
+    expect(audit.at(-1)?.kind).toBe(SLACK_WEBHOOK_IGNORED_AUDIT_KIND)
   })
 
   test('unknown top-level type: 202 ignored, no enqueue', async () => {

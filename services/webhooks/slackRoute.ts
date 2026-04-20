@@ -20,6 +20,7 @@
 
 import type { IncomingMessage, ServerResponse } from 'node:http'
 import { randomUUID } from 'node:crypto'
+import { writeAuditEntry } from '../audit/durableAuditLog.js'
 import { getQueueBackend } from '../assignmentQueue/backend.js'
 import { DEFAULT_TENANT } from '../tenant/tenantContext.js'
 import { verifyHmacSignature } from './signatureVerification.js'
@@ -33,7 +34,12 @@ export type HandleSlackWebhookOptions = {
   secret: string
   idFactory?: () => string
   now?: () => Date
+  auditDir?: string
 }
+
+export const SLACK_WEBHOOK_QUEUED_AUDIT_KIND = 'webhook.slack.queued'
+export const SLACK_WEBHOOK_IGNORED_AUDIT_KIND = 'webhook.slack.ignored'
+export const SLACK_WEBHOOK_CHALLENGE_AUDIT_KIND = 'webhook.slack.challenge'
 
 type RawBody = { kind: 'ok'; text: string } | { kind: 'too_large' }
 
@@ -162,8 +168,21 @@ export async function handleSlackWebhookRequest(
   }
 
   const translation = translatePayload(payload)
+  const tsIso = (opts.now ?? (() => new Date()))().toISOString()
+  const auditWriteOpts = {
+    ...(opts.auditDir ? { dir: opts.auditDir } : {}),
+    tenant: DEFAULT_TENANT,
+  }
 
   if (translation.kind === 'challenge') {
+    writeAuditEntry(
+      {
+        ts: tsIso,
+        kind: SLACK_WEBHOOK_CHALLENGE_AUDIT_KIND,
+        source: 'slack.webhook',
+      },
+      auditWriteOpts,
+    )
     // Slack expects the challenge echoed verbatim so it can confirm
     // this endpoint owns the URL it was configured with.
     writeJson(res, 200, { challenge: translation.challenge })
@@ -171,6 +190,15 @@ export async function handleSlackWebhookRequest(
   }
 
   if (translation.kind === 'ignore') {
+    writeAuditEntry(
+      {
+        ts: tsIso,
+        kind: SLACK_WEBHOOK_IGNORED_AUDIT_KIND,
+        source: 'slack.webhook',
+        event: translation.event,
+      },
+      auditWriteOpts,
+    )
     writeJson(res, 202, { status: 'ignored', event: translation.event })
     return
   }
@@ -180,6 +208,16 @@ export async function handleSlackWebhookRequest(
   await backend.enqueue(
     { id, assignment: translation.assignment },
     { projectRoot: opts.projectRoot, tenantId: DEFAULT_TENANT.id },
+  )
+  writeAuditEntry(
+    {
+      ts: tsIso,
+      kind: SLACK_WEBHOOK_QUEUED_AUDIT_KIND,
+      source: 'slack.webhook',
+      event: translation.event,
+      assignmentId: id,
+    },
+    auditWriteOpts,
   )
 
   writeJson(res, 202, { id, status: 'queued', event: translation.event })
