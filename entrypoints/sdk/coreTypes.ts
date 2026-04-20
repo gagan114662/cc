@@ -289,6 +289,7 @@ export type PostCompactHookInput = BaseHookInput & {
 export type SetupHookInput = BaseHookInput & {
   hook_event_name: 'Setup'
   additionalContext?: string
+  trigger?: string
   [key: string]: unknown
 }
 
@@ -304,6 +305,54 @@ export type WorktreeRemoveHookInput = BaseHookInput & {
   worktree_path?: string
   [key: string]: unknown
 }
+
+// Widen the HookInput union to include every shim above plus the upstream
+// variants. Explicit named export shadows the `export *` from generated, so
+// utils/hooks.ts callsites can dispatch on the wider HookEvent set without
+// the upstream narrow union rejecting "PermissionDenied"/"Setup"/etc.
+import type {
+  PreToolUseHookInput as UpstreamPreToolUseHookInput,
+  PostToolUseHookInput as UpstreamPostToolUseHookInput,
+  PostToolUseFailureHookInput as UpstreamPostToolUseFailureHookInput,
+  NotificationHookInput as UpstreamNotificationHookInput,
+  UserPromptSubmitHookInput as UpstreamUserPromptSubmitHookInput,
+  SessionStartHookInput as UpstreamSessionStartHookInput,
+  SessionEndHookInput as UpstreamSessionEndHookInput,
+  StopHookInput as UpstreamStopHookInput,
+  SubagentStartHookInput as UpstreamSubagentStartHookInput,
+  SubagentStopHookInput as UpstreamSubagentStopHookInput,
+  PreCompactHookInput as UpstreamPreCompactHookInput,
+  PermissionRequestHookInput as UpstreamPermissionRequestHookInput,
+} from './coreTypes.generated.js'
+
+export type HookInput =
+  | UpstreamPreToolUseHookInput
+  | UpstreamPostToolUseHookInput
+  | UpstreamPostToolUseFailureHookInput
+  | UpstreamNotificationHookInput
+  | UpstreamUserPromptSubmitHookInput
+  | UpstreamSessionStartHookInput
+  | UpstreamSessionEndHookInput
+  | UpstreamStopHookInput
+  | UpstreamSubagentStartHookInput
+  | UpstreamSubagentStopHookInput
+  | UpstreamPreCompactHookInput
+  | UpstreamPermissionRequestHookInput
+  | PermissionDeniedHookInput
+  | PostCompactHookInput
+  | SetupHookInput
+  | WorktreeCreateHookInput
+  | WorktreeRemoveHookInput
+  | StopFailureHookInput
+  | TeammateIdleHookInput
+  | TaskCreatedHookInput
+  | TaskCompletedHookInput
+  | ConfigChangeHookInput
+  | CwdChangedHookInput
+  | FileChangedHookInput
+  | InstructionsLoadedHookInput
+  | ElicitationHookInput
+  | ElicitationResultHookInput
 
 // Widen SyncHookJSONOutput.hookSpecificOutput so utils/hooks.ts can narrow on
 // the wider HookEvent set (Setup, PermissionDenied, Elicitation, etc.).
@@ -370,13 +419,29 @@ export type SyncHookJSONOutput = {
       }
     | {
         hookEventName: 'Elicitation'
-        action?: 'accept' | 'decline' | 'cancel' | string
+        action?: 'accept' | 'decline' | 'cancel'
         content?: unknown
       }
     | {
         hookEventName: 'ElicitationResult'
-        action?: 'accept' | 'decline' | 'cancel' | string
+        action?: 'accept' | 'decline' | 'cancel'
         content?: unknown
+      }
+    | {
+        hookEventName: 'Notification'
+        additionalContext?: string
+      }
+    | {
+        hookEventName: 'WorktreeCreate'
+        worktreePath?: string
+      }
+    | {
+        hookEventName: 'CwdChanged'
+        watchPaths?: string[]
+      }
+    | {
+        hookEventName: 'FileChanged'
+        watchPaths?: string[]
       }
 }
 
