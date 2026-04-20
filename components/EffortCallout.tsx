@@ -159,7 +159,7 @@ export function EffortCallout(t0: Props) {
 function _temp() {
   markV2Dismissed();
 }
-function EffortIndicatorSymbol(t0: Record<string, unknown>) {
+function EffortIndicatorSymbol(t0: any) {
   const $ = _c(4);
   const {
     level
@@ -182,7 +182,7 @@ function EffortIndicatorSymbol(t0: Record<string, unknown>) {
   }
   return t2;
 }
-function EffortOptionLabel(t0: Record<string, unknown>) {
+function EffortOptionLabel(t0: any) {
   const $ = _c(5);
   const {
     level,

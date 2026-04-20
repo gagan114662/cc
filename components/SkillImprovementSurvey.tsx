@@ -57,7 +57,7 @@ const VALID_INPUTS = ['0', '1'] as const;
 function isValidInput(input: string): boolean {
   return (VALID_INPUTS as readonly string[]).includes(input);
 }
-function SkillImprovementSurveyView(t0: Record<string, unknown>) {
+function SkillImprovementSurveyView(t0: any) {
   const $ = _c(17);
   const {
     skillName,

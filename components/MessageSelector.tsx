@@ -413,7 +413,7 @@ function getRestoreOptionConversationText(option: RestoreOption): string {
       return 'The conversation will be unchanged.';
   }
 }
-function RestoreOptionDescription(t0: Record<string, unknown>) {
+function RestoreOptionDescription(t0: any) {
   const $ = _c(11);
   const {
     selectedRestoreOption,
@@ -458,7 +458,7 @@ function RestoreOptionDescription(t0: Record<string, unknown>) {
   }
   return t4;
 }
-function RestoreCodeConfirmation(t0: Record<string, unknown>) {
+function RestoreCodeConfirmation(t0: any) {
   const $ = _c(14);
   const {
     diffStatsForRestore
@@ -541,7 +541,7 @@ function RestoreCodeConfirmation(t0: Record<string, unknown>) {
   }
   return t2;
 }
-function DiffStatsText(t0: Record<string, unknown>) {
+function DiffStatsText(t0: any) {
   const $ = _c(7);
   const {
     diffStats
@@ -576,7 +576,7 @@ function DiffStatsText(t0: Record<string, unknown>) {
   }
   return t3;
 }
-function UserMessageOption(t0: Record<string, unknown>) {
+function UserMessageOption(t0: any) {
   const $ = _c(31);
   const {
     userMessage,

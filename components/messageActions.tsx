@@ -271,7 +271,7 @@ export function useMessageActions(cursor: MessageActionsState | null, setCursor:
 }
 
 // Must mount inside <KeybindingSetup>.
-export function MessageActionsKeybindings(t0: Record<string, unknown>) {
+export function MessageActionsKeybindings(t0: any) {
   const $ = _c(2);
   const {
     handlers,
@@ -293,7 +293,7 @@ export function MessageActionsKeybindings(t0: Record<string, unknown>) {
 }
 
 // borderTop-only Box matches PromptInput's ─── line for stable footer height.
-export function MessageActionsBar(t0: Record<string, unknown>) {
+export function MessageActionsBar(t0: any) {
   const $ = _c(28);
   const {
     cursor

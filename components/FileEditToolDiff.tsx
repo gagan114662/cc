@@ -50,7 +50,7 @@ export function FileEditToolDiff(props: Props) {
   }
   return t2;
 }
-function DiffBody(t0: Record<string, unknown>) {
+function DiffBody(t0: any) {
   const $ = _c(6);
   const {
     promise,
@@ -78,7 +78,7 @@ function DiffBody(t0: Record<string, unknown>) {
   }
   return t1;
 }
-function DiffFrame(t0: Record<string, unknown>) {
+function DiffFrame(t0: any) {
   const $ = _c(5);
   const {
     children,

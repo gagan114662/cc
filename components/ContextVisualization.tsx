@@ -397,7 +397,7 @@ function _temp27(attachment: any, i_10: number) {
 function _temp26(tool_5: any, i_9: number) {
   return <Box key={i_9} marginLeft={1}><Text>└ {tool_5.name}: </Text><Text dimColor={true}>calls {formatTokens(tool_5.callTokens)}, results{" "}{formatTokens(tool_5.resultTokens)}</Text></Box>;
 }
-function _temp25(t0: Record<string, unknown>) {
+function _temp25(t0: any) {
   const [sourceDisplay_0, sourceSkills] = t0;
   return <Box key={sourceDisplay_0} flexDirection="column" marginTop={1}><Text dimColor={true}>{sourceDisplay_0}</Text>{sourceSkills.map(_temp24)}</Box>;
 }
@@ -407,7 +407,7 @@ function _temp24(skill: any, i_8: number) {
 function _temp23(file: any, i_7: number) {
   return <Box key={i_7}><Text>└ {getDisplayPath(file.path)}: </Text><Text dimColor={true}>{formatTokens(file.tokens)} tokens</Text></Box>;
 }
-function _temp22(t0: Record<string, unknown>) {
+function _temp22(t0: any) {
   const [sourceDisplay, sourceAgents] = t0;
   return <Box key={sourceDisplay} flexDirection="column" marginTop={1}><Text dimColor={true}>{sourceDisplay}</Text>{sourceAgents.map(_temp21)}</Box>;
 }

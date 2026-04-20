@@ -219,7 +219,7 @@ export function SandboxSettings(t0: Props) {
   }
   return t17;
 }
-function SandboxModeTab(t0: Record<string, unknown>) {
+function SandboxModeTab(t0: any) {
   const $ = _c(16);
   const {
     showSocketWarning,

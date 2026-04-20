@@ -209,3 +209,125 @@ export const EXIT_REASONS = [
   'other',
   'bypass_permissions_disabled',
 ] as const
+
+// Local HookEvent — derived from the runtime HOOK_EVENTS list, which is wider
+// than the upstream SDK's HookEvent union. Explicit named export shadows the
+// generated `export *` above so all callsites see the wider set.
+export type HookEvent = (typeof HOOK_EVENTS)[number]
+
+// Hook input shims for events the upstream SDK doesn't yet type. Field
+// shapes mirror what utils/hooks.ts dispatches on; everything past the
+// discriminator is open via index sig so consumers can read extra fields.
+export type PermissionDeniedHookInput = BaseHookInput & {
+  hook_event_name: 'PermissionDenied'
+  tool_name?: string
+  tool_input?: Record<string, unknown>
+  reason?: string
+  retry?: boolean
+  [key: string]: unknown
+}
+
+export type PostCompactHookInput = BaseHookInput & {
+  hook_event_name: 'PostCompact'
+  trigger?: 'auto' | 'manual' | 'microcompact' | string
+  custom_instructions?: string
+  [key: string]: unknown
+}
+
+export type SetupHookInput = BaseHookInput & {
+  hook_event_name: 'Setup'
+  additionalContext?: string
+  [key: string]: unknown
+}
+
+export type WorktreeCreateHookInput = BaseHookInput & {
+  hook_event_name: 'WorktreeCreate'
+  worktree_path?: string
+  branch?: string
+  [key: string]: unknown
+}
+
+export type WorktreeRemoveHookInput = BaseHookInput & {
+  hook_event_name: 'WorktreeRemove'
+  worktree_path?: string
+  [key: string]: unknown
+}
+
+// Widen SyncHookJSONOutput.hookSpecificOutput so utils/hooks.ts can narrow on
+// the wider HookEvent set (Setup, PermissionDenied, Elicitation, etc.).
+// Upstream type only covers a subset; we add the remaining shapes.
+export type SyncHookJSONOutput = {
+  continue?: boolean
+  suppressOutput?: boolean
+  stopReason?: string
+  decision?: 'approve' | 'block'
+  systemMessage?: string
+  reason?: string
+  hookSpecificOutput?:
+    | {
+        hookEventName: 'PreToolUse'
+        permissionDecision?: 'allow' | 'deny' | 'ask'
+        permissionDecisionReason?: string
+        updatedInput?: Record<string, unknown>
+        additionalContext?: string
+      }
+    | {
+        hookEventName: 'UserPromptSubmit'
+        additionalContext?: string
+      }
+    | {
+        hookEventName: 'SessionStart'
+        additionalContext?: string
+        initialUserMessage?: string
+        watchPaths?: string[]
+      }
+    | {
+        hookEventName: 'SubagentStart'
+        additionalContext?: string
+      }
+    | {
+        hookEventName: 'PostToolUse'
+        additionalContext?: string
+        updatedMCPToolOutput?: unknown
+      }
+    | {
+        hookEventName: 'PostToolUseFailure'
+        additionalContext?: string
+      }
+    | {
+        hookEventName: 'PermissionRequest'
+        decision?:
+          | {
+              behavior: 'allow'
+              updatedInput?: Record<string, unknown>
+              updatedPermissions?: unknown[]
+            }
+          | {
+              behavior: 'deny'
+              message?: string
+              interrupt?: boolean
+            }
+      }
+    | {
+        hookEventName: 'Setup'
+        additionalContext?: string
+      }
+    | {
+        hookEventName: 'PermissionDenied'
+        retry?: boolean
+      }
+    | {
+        hookEventName: 'Elicitation'
+        action?: 'accept' | 'decline' | 'cancel' | string
+        content?: unknown
+      }
+    | {
+        hookEventName: 'ElicitationResult'
+        action?: 'accept' | 'decline' | 'cancel' | string
+        content?: unknown
+      }
+}
+
+export type HookJSONOutput =
+  | { async: true; asyncTimeout?: number }
+  | SyncHookJSONOutput

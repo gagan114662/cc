@@ -402,7 +402,7 @@ function resolveOptionModel(value?: string): string | undefined {
   if (!value) return undefined;
   return value === NO_PREFERENCE ? getDefaultMainLoopModel() : parseUserSpecifiedModel(value);
 }
-function EffortLevelIndicator(t0: Record<string, unknown>) {
+function EffortLevelIndicator(t0: any) {
   const $ = _c(5);
   const {
     effort

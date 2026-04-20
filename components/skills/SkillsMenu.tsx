@@ -45,7 +45,7 @@ function getSourceSubtitle(source: SkillSource, skills: SkillCommand[]): string 
   const hasCommandsSkills = skills.some(s => s.loadedFrom === 'commands_DEPRECATED');
   return hasCommandsSkills ? `${skillsPath}, ${getDisplayPath(getSkillsPath(source, 'commands'))}` : skillsPath;
 }
-export function SkillsMenu(t0: Record<string, unknown>) {
+export function SkillsMenu(t0: any) {
   const $ = _c(35);
   const {
     onExit,

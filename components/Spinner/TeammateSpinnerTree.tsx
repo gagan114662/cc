@@ -209,7 +209,7 @@ function _temp2(s_0: any) {
 function _temp(s: any) {
   return s.tasks;
 }
-function HideRow(t0: Record<string, unknown>) {
+function HideRow(t0: any) {
   const $ = _c(18);
   const {
     isSelected

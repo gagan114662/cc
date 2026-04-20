@@ -180,7 +180,7 @@ export function Clawd(t0: Props) {
   }
   return t12;
 }
-function AppleTerminalClawd(t0: Record<string, unknown>) {
+function AppleTerminalClawd(t0: any) {
   const $ = _c(10);
   const {
     pose

@@ -190,7 +190,7 @@ export function RemoteEnvironmentDialog(t0: Props) {
   }
   return t5;
 }
-function EnvironmentLabel(t0: Record<string, unknown>) {
+function EnvironmentLabel(t0: any) {
   const $ = _c(7);
   const {
     environment
@@ -222,7 +222,7 @@ function EnvironmentLabel(t0: Record<string, unknown>) {
   }
   return t3;
 }
-function SingleEnvironmentContent(t0: Record<string, unknown>) {
+function SingleEnvironmentContent(t0: any) {
   const $ = _c(6);
   const {
     environment,
@@ -257,7 +257,7 @@ function SingleEnvironmentContent(t0: Record<string, unknown>) {
   }
   return t3;
 }
-function MultipleEnvironmentsContent(t0: Record<string, unknown>) {
+function MultipleEnvironmentsContent(t0: any) {
   const $ = _c(18);
   const {
     environments,

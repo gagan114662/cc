@@ -141,7 +141,7 @@ function PostGracePeriodContentBody() {
   }
   return t6;
 }
-export function GroveDialog(t0: Record<string, unknown>) {
+export function GroveDialog(t0: any) {
   const $ = _c(34);
   const {
     showIfAlreadyViewed,

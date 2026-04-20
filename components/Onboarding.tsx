@@ -211,7 +211,7 @@ export function Onboarding({
       </Box>
     </Box>;
 }
-export function SkippableStep(t0: Record<string, unknown>) {
+export function SkippableStep(t0: any) {
   const $ = _c(4);
   const {
     skip,

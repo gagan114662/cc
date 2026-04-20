@@ -319,8 +319,36 @@ export type CollapsedReadSearchGroup = {
   type: 'collapsed_read_search'
   uuid: string
   timestamp?: string
-  messages: Array<AssistantMessage | UserMessage>
+  messages: Array<AssistantMessage | UserMessage | GroupedToolUseMessage>
   relevantMemories?: Array<{ path: string; content: string; mtimeMs: number }>
+  // Counts and metadata accumulated by createCollapsedGroup in
+  // utils/collapseReadSearch.ts. All optional because they're populated only
+  // when the corresponding tool kind appeared in the group.
+  searchCount?: number
+  readCount?: number
+  listCount?: number
+  replCount?: number
+  memorySearchCount?: number
+  memoryReadCount?: number
+  memoryWriteCount?: number
+  teamMemorySearchCount?: number
+  teamMemoryReadCount?: number
+  teamMemoryWriteCount?: number
+  readFilePaths?: string[]
+  searchArgs?: unknown[]
+  latestDisplayHint?: unknown
+  displayMessage?: AssistantMessage | UserMessage | GroupedToolUseMessage
+  mcpCallCount?: number
+  mcpServerNames?: string[]
+  bashCount?: number
+  gitOpBashCount?: number
+  commits?: unknown[]
+  pushes?: unknown[]
+  branches?: unknown[]
+  prs?: unknown[]
+  hookCount?: number
+  hookTotalMs?: number
+  hookInfos?: unknown[]
 }
 
 export type RenderableMessage =

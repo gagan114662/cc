@@ -149,7 +149,7 @@ export function DiffFileList(t0: Props) {
   }
   return t6;
 }
-function FileItem(t0: Record<string, unknown>) {
+function FileItem(t0: any) {
   const $ = _c(14);
   const {
     file,
@@ -206,7 +206,7 @@ function FileItem(t0: Record<string, unknown>) {
   }
   return t6;
 }
-function FileStats(t0: Record<string, unknown>) {
+function FileStats(t0: any) {
   const $ = _c(20);
   const {
     file,

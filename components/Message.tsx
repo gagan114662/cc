@@ -353,7 +353,7 @@ function MessageImpl(t0: Props) {
       }
   }
 }
-function UserMessage(t0: Record<string, unknown>) {
+function UserMessage(t0: any) {
   const $ = _c(20);
   const {
     message,
@@ -430,7 +430,7 @@ function UserMessage(t0: Record<string, unknown>) {
       }
   }
 }
-function AssistantMessageBlock(t0: Record<string, unknown>) {
+function AssistantMessageBlock(t0: any) {
   const $ = _c(45);
   const {
     param,

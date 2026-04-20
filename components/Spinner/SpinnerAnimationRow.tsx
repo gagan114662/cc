@@ -229,7 +229,7 @@ export function SpinnerAnimationRow({
       {status}
     </Box>;
 }
-function SpinnerModeGlyph(t0: Record<string, unknown>) {
+function SpinnerModeGlyph(t0: any) {
   const $ = _c(2);
   const {
     mode

@@ -84,7 +84,7 @@ function CollapseLabel(t0: Props) {
   }
   return t5;
 }
-export function TokenWarning(t0: Record<string, unknown>) {
+export function TokenWarning(t0: any) {
   const $ = _c(13);
   const {
     tokenUsage,

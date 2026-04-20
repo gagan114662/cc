@@ -312,7 +312,7 @@ function StatsContent(t0: StatsContentProps) {
 function _temp(prev_0: any) {
   return prev_0 === "Overview" ? "Models" : "Overview";
 }
-function DateRangeSelector(t0: Record<string, unknown>) {
+function DateRangeSelector(t0: any) {
   const $ = _c(9);
   const {
     dateRange,
@@ -713,7 +713,7 @@ function generateFunFactoid(stats: ClaudeCodeStats, totalTokens: number): string
   const randomIndex = Math.floor(Math.random() * factoids.length);
   return factoids[randomIndex];
 }
-function ModelsTab(t0: Record<string, unknown>) {
+function ModelsTab(t0: any) {
   const $ = _c(15);
   const {
     stats,
