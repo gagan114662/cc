@@ -97,3 +97,12 @@ declare module 'image-processor-napi' {
 declare module 'url-handler-napi' {
   export function waitForUrlEvent(...args: unknown[]): Promise<unknown>
 }
+
+declare module 'react/compiler-runtime' {
+  // React Compiler auto-injects `import { c as _c } from 'react/compiler-runtime'`
+  // then writes `const $ = _c(n); if ($[i] === sentinel) $[i] = value; return $[i]`.
+  // Return `any[]` so the cache-slot reads erase type-wise — otherwise every
+  // memoized JSX expression degrades to `unknown` and cascades TS2786/TS18046.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export function c(size: number): any[]
+}
