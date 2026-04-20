@@ -34,7 +34,7 @@ function renderInputGuide(exitState: ExitState): React.ReactNode {
       <ConfigurableShortcutHint action="confirm:no" context="Confirmation" fallback="Esc" description="cancel" />
     </Byline>;
 }
-export function WorkflowMultiselectDialog(t0) {
+export function WorkflowMultiselectDialog(t0: Record<string, unknown>) {
   const $ = _c(14);
   const {
     onSubmit,
@@ -43,7 +43,7 @@ export function WorkflowMultiselectDialog(t0) {
   const [showError, setShowError] = useState(false);
   let t1;
   if ($[0] !== onSubmit) {
-    t1 = selectedValues => {
+    t1 = (selectedValues: unknown) => {
       if (selectedValues.length === 0) {
         setShowError(true);
         return;
@@ -119,7 +119,7 @@ export function WorkflowMultiselectDialog(t0) {
   }
   return t8;
 }
-function _temp(workflow) {
+function _temp(workflow: unknown) {
   return {
     label: workflow.label,
     value: workflow.value

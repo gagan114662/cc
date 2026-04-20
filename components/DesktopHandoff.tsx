@@ -24,7 +24,7 @@ type Props = {
     display?: CommandResultDisplay;
   }) => void;
 };
-export function DesktopHandoff(t0) {
+export function DesktopHandoff(t0: Props) {
   const $ = _c(20);
   const {
     onDone
@@ -34,7 +34,7 @@ export function DesktopHandoff(t0) {
   const [downloadMessage, setDownloadMessage] = useState("");
   let t1;
   if ($[0] !== error || $[1] !== onDone || $[2] !== state) {
-    t1 = input => {
+    t1 = (input: unknown) => {
       if (state === "error") {
         onDone(error ?? "Unknown error", {
           display: "system"
@@ -183,7 +183,7 @@ export function DesktopHandoff(t0) {
   }
   return t6;
 }
-async function _temp2(onDone_0) {
+async function _temp2(onDone_0: unknown) {
   onDone_0("Session transferred to Claude Desktop", {
     display: "system"
   });

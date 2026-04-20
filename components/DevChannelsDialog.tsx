@@ -9,7 +9,7 @@ type Props = {
   channels: ChannelEntry[];
   onAccept(): void;
 };
-export function DevChannelsDialog(t0) {
+export function DevChannelsDialog(t0: Props) {
   const $ = _c(14);
   const {
     channels,
@@ -17,7 +17,7 @@ export function DevChannelsDialog(t0) {
   } = t0;
   let t1;
   if ($[0] !== onAccept) {
-    t1 = function onChange(value) {
+    t1 = function onChange(value: unknown) {
       bb2: switch (value) {
         case "accept":
           {
@@ -96,7 +96,7 @@ export function DevChannelsDialog(t0) {
   }
   return t8;
 }
-function _temp2(c) {
+function _temp2(c: unknown) {
   return c.kind === "plugin" ? `plugin:${c.name}@${c.marketplace}` : `server:${c.name}`;
 }
 function _temp() {

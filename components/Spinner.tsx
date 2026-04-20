@@ -313,7 +313,7 @@ type BriefSpinnerProps = {
   mode: SpinnerMode;
   overrideMessage?: string | null;
 };
-function BriefSpinner(t0) {
+function BriefSpinner(t0: BriefSpinnerProps) {
   const $ = _c(31);
   const {
     mode,
@@ -439,10 +439,10 @@ function BriefSpinner(t0) {
 // as BriefSpinner so the input bar never jumps when toggling between
 // working/idle/disconnected. See BriefSpinner's comment for the
 // Notifications overlay coupling.
-function _temp6(s_0) {
+function _temp6(s_0: unknown) {
   return count(Object.values(s_0.tasks), isBackgroundTask) + s_0.remoteBackgroundTaskCount;
 }
-function _temp5(s) {
+function _temp5(s: unknown) {
   return s.remoteConnectionStatus;
 }
 function _temp4() {
@@ -498,10 +498,10 @@ export function BriefIdleStatus() {
   }
   return t2;
 }
-function _temp8(s_0) {
+function _temp8(s_0: unknown) {
   return count(Object.values(s_0.tasks), isBackgroundTask) + s_0.remoteBackgroundTaskCount;
 }
-function _temp7(s) {
+function _temp7(s: unknown) {
   return s.remoteConnectionStatus;
 }
 export function Spinner() {

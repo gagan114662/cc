@@ -7,7 +7,7 @@ type Props = {
   children: React.ReactNode;
   height?: number;
 };
-export function MessageResponse(t0) {
+export function MessageResponse(t0: Props) {
   const $ = _c(8);
   const {
     children,
@@ -60,7 +60,7 @@ export function MessageResponse(t0) {
 // is rendered as a descendant of another MessageResponse. We use it
 // to avoid rendering nested ⎿ characters.
 const MessageResponseContext = React.createContext(false);
-function MessageResponseProvider(t0) {
+function MessageResponseProvider(t0: Record<string, unknown>) {
   const $ = _c(2);
   const {
     children

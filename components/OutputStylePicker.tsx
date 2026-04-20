@@ -25,7 +25,7 @@ export type OutputStylePickerProps = {
   onCancel: () => void;
   isStandaloneCommand?: boolean;
 };
-export function OutputStylePicker(t0) {
+export function OutputStylePicker(t0: OutputStylePickerProps) {
   const $ = _c(16);
   const {
     initialStyle,
@@ -66,7 +66,7 @@ export function OutputStylePicker(t0) {
   useEffect(t2, t3);
   let t4;
   if ($[3] !== onComplete) {
-    t4 = style => {
+    t4 = (style: unknown) => {
       const outputStyle = style as OutputStyle;
       onComplete(outputStyle);
     };

@@ -23,7 +23,7 @@ type Props = {
   onDone: (message?: string) => void;
 };
 type LoadingState = 'loading' | 'updating' | null;
-export function RemoteEnvironmentDialog(t0) {
+export function RemoteEnvironmentDialog(t0: Props) {
   const $ = _c(27);
   const {
     onDone
@@ -82,13 +82,13 @@ export function RemoteEnvironmentDialog(t0) {
   useEffect(t2, t3);
   let t4;
   if ($[3] !== environments || $[4] !== onDone) {
-    t4 = function handleSelect(value) {
+    t4 = function handleSelect(value: unknown) {
       if (value === "cancel") {
         onDone();
         return;
       }
       setLoadingState("updating");
-      const selectedEnv = environments.find(env => env.environment_id === value);
+      const selectedEnv = environments.find((env: unknown) => env.environment_id === value);
       if (!selectedEnv) {
         onDone("Error: Selected environment not found");
         return;
@@ -190,7 +190,7 @@ export function RemoteEnvironmentDialog(t0) {
   }
   return t5;
 }
-function EnvironmentLabel(t0) {
+function EnvironmentLabel(t0: Record<string, unknown>) {
   const $ = _c(7);
   const {
     environment
@@ -222,7 +222,7 @@ function EnvironmentLabel(t0) {
   }
   return t3;
 }
-function SingleEnvironmentContent(t0) {
+function SingleEnvironmentContent(t0: Record<string, unknown>) {
   const $ = _c(6);
   const {
     environment,
@@ -257,7 +257,7 @@ function SingleEnvironmentContent(t0) {
   }
   return t3;
 }
-function MultipleEnvironmentsContent(t0) {
+function MultipleEnvironmentsContent(t0: Record<string, unknown>) {
   const $ = _c(18);
   const {
     environments,
@@ -331,7 +331,7 @@ function MultipleEnvironmentsContent(t0) {
   }
   return t7;
 }
-function _temp(env) {
+function _temp(env: unknown) {
   return {
     label: <Text>{env.name} <Text dimColor={true}>({env.environment_id})</Text></Text>,
     value: env.environment_id

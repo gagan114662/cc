@@ -15,7 +15,7 @@ type Props = {
  * Dialog shown when settings files have validation errors.
  * User must choose to continue (skipping invalid files) or exit to fix them.
  */
-export function InvalidSettingsDialog(t0) {
+export function InvalidSettingsDialog(t0: Props) {
   const $ = _c(13);
   const {
     settingsErrors,
@@ -24,7 +24,7 @@ export function InvalidSettingsDialog(t0) {
   } = t0;
   let t1;
   if ($[0] !== onContinue || $[1] !== onExit) {
-    t1 = function handleSelect(value) {
+    t1 = function handleSelect(value: unknown) {
       if (value === "exit") {
         onExit();
       } else {

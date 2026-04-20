@@ -39,7 +39,7 @@
     "autoresearch:status": "bun ./scripts/autoresearchStatus.ts",
     "build:autoresearch-cycle": "bun build ./scripts/autoresearchCycle.ts --outfile ./dist/autoresearch-cycle.js --target bun --format esm --define MACRO='{\"VERSION\":\"0.0.0-rebuilt\",\"BUILD_TIME\":\"2026-03-31T00:00:00.000Z\",\"FEEDBACK_CHANNEL\":\"#claude-code\",\"ISSUES_EXPLAINER\":\"open an issue\",\"PACKAGE_URL\":\"@anthropic-ai/claude-code\",\"NATIVE_PACKAGE_URL\":\"@anthropic-ai/claude-code-native\",\"VERSION_CHANGELOG\":\"\"}'",
     "autoresearch:cycle": "bun run build:autoresearch-cycle && bun ./dist/autoresearch-cycle.js",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "NODE_OPTIONS=--max-old-space-size=6144 tsc --noEmit",
     "typecheck:employee": "tsc --noEmit --allowJs false --skipLibCheck ./types/employee.ts",
     "lint": "eslint . --cache --no-error-on-unmatched-pattern",
     "lint:employee": "eslint ./types/employee.ts ./utils/employeeConfig.ts ./tools/AgentTool/builtInAgents.ts ./tools/AgentTool/built-in/engineeringLeadAgent.ts ./commands/employee/index.ts ./commands/employee/employee.tsx ./scripts/employeeSmoke.ts ./entrypoints/cli.tsx --cache --no-error-on-unmatched-pattern",

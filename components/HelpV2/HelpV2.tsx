@@ -17,7 +17,7 @@ type Props = {
   }) => void;
   commands: Command[];
 };
-export function HelpV2(t0) {
+export function HelpV2(t0: Props) {
   const $ = _c(44);
   const {
     onClose,
@@ -57,7 +57,7 @@ export function HelpV2(t0) {
   let t3;
   if ($[3] !== commands) {
     const builtinNames = builtInCommandNames();
-    builtinCommands = commands.filter(cmd => builtinNames.has(cmd.name) && !cmd.isHidden);
+    builtinCommands = commands.filter((cmd: unknown) => builtinNames.has(cmd.name) && !cmd.isHidden);
     let t4;
     if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
       t4 = [];
@@ -66,7 +66,7 @@ export function HelpV2(t0) {
       t4 = $[7];
     }
     antOnlyCommands = t4;
-    t3 = commands.filter(cmd_2 => !builtinNames.has(cmd_2.name) && !cmd_2.isHidden);
+    t3 = commands.filter((cmd_2: unknown) => !builtinNames.has(cmd_2.name) && !cmd_2.isHidden);
     $[3] = commands;
     $[4] = antOnlyCommands;
     $[5] = builtinCommands;

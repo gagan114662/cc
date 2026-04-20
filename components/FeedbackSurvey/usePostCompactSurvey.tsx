@@ -29,7 +29,7 @@ function hasMessageAfterBoundary(messages: Message[], boundaryUuid: string): boo
   }
   return false;
 }
-export function usePostCompactSurvey(messages, isLoading, t0, t1) {
+export function usePostCompactSurvey(messages: unknown, isLoading: unknown, t0: Record<string, unknown>, t1: unknown) {
   const $ = _c(23);
   const hasActivePrompt = t0 === undefined ? false : t0;
   let t2;
@@ -169,13 +169,13 @@ export function usePostCompactSurvey(messages, isLoading, t0, t1) {
   }
   return t11;
 }
-function _temp4(msg_0) {
+function _temp4(msg_0: unknown) {
   return msg_0.uuid;
 }
-function _temp3(msg) {
+function _temp3(msg: unknown) {
   return isCompactBoundaryMessage(msg);
 }
-function _temp2(appearanceId_0, selected) {
+function _temp2(appearanceId_0: unknown, selected: unknown) {
   const smCompactionEnabled_0 = shouldUseSessionMemoryCompaction();
   logEvent("tengu_post_compact_survey_event", {
     event_type: "responded" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -190,7 +190,7 @@ function _temp2(appearanceId_0, selected) {
     survey_type: "post_compact"
   });
 }
-function _temp(appearanceId) {
+function _temp(appearanceId: unknown) {
   const smCompactionEnabled = shouldUseSessionMemoryCompaction();
   logEvent("tengu_post_compact_survey_event", {
     event_type: "appeared" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

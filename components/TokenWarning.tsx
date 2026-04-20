@@ -18,7 +18,7 @@ type Props = {
  * (hooks-in-conditionals would violate React rules). The parent only
  * renders this when feature('CONTEXT_COLLAPSE') + isContextCollapseEnabled().
  */
-function CollapseLabel(t0) {
+function CollapseLabel(t0: Props) {
   const $ = _c(8);
   const {
     upgradeMessage
@@ -84,7 +84,7 @@ function CollapseLabel(t0) {
   }
   return t5;
 }
-export function TokenWarning(t0) {
+export function TokenWarning(t0: Record<string, unknown>) {
   const $ = _c(13);
   const {
     tokenUsage,

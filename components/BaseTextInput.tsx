@@ -19,7 +19,7 @@ type BaseTextInputComponentProps = BaseTextInputProps & {
 /**
  * A base component for text inputs that handles rendering and basic input
  */
-export function BaseTextInput(t0) {
+export function BaseTextInput(t0: BaseTextInputComponentProps) {
   const $ = _c(14);
   const {
     inputState,
@@ -90,12 +90,12 @@ export function BaseTextInput(t0) {
   });
   const commandWithoutArgs = props.value && props.value.trim().indexOf(" ") === -1 || props.value && props.value.endsWith(" ");
   const showArgumentHint = Boolean(props.argumentHint && props.value && commandWithoutArgs && props.value.startsWith("/"));
-  const cursorFiltered = props.showCursor && props.highlights ? props.highlights.filter(h => h.dimColor || props.cursorOffset < h.start || props.cursorOffset >= h.end) : props.highlights;
+  const cursorFiltered = props.showCursor && props.highlights ? props.highlights.filter((h: unknown) => h.dimColor || props.cursorOffset < h.start || props.cursorOffset >= h.end) : props.highlights;
   const {
     viewportCharOffset,
     viewportCharEnd
   } = inputState;
-  const filteredHighlights = cursorFiltered && viewportCharOffset > 0 ? cursorFiltered.filter(h_0 => h_0.end > viewportCharOffset && h_0.start < viewportCharEnd).map(h_1 => ({
+  const filteredHighlights = cursorFiltered && viewportCharOffset > 0 ? cursorFiltered.filter((h_0: unknown) => h_0.end > viewportCharOffset && h_0.start < viewportCharEnd).map((h_1: unknown) => ({
     ...h_1,
     start: Math.max(0, h_1.start - viewportCharOffset),
     end: h_1.end - viewportCharOffset

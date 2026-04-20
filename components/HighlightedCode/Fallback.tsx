@@ -36,7 +36,7 @@ function cachedHighlight(hl: NonNullable<Awaited<ReturnType<typeof getCliHighlig
   hlCache.set(key, out);
   return out;
 }
-export function HighlightedCodeFallback(t0) {
+export function HighlightedCodeFallback(t0: Record<string, unknown>) {
   const $ = _c(20);
   const {
     code,
@@ -121,7 +121,7 @@ export function HighlightedCodeFallback(t0) {
   }
   return t8;
 }
-function Highlighted(t0) {
+function Highlighted(t0: Record<string, unknown>) {
   const $ = _c(10);
   const {
     codeWithSpaces,

@@ -68,7 +68,7 @@ export function AwsAuthStatusBox() {
   }
   return t6;
 }
-function _temp(line, index) {
+function _temp(line: string, index: number) {
   const m = line.match(URL_RE);
   if (!m) {
     return <Text key={index} dimColor={true}>{line}</Text>;

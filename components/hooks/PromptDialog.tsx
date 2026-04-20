@@ -12,7 +12,7 @@ type Props = {
   onRespond: (key: string) => void;
   onAbort: () => void;
 };
-export function PromptDialog(t0) {
+export function PromptDialog(t0: Props) {
   const $ = _c(15);
   const {
     title,
@@ -50,7 +50,7 @@ export function PromptDialog(t0) {
   }
   let t4;
   if ($[5] !== onRespond) {
-    t4 = value => {
+    t4 = (value: unknown) => {
       onRespond(value);
     };
     $[5] = onRespond;
@@ -80,7 +80,7 @@ export function PromptDialog(t0) {
   }
   return t6;
 }
-function _temp(opt) {
+function _temp(opt: unknown) {
   return {
     label: opt.label,
     value: opt.key,

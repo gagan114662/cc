@@ -19,7 +19,7 @@ const inputToResponse: Record<ResponseInput, FeedbackSurveyResponse> = {
 } as const;
 export const isValidResponseInput = (input: string): input is ResponseInput => (RESPONSE_INPUTS as readonly string[]).includes(input);
 const DEFAULT_MESSAGE = 'How is Claude doing this session? (optional)';
-export function FeedbackSurveyView(t0) {
+export function FeedbackSurveyView(t0: Props) {
   const $ = _c(15);
   const {
     onSelect,
@@ -30,7 +30,7 @@ export function FeedbackSurveyView(t0) {
   const message = t1 === undefined ? DEFAULT_MESSAGE : t1;
   let t2;
   if ($[0] !== onSelect) {
-    t2 = digit => onSelect(inputToResponse[digit]);
+    t2 = (digit: unknown) => onSelect(inputToResponse[digit]);
     $[0] = onSelect;
     $[1] = t2;
   } else {

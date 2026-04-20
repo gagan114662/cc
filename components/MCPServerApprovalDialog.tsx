@@ -9,7 +9,7 @@ type Props = {
   serverName: string;
   onDone(): void;
 };
-export function MCPServerApprovalDialog(t0) {
+export function MCPServerApprovalDialog(t0: Props) {
   const $ = _c(13);
   const {
     serverName,
@@ -17,7 +17,7 @@ export function MCPServerApprovalDialog(t0) {
   } = t0;
   let t1;
   if ($[0] !== onDone || $[1] !== serverName) {
-    t1 = function onChange(value) {
+    t1 = function onChange(value: unknown) {
       logEvent("tengu_mcp_dialog_choice", {
         choice: value as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       });

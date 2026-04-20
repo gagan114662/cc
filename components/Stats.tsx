@@ -79,7 +79,7 @@ function createAllTimeStatsPromise(): Promise<StatsResult> {
     };
   });
 }
-export function Stats(t0) {
+export function Stats(t0: StatsContentProps) {
   const $ = _c(4);
   const {
     onClose
@@ -118,7 +118,7 @@ type StatsContentProps = {
  * Inner component that uses React 19's use() to read the stats promise.
  * Suspends while loading all-time stats, then handles date range changes without suspending.
  */
-function StatsContent(t0) {
+function StatsContent(t0: StatsContentProps) {
   const $ = _c(34);
   const {
     allTimePromise,
@@ -151,7 +151,7 @@ function StatsContent(t0) {
       setIsLoadingFiltered(true);
       aggregateClaudeCodeStatsForRange(dateRange).then(data => {
         if (!cancelled) {
-          setStatsCache(prev => ({
+          setStatsCache((prev: unknown) => ({
             ...prev,
             [dateRange]: data
           }));
@@ -203,7 +203,7 @@ function StatsContent(t0) {
   useKeybinding("confirm:no", handleClose, t5);
   let t6;
   if ($[8] !== activeTab || $[9] !== dateRange || $[10] !== displayStats || $[11] !== onClose) {
-    t6 = (input, key) => {
+    t6 = (input: unknown, key: unknown) => {
       if (key.ctrl && (input === "c" || input === "d")) {
         onClose("Stats dialog dismissed", {
           display: "system"
@@ -309,10 +309,10 @@ function StatsContent(t0) {
   }
   return t12;
 }
-function _temp(prev_0) {
+function _temp(prev_0: unknown) {
   return prev_0 === "Overview" ? "Models" : "Overview";
 }
-function DateRangeSelector(t0) {
+function DateRangeSelector(t0: Record<string, unknown>) {
   const $ = _c(9);
   const {
     dateRange,
@@ -713,7 +713,7 @@ function generateFunFactoid(stats: ClaudeCodeStats, totalTokens: number): string
   const randomIndex = Math.floor(Math.random() * factoids.length);
   return factoids[randomIndex];
 }
-function ModelsTab(t0) {
+function ModelsTab(t0: Record<string, unknown>) {
   const $ = _c(15);
   const {
     stats,
@@ -813,21 +813,21 @@ function ModelsTab(t0) {
           return <ModelEntry key={model_0} model={model_0} usage={usage_0} totalTokens={totalTokens} />;
         })}</Box>{t9}</Box>{t10}</Box>;
 }
-function _temp1(item, i) {
+function _temp1(item: unknown, i: number) {
   return <Text key={item.model}>{i > 0 ? " \xB7 " : ""}<Ansi>{item.coloredBullet}</Ansi> {item.model}</Text>;
 }
-function _temp0(t0) {
+function _temp0(t0: ModelEntryProps) {
   const [model] = t0;
   return model;
 }
-function _temp9(sum, t0) {
+function _temp9(sum: unknown, t0: ModelEntryProps) {
   const [, usage] = t0;
   return sum + usage.inputTokens + usage.outputTokens;
 }
-function _temp8(prev_0) {
+function _temp8(prev_0: unknown) {
   return Math.max(prev_0 - 2, 0);
 }
-function _temp7(t0, t1) {
+function _temp7(t0: ModelEntryProps, t1: unknown) {
   const [, a] = t0;
   const [, b] = t1;
   return b.inputTokens + b.outputTokens - (a.inputTokens + a.outputTokens);
@@ -841,7 +841,7 @@ type ModelEntryProps = {
   };
   totalTokens: number;
 };
-function ModelEntry(t0) {
+function ModelEntry(t0: ModelEntryProps) {
   const $ = _c(21);
   const {
     model,

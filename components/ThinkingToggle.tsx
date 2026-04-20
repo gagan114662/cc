@@ -15,7 +15,7 @@ export type Props = {
   onCancel?: () => void;
   isMidConversation?: boolean;
 };
-export function ThinkingToggle(t0) {
+export function ThinkingToggle(t0: Props) {
   const $ = _c(27);
   const {
     currentValue,
@@ -94,7 +94,7 @@ export function ThinkingToggle(t0) {
   useKeybinding("confirm:yes", t4, t6);
   let t7;
   if ($[10] !== currentValue || $[11] !== isMidConversation || $[12] !== onSelect) {
-    t7 = function handleSelectChange(value) {
+    t7 = function handleSelectChange(value: unknown) {
       const selected = value === "true";
       if (isMidConversation && selected !== currentValue) {
         setConfirmationPending(selected);

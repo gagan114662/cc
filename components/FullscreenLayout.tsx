@@ -267,7 +267,7 @@ export function computeUnseenDivider(messages: readonly Message[], dividerIndex:
  * (alt buffer + mouse tracking + height constraint) lives at REPL's root
  * so nothing can accidentally render outside it.
  */
-export function FullscreenLayout(t0) {
+export function FullscreenLayout(t0: Record<string, unknown>) {
   const $ = _c(47);
   const {
     scrollable,
@@ -303,7 +303,7 @@ export function FullscreenLayout(t0) {
   const chromeCtx = t4;
   let t5;
   if ($[1] !== scrollRef) {
-    t5 = listener => scrollRef?.current?.subscribe(listener) ?? _temp;
+    t5 = (listener: unknown) => scrollRef?.current?.subscribe(listener) ?? _temp;
     $[1] = scrollRef;
     $[2] = t5;
   } else {
@@ -478,7 +478,7 @@ function _temp3() {
     ink.onHyperlinkClick = undefined;
   };
 }
-function _temp2(url) {
+function _temp2(url: unknown) {
   if (url.startsWith("file:")) {
     try {
       openPath(fileURLToPath(url));
@@ -488,7 +488,7 @@ function _temp2(url) {
   }
 }
 function _temp() {}
-function NewMessagesPill(t0) {
+function NewMessagesPill(t0: Record<string, unknown>) {
   const $ = _c(10);
   const {
     count,
@@ -548,7 +548,7 @@ function NewMessagesPill(t0) {
 // even with scrollTop unchanged (the DECSTBM region top shifts with the
 // ScrollBox, and the diff engine sees "everything moved"). Fixed height
 // keeps the ScrollBox anchored; only the header TEXT changes, not its box.
-function StickyPromptHeader(t0) {
+function StickyPromptHeader(t0: Record<string, unknown>) {
   const $ = _c(8);
   const {
     text,

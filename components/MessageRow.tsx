@@ -90,7 +90,7 @@ export function hasContentAfterIndex(messages: RenderableMessage[], index: numbe
   }
   return false;
 }
-function MessageRowImpl(t0) {
+function MessageRowImpl(t0: Record<string, unknown>) {
   const $ = _c(64);
   const {
     message: msg,
@@ -172,7 +172,7 @@ function MessageRowImpl(t0) {
       if ($[23] !== inProgressToolUseIDs || $[24] !== msg.messages) {
         let t6;
         if ($[26] !== inProgressToolUseIDs) {
-          t6 = m => {
+          t6 = (m: unknown) => {
             const content = m.message.content[0];
             return content?.type === "tool_use" && inProgressToolUseIDs.has(content.id);
           };
@@ -290,7 +290,7 @@ function MessageRowImpl(t0) {
  * Checks if a message is "streaming" - i.e., its content may still be changing.
  * Exported for testing.
  */
-function _temp(c) {
+function _temp(c: unknown) {
   return c.type === "text";
 }
 export function isMessageStreaming(msg: RenderableMessage, streamingToolUseIDs: Set<string>): boolean {

@@ -8,7 +8,7 @@ type Props = {
   customApiKeyTruncated: string;
   onDone(approved: boolean): void;
 };
-export function ApproveApiKey(t0) {
+export function ApproveApiKey(t0: Props) {
   const $ = _c(17);
   const {
     customApiKeyTruncated,
@@ -16,7 +16,7 @@ export function ApproveApiKey(t0) {
   } = t0;
   let t1;
   if ($[0] !== customApiKeyTruncated || $[1] !== onDone) {
-    t1 = function onChange(value) {
+    t1 = function onChange(value: unknown) {
       bb2: switch (value) {
         case "yes":
           {

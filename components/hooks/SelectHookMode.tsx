@@ -21,7 +21,7 @@ type Props = {
   onSelect: (hook: IndividualHookConfig) => void;
   onCancel: () => void;
 };
-export function SelectHookMode(t0) {
+export function SelectHookMode(t0: Props) {
   const $ = _c(19);
   const {
     selectedEvent,
@@ -63,7 +63,7 @@ export function SelectHookMode(t0) {
   }
   let t3;
   if ($[7] !== hooksForSelectedMatcher || $[8] !== onSelect) {
-    t3 = value => {
+    t3 = (value: unknown) => {
       const index_0 = parseInt(value, 10);
       const hook_0 = hooksForSelectedMatcher[index_0];
       if (hook_0) {
@@ -99,7 +99,7 @@ export function SelectHookMode(t0) {
   }
   return t5;
 }
-function _temp2(hook, index) {
+function _temp2(hook: unknown, index: number) {
   return {
     label: `[${hook.config.type}] ${getHookDisplayText(hook.config)}`,
     value: index.toString(),

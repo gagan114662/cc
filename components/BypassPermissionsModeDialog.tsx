@@ -9,7 +9,7 @@ import { Dialog } from './design-system/Dialog.js';
 type Props = {
   onAccept(): void;
 };
-export function BypassPermissionsModeDialog(t0) {
+export function BypassPermissionsModeDialog(t0: Props) {
   const $ = _c(7);
   const {
     onAccept
@@ -24,7 +24,7 @@ export function BypassPermissionsModeDialog(t0) {
   React.useEffect(_temp, t1);
   let t2;
   if ($[1] !== onAccept) {
-    t2 = function onChange(value) {
+    t2 = function onChange(value: unknown) {
       bb3: switch (value) {
         case "accept":
           {

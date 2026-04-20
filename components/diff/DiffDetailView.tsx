@@ -22,7 +22,7 @@ type Props = {
  * Uses StructuredDiff for word-level diffing and syntax highlighting.
  * No scrolling - renders all lines (max 400 due to parsing limits).
  */
-export function DiffDetailView(t0) {
+export function DiffDetailView(t0: Props) {
   const $ = _c(53);
   const {
     filePath,
@@ -240,7 +240,7 @@ export function DiffDetailView(t0) {
   }
   let t6;
   if ($[39] !== columns || $[40] !== fileContent || $[41] !== filePath || $[42] !== firstLine || $[43] !== hunks) {
-    t6 = hunks.length === 0 ? <Text dimColor={true}>No diff content</Text> : hunks.map((hunk, index) => <StructuredDiff key={index} patch={hunk} filePath={filePath} firstLine={firstLine} fileContent={fileContent} dim={false} width={columns - 2 - 2} />);
+    t6 = hunks.length === 0 ? <Text dimColor={true}>No diff content</Text> : hunks.map((hunk: unknown, index: number) => <StructuredDiff key={index} patch={hunk} filePath={filePath} firstLine={firstLine} fileContent={fileContent} dim={false} width={columns - 2 - 2} />);
     $[39] = columns;
     $[40] = fileContent;
     $[41] = filePath;

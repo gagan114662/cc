@@ -22,7 +22,7 @@ interface InvalidConfigDialogProps {
 /**
  * Dialog shown when the Claude config file contains invalid JSON
  */
-function InvalidConfigDialog(t0) {
+function InvalidConfigDialog(t0: InvalidConfigDialogProps) {
   const $ = _c(19);
   const {
     filePath,
@@ -32,7 +32,7 @@ function InvalidConfigDialog(t0) {
   } = t0;
   let t1;
   if ($[0] !== onExit || $[1] !== onReset) {
-    t1 = value => {
+    t1 = (value: unknown) => {
       if (value === "exit") {
         onExit();
       } else {

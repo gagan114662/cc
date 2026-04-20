@@ -34,7 +34,7 @@ type DesktopUpsellSelection = 'try' | 'not-now' | 'never';
 type Props = {
   onDone: () => void;
 };
-export function DesktopUpsellStartup(t0) {
+export function DesktopUpsellStartup(t0: Props) {
   const $ = _c(14);
   const {
     onDone
@@ -61,7 +61,7 @@ export function DesktopUpsellStartup(t0) {
   }
   let t2;
   if ($[3] !== onDone) {
-    t2 = function handleSelect(value) {
+    t2 = function handleSelect(value: unknown) {
       switch (value) {
         case "try":
           {
@@ -144,7 +144,7 @@ export function DesktopUpsellStartup(t0) {
   }
   return t8;
 }
-function _temp2(prev_0) {
+function _temp2(prev_0: unknown) {
   if (prev_0.desktopUpsellDismissed) {
     return prev_0;
   }

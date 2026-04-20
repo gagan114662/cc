@@ -141,7 +141,7 @@ function PostGracePeriodContentBody() {
   }
   return t6;
 }
-export function GroveDialog(t0) {
+export function GroveDialog(t0: Record<string, unknown>) {
   const $ = _c(34);
   const {
     showIfAlreadyViewed,
@@ -191,7 +191,7 @@ export function GroveDialog(t0) {
   }
   let t3;
   if ($[5] !== groveConfig?.notice_is_grace_period || $[6] !== onDone) {
-    t3 = async function onChange(value) {
+    t3 = async function onChange(value: unknown) {
       bb21: switch (value) {
         case "accept_opt_in":
           {
@@ -318,7 +318,7 @@ export function GroveDialog(t0) {
   }
   let t12;
   if ($[24] !== onChange) {
-    t12 = value_0 => onChange(value_0 as 'accept_opt_in' | 'accept_opt_out' | 'defer');
+    t12 = (value_0: unknown) => onChange(value_0 as 'accept_opt_in' | 'accept_opt_out' | 'defer');
     $[24] = onChange;
     $[25] = t12;
   } else {
@@ -346,7 +346,7 @@ export function GroveDialog(t0) {
   }
   return t14;
 }
-function _temp(exitState) {
+function _temp(exitState: unknown) {
   return exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : <Byline><KeyboardShortcutHint shortcut="Enter" action="confirm" /><KeyboardShortcutHint shortcut="Esc" action="cancel" /></Byline>;
 }
 type PrivacySettingsDialogProps = {
@@ -354,7 +354,7 @@ type PrivacySettingsDialogProps = {
   domainExcluded?: boolean;
   onDone(): void;
 };
-export function PrivacySettingsDialog(t0) {
+export function PrivacySettingsDialog(t0: PrivacySettingsDialogProps) {
   const $ = _c(17);
   const {
     settings,
@@ -372,7 +372,7 @@ export function PrivacySettingsDialog(t0) {
   React.useEffect(_temp2, t1);
   let t2;
   if ($[1] !== domainExcluded || $[2] !== groveEnabled) {
-    t2 = async (input, key) => {
+    t2 = async (input: unknown, key: unknown) => {
       if (!domainExcluded && (key.tab || key.return || input === " ")) {
         const newValue = !groveEnabled;
         setGroveEnabled(newValue);
@@ -417,7 +417,7 @@ export function PrivacySettingsDialog(t0) {
   }
   let t4;
   if ($[7] !== domainExcluded) {
-    t4 = exitState => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : domainExcluded ? <KeyboardShortcutHint shortcut="Esc" action="cancel" /> : <Byline><KeyboardShortcutHint shortcut="Enter/Tab/Space" action="toggle" /><KeyboardShortcutHint shortcut="Esc" action="cancel" /></Byline>;
+    t4 = (exitState: unknown) => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : domainExcluded ? <KeyboardShortcutHint shortcut="Esc" action="cancel" /> : <Byline><KeyboardShortcutHint shortcut="Enter/Tab/Space" action="toggle" /><KeyboardShortcutHint shortcut="Esc" action="cancel" /></Byline>;
     $[7] = domainExcluded;
     $[8] = t4;
   } else {
