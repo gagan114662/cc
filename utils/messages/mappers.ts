@@ -1,5 +1,6 @@
 import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID } from 'crypto'
+import type { UUID } from '../../types/uuid.js'
 import { getSessionId } from 'src/bootstrap/state.js'
 import {
   LOCAL_COMMAND_STDERR_TAG,
@@ -152,7 +153,7 @@ export function toSDKMessages(messages: Message[]): SDKMessage[] {
               type: 'system',
               subtype: 'compact_boundary' as const,
               session_id: getSessionId(),
-              uuid: message.uuid,
+              uuid: message.uuid as SDKCompactBoundaryMessage['uuid'],
               compact_metadata: toSDKCompactMetadata(message.compactMetadata),
             },
           ]
@@ -210,7 +211,7 @@ export function localCommandOutputToSDKAssistantMessage(
     message: synthetic.message,
     parent_tool_use_id: null,
     session_id: getSessionId(),
-    uuid,
+    uuid: uuid as SDKAssistantMessage['uuid'],
   }
 }
 

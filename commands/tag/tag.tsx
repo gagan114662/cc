@@ -1,6 +1,6 @@
 import { c as _c } from "react/compiler-runtime";
 import chalk from 'chalk';
-import type { UUID } from 'crypto';
+import type { UUID } from '../../types/uuid.js';
 import * as React from 'react';
 import { getSessionId } from '../../bootstrap/state.js';
 import type { CommandResultDisplay } from '../../commands.js';

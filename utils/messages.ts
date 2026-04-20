@@ -12,7 +12,8 @@ import type {
   ToolUseBlock,
   ToolUseBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID } from 'crypto'
+import type { UUID } from '../types/uuid.js'
 import isObject from 'lodash-es/isObject.js'
 import last from 'lodash-es/last.js'
 import {

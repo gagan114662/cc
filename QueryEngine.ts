@@ -946,7 +946,7 @@ export class QueryEngine {
               type: 'system',
               subtype: 'compact_boundary' as const,
               session_id: getSessionId(),
-              uuid: message.uuid,
+              uuid: message.uuid as SDKCompactBoundaryMessage['uuid'],
               compact_metadata: toSDKCompactMetadata(message.compactMetadata),
             }
           }
