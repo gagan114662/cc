@@ -2,6 +2,7 @@ import { afterEach, describe, expect, test } from 'bun:test'
 import { mkdtemp, mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import path from 'node:path'
+import { summarizeWorkspaceLifecycle } from 'src/services/workspaces/lifecycleLog.js'
 import { performPostCreationSetup } from 'src/utils/worktree.js'
 
 const tempDirs: string[] = []
@@ -59,6 +60,13 @@ describe('worktree post-creation setup', () => {
     expect(
       await readFile(path.join(worktreePath, 'worktree-path.txt'), 'utf-8'),
     ).toBe(`${worktreePath}\n`)
+
+    const lifecycle = summarizeWorkspaceLifecycle(repoRoot, { recentLimit: 10 })
+    expect(lifecycle.total).toBe(2)
+    expect(lifecycle.byKind).toEqual([
+      { kind: 'worktree.setup.completed', count: 1 },
+      { kind: 'worktree.setup.started', count: 1 },
+    ])
   })
 
   test('surfaces setup script failures instead of silently leaving a half-ready worktree', async () => {

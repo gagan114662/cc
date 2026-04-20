@@ -44,6 +44,7 @@ import {
 } from './settings/settings.js'
 import { sleep } from './sleep.js'
 import { isInITerm2 } from './swarm/backends/detection.js'
+import { writeWorkspaceLifecycleEvent } from '../services/workspaces/lifecycleLog.js'
 
 const VALID_WORKTREE_SLUG_SEGMENT = /^[a-zA-Z0-9._-]+$/
 const MAX_WORKTREE_SLUG_LENGTH = 64
@@ -515,6 +516,15 @@ export async function performPostCreationSetup(
   worktreePath: string,
   parentWorktreePath: string = repoRoot,
 ): Promise<void> {
+  writeWorkspaceLifecycleEvent(
+    {
+      ts: new Date().toISOString(),
+      kind: 'worktree.setup.started',
+      worktreePath,
+      repoRoot,
+    },
+    { projectRoot: repoRoot },
+  )
   // Copy settings.local.json to the worktree's .claude directory
   // This propagates local settings (which may contain secrets) to the worktree
   const localSettingsRelativePath =
@@ -684,6 +694,16 @@ export async function performPostCreationSetup(
         logForDebugging(`Failed to load postCommitAttribution module: ${error}`)
       })
   }
+
+  writeWorkspaceLifecycleEvent(
+    {
+      ts: new Date().toISOString(),
+      kind: 'worktree.setup.completed',
+      worktreePath,
+      repoRoot,
+    },
+    { projectRoot: repoRoot },
+  )
 }
 
 /**
@@ -780,6 +800,15 @@ export async function createWorktreeForSession(
     logForDebugging(
       `Created hook-based worktree at: ${hookResult.worktreePath}`,
     )
+    writeWorkspaceLifecycleEvent(
+      {
+        ts: new Date().toISOString(),
+        kind: 'agent.worktree.created',
+        worktreePath: hookResult.worktreePath,
+        sessionId,
+      },
+      { projectRoot: originalCwd },
+    )
 
     currentWorktreeSession = {
       originalCwd,
@@ -816,6 +845,18 @@ export async function createWorktreeForSession(
       try {
         await performPostCreationSetup(gitRoot, worktreePath, parentWorktreePath)
       } catch (error) {
+        writeWorkspaceLifecycleEvent(
+          {
+            ts: new Date().toISOString(),
+            kind: 'worktree.setup.failed',
+            worktreePath,
+            repoRoot: gitRoot,
+            worktreeBranch,
+            sessionId,
+            error: error instanceof Error ? error.message : String(error),
+          },
+          { projectRoot: gitRoot },
+        )
         await execFileNoThrowWithCwd(
           gitExe(),
           ['worktree', 'remove', '--force', worktreePath],
@@ -861,7 +902,8 @@ export async function keepWorktree(): Promise<void> {
   }
 
   try {
-    const { worktreePath, originalCwd, worktreeBranch } = currentWorktreeSession
+    const { worktreePath, originalCwd, worktreeBranch, sessionId } =
+      currentWorktreeSession
 
     // Change back to original directory first
     process.chdir(originalCwd)
@@ -881,6 +923,16 @@ export async function keepWorktree(): Promise<void> {
     logForDebugging(
       `You can continue working there by running: cd ${worktreePath}`,
     )
+    writeWorkspaceLifecycleEvent(
+      {
+        ts: new Date().toISOString(),
+        kind: 'worktree.kept',
+        worktreePath,
+        worktreeBranch,
+        sessionId,
+      },
+      { projectRoot: originalCwd },
+    )
   } catch (error) {
     logForDebugging(`Error keeping worktree: ${error}`, {
       level: 'error',
@@ -896,9 +948,20 @@ export async function cleanupWorktree(): Promise<void> {
   try {
     const { worktreePath, originalCwd, worktreeBranch, hookBased } =
       currentWorktreeSession
+    const sessionId = currentWorktreeSession.sessionId
 
     // Change back to original directory first
     process.chdir(originalCwd)
+    writeWorkspaceLifecycleEvent(
+      {
+        ts: new Date().toISOString(),
+        kind: 'worktree.cleanup.started',
+        worktreePath,
+        worktreeBranch,
+        sessionId,
+      },
+      { projectRoot: originalCwd },
+    )
 
     if (hookBased) {
       // Hook-based worktree: delegate cleanup to WorktreeRemove hook
@@ -964,10 +1027,33 @@ export async function cleanupWorktree(): Promise<void> {
     }
 
     logForDebugging('Linked worktree cleaned up completely')
+    writeWorkspaceLifecycleEvent(
+      {
+        ts: new Date().toISOString(),
+        kind: 'worktree.cleanup.completed',
+        worktreePath,
+        worktreeBranch,
+        sessionId,
+      },
+      { projectRoot: originalCwd },
+    )
   } catch (error) {
     logForDebugging(`Error cleaning up worktree: ${error}`, {
       level: 'error',
     })
+    if (currentWorktreeSession) {
+      writeWorkspaceLifecycleEvent(
+        {
+          ts: new Date().toISOString(),
+          kind: 'worktree.cleanup.failed',
+          worktreePath: currentWorktreeSession.worktreePath,
+          worktreeBranch: currentWorktreeSession.worktreeBranch,
+          sessionId: currentWorktreeSession.sessionId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        { projectRoot: currentWorktreeSession.originalCwd },
+      )
+    }
   }
 }
 
@@ -991,6 +1077,14 @@ export async function createAgentWorktree(slug: string): Promise<{
     const hookResult = await executeWorktreeCreateHook(slug)
     logForDebugging(
       `Created hook-based agent worktree at: ${hookResult.worktreePath}`,
+    )
+    writeWorkspaceLifecycleEvent(
+      {
+        ts: new Date().toISOString(),
+        kind: 'agent.worktree.created',
+        worktreePath: hookResult.worktreePath,
+      },
+      { projectRoot: getCwd() },
     )
 
     return { worktreePath: hookResult.worktreePath, hookBased: true }
@@ -1020,6 +1114,17 @@ export async function createAgentWorktree(slug: string): Promise<{
     try {
       await performPostCreationSetup(gitRoot, worktreePath, parentWorktreePath)
     } catch (error) {
+      writeWorkspaceLifecycleEvent(
+        {
+          ts: new Date().toISOString(),
+          kind: 'worktree.setup.failed',
+          worktreePath,
+          repoRoot: gitRoot,
+          worktreeBranch,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        { projectRoot: gitRoot },
+      )
       await execFileNoThrowWithCwd(
         gitExe(),
         ['worktree', 'remove', '--force', worktreePath],
@@ -1040,6 +1145,17 @@ export async function createAgentWorktree(slug: string): Promise<{
     await utimes(worktreePath, now, now)
     logForDebugging(`Resuming existing agent worktree at: ${worktreePath}`)
   }
+
+  writeWorkspaceLifecycleEvent(
+    {
+      ts: new Date().toISOString(),
+      kind: 'agent.worktree.created',
+      worktreePath,
+      repoRoot: gitRoot,
+      worktreeBranch,
+    },
+    { projectRoot: gitRoot },
+  )
 
   return { worktreePath, worktreeBranch, headCommit, gitRoot }
 }
@@ -1067,6 +1183,16 @@ export async function removeAgentWorktree(
         { level: 'warn' },
       )
     }
+    writeWorkspaceLifecycleEvent(
+      {
+        ts: new Date().toISOString(),
+        kind: 'agent.worktree.removed',
+        worktreePath,
+        worktreeBranch,
+        ...(hookRan ? {} : { error: 'worktree_remove_hook_missing' }),
+      },
+      { projectRoot: getCwd() },
+    )
     return hookRan
   }
 
@@ -1089,6 +1215,17 @@ export async function removeAgentWorktree(
     logForDebugging(`Failed to remove agent worktree: ${removeError}`, {
       level: 'error',
     })
+    writeWorkspaceLifecycleEvent(
+      {
+        ts: new Date().toISOString(),
+        kind: 'worktree.cleanup.failed',
+        worktreePath,
+        worktreeBranch,
+        repoRoot: gitRoot,
+        error: removeError,
+      },
+      { projectRoot: gitRoot },
+    )
     return false
   }
   logForDebugging(`Removed agent worktree at: ${worktreePath}`)
@@ -1109,6 +1246,16 @@ export async function removeAgentWorktree(
       { level: 'error' },
     )
   }
+  writeWorkspaceLifecycleEvent(
+    {
+      ts: new Date().toISOString(),
+      kind: 'agent.worktree.removed',
+      worktreePath,
+      worktreeBranch,
+      repoRoot: gitRoot,
+    },
+    { projectRoot: gitRoot },
+  )
   return true
 }
 

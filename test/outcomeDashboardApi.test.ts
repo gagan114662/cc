@@ -7,7 +7,11 @@ import {
   appendAssignmentStateRecord,
   enqueueAssignment,
 } from 'src/services/assignmentQueue/storage.js'
+import { dispatchOperationalAlert } from 'src/services/alerting/dispatcher.js'
 import { writeAuditEntry } from 'src/services/audit/durableAuditLog.js'
+import { appendUsageLedgerRecord } from 'src/services/billing/usageLedger.js'
+import { appendInboxMessage } from 'src/services/email/inboxStore.js'
+import { writeWorkspaceLifecycleEvent } from 'src/services/workspaces/lifecycleLog.js'
 import {
   GITHUB_WEBHOOK_QUEUED_AUDIT_KIND,
 } from 'src/services/webhooks/githubRoute.js'
@@ -102,6 +106,64 @@ beforeEach(async () => {
       tenant: { id: 'acme', name: 'acme', role: 'developer' },
     },
   )
+
+  appendInboxMessage(
+    {
+      id: 'mail-1',
+      tenantId: 'acme',
+      employee: 'alice',
+      from: 'ops@example.com',
+      to: 'alice+acme@example.com',
+      subject: 'Follow up',
+      receivedAt: '2026-04-20T10:02:00.000Z',
+      message: 'Reply to the customer',
+    },
+    { projectRoot, tenantId: 'acme' },
+  )
+
+  appendUsageLedgerRecord(
+    {
+      ts: '2026-04-20T10:03:00.000Z',
+      tenantId: 'acme',
+      subjectKind: 'assignment',
+      subjectId: 'acme-failed',
+      sessionId: 'session-1',
+      model: 'claude-sonnet',
+      costUSD: 0.42,
+      inputTokens: 10,
+      outputTokens: 7,
+      cacheReadInputTokens: 0,
+      cacheCreationInputTokens: 0,
+      webSearchRequests: 0,
+    },
+    { projectRoot, tenantId: 'acme' },
+  )
+
+  await dispatchOperationalAlert(
+    {
+      provider: 'pagerduty',
+      severity: 'error',
+      summary: 'Duty failed',
+      source: 'daemon.duty',
+      dedupeKey: 'daemon.duty:acme:duty-1',
+    },
+    {
+      tenant: { id: 'acme', name: 'acme', role: 'developer' },
+      projectRoot,
+      url: 'http://127.0.0.1:1/pagerduty',
+      routingKey: 'routing-key',
+    },
+  )
+
+  writeWorkspaceLifecycleEvent(
+    {
+      ts: '2026-04-20T10:04:00.000Z',
+      kind: 'worktree.setup.completed',
+      worktreePath: '/tmp/worktree-acme',
+      repoRoot: projectRoot,
+    },
+    { projectRoot },
+  )
 })
 
 afterEach(async () => {
@@ -140,6 +202,19 @@ describe('GET /v1/outcomes', () => {
         done: 1,
         failed: 1,
       })
+      expect(body.inbox.tenantCount).toBe(1)
+      expect(body.inbox.employeeCount).toBe(1)
+      expect(body.inbox.messageCount).toBe(1)
+      expect(body.billing.totals.costUSD).toBe(0.42)
+      expect(body.billing.totals.records).toBe(1)
+      expect(body.alerts.total).toBe(1)
+      expect(body.workspaceLifecycle.total).toBe(1)
+      expect(body.security.encryptionAtRest.coveredStores).toEqual([
+        'alert-deliveries',
+        'billing-usage',
+        'employee-inbox',
+        'workspace-lifecycle',
+      ])
       expect(body.liveScheduler.scheduledDutyCount).toBe(0)
       expect([...body.liveScheduler.drainerTenantIds].sort()).toEqual([
         'acme',
@@ -162,6 +237,8 @@ describe('GET /v1/outcomes', () => {
       )
       expect(auditKinds).toContain(GITHUB_WEBHOOK_QUEUED_AUDIT_KIND)
       expect(auditKinds).toContain(SLACK_WEBHOOK_IGNORED_AUDIT_KIND)
+      expect(body.inbox.tenants[0].recentMessages[0].subject).toBe('Follow up')
+      expect(body.alerts.recent[0].provider).toBe('pagerduty')
     } finally {
       await stopDaemon(daemon, 'test-cleanup')
     }

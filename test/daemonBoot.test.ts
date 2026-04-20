@@ -103,6 +103,11 @@ describe('daemon boot', () => {
       }
       expect(body.status).toBe('ok')
       expect(body.configLoaded).toBe(true)
+      expect((body as any).smtp).toEqual({
+        enabled: false,
+        port: null,
+        domain: null,
+      })
       // Only the enabled duty hydrates into the scheduler.
       expect(body.duties.map(d => d.id)).toEqual(['d-alpha'])
       expect(body.duties[0]!.tokenBudget).toBe(8000)
@@ -161,6 +166,34 @@ describe('daemon boot', () => {
       expect(health.status).toBe(200)
       const body = health.body as { duties: unknown[] }
       expect(body.duties).toEqual([])
+    } finally {
+      await stopDaemon(state, 'test-cleanup')
+    }
+  })
+
+  test('health reports the SMTP listener when enabled', async () => {
+    await writeEmployeeConfig(projectRoot, [])
+
+    const state = await startDaemon({
+      projectRoot,
+      port,
+      smtpPort: 0,
+      smtpDomain: 'mail.test',
+      graceMs: 100,
+      cliBundlePath: path.join(projectRoot, 'dist', 'cli.js'),
+      once: false,
+    })
+
+    try {
+      const health = await fetchJson(
+        `http://127.0.0.1:${state.args.port}/health`,
+      )
+      expect(health.status).toBe(200)
+      expect((health.body as any).smtp).toEqual({
+        enabled: true,
+        port: expect.any(Number),
+        domain: 'mail.test',
+      })
     } finally {
       await stopDaemon(state, 'test-cleanup')
     }
