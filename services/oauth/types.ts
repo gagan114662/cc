@@ -57,3 +57,36 @@ export type OAuthTokens = {
     organizationUuid?: string
   }
 }
+
+// Referral / guest-pass API types
+export type ReferralCampaign =
+  | 'claude_code_guest_pass'
+  | 'claude_code_guest_pass_v1'
+  | string
+
+export type ReferrerRewardInfo = {
+  currency: string
+  amount_minor_units: number
+}
+
+export type ReferralRedemption = {
+  id?: string
+  redeemed_at?: string
+  redeemer_email?: string
+  status?: string
+}
+
+export type ReferralRedemptionsResponse = {
+  redemptions?: ReferralRedemption[]
+  limit?: number
+}
+
+export type ReferralEligibilityResponse = {
+  eligible?: boolean
+  referral_code_details?: {
+    campaign?: string
+    code?: string
+  }
+  referrer_reward?: ReferrerRewardInfo
+  remaining_passes?: number
+}

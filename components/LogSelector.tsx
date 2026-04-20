@@ -9,6 +9,7 @@ import { useSearchInput } from '../hooks/useSearchInput.js';
 import { useTerminalSize } from '../hooks/useTerminalSize.js';
 import { applyColor } from '../ink/colorize.js';
 import type { Color } from '../ink/styles.js';
+import type { Key } from '../ink.js';
 import { Box, Text, useInput, useTerminalFocus, useTheme } from '../ink.js';
 import { useKeybinding } from '../keybindings/useKeybinding.js';
 import { logEvent } from '../services/analytics/index.js';
@@ -140,7 +141,7 @@ function buildLogMetadata(log: LogOption, options?: {
   const projectSuffix = showProjectPath && log.projectPath ? ` · ${log.projectPath}` : '';
   return childPadding + baseMetadata + projectSuffix;
 }
-export function LogSelector(t0: Record<string, unknown>) {
+export function LogSelector(t0: LogSelectorProps) {
   const $ = _c(247);
   const {
     logs,
@@ -182,7 +183,7 @@ export function LogSelector(t0: Record<string, unknown>) {
   const theme = t4;
   let t5;
   if ($[3] !== theme.warning) {
-    t5 = (text: unknown) => applyColor(text, theme.warning as Color);
+    t5 = (text: string) => applyColor(text, theme.warning as Color);
     $[3] = theme.warning;
     $[4] = t5;
   } else {
@@ -362,7 +363,7 @@ export function LogSelector(t0: Record<string, unknown>) {
     if ($[26] !== filtered || $[27] !== tagFilter) {
       let t23;
       if ($[29] !== tagFilter) {
-        t23 = (log_2: unknown) => log_2.tag === tagFilter;
+        t23 = (log_2: LogOption) => log_2.tag === tagFilter;
         $[29] = tagFilter;
         $[30] = t23;
       } else {
@@ -382,7 +383,7 @@ export function LogSelector(t0: Record<string, unknown>) {
     if ($[31] !== currentBranch || $[32] !== filtered) {
       let t23;
       if ($[34] !== currentBranch) {
-        t23 = (log_3: unknown) => log_3.gitBranch === currentBranch;
+        t23 = (log_3: LogOption) => log_3.gitBranch === currentBranch;
         $[34] = currentBranch;
         $[35] = t23;
       } else {
@@ -402,7 +403,7 @@ export function LogSelector(t0: Record<string, unknown>) {
     if ($[36] !== filtered) {
       let t23;
       if ($[38] === Symbol.for("react.memo_cache_sentinel")) {
-        t23 = (log_4: unknown) => log_4.projectPath === currentCwd;
+        t23 = (log_4: LogOption) => log_4.projectPath === currentCwd;
         $[38] = t23;
       } else {
         t23 = $[38];
@@ -425,7 +426,7 @@ export function LogSelector(t0: Record<string, unknown>) {
     let t23;
     if ($[39] !== baseFilteredLogs || $[40] !== searchQuery) {
       const query = searchQuery.toLowerCase();
-      t23 = baseFilteredLogs.filter((log_5: unknown) => {
+      t23 = baseFilteredLogs.filter((log_5: LogOption) => {
         const displayedTitle = getLogDisplayTitle(log_5).toLowerCase();
         const branch_0 = (log_5.gitBranch || "").toLowerCase();
         const tag = (log_5.tag || "").toLowerCase();
@@ -509,7 +510,7 @@ export function LogSelector(t0: Record<string, unknown>) {
       if ($[56] !== deepSearchResults.results || $[57] !== filtered_0 || $[58] !== titleMatchIds) {
         let t29;
         if ($[60] !== titleMatchIds) {
-          t29 = (log_7: unknown) => !titleMatchIds.has(log_7.messages[0]?.uuid);
+          t29 = (log_7: LogOption) => !titleMatchIds.has(log_7.messages[0]?.uuid);
           $[60] = titleMatchIds;
           $[61] = t29;
         } else {
@@ -667,7 +668,7 @@ export function LogSelector(t0: Record<string, unknown>) {
     if ($[73] !== displayedLogs || $[74] !== highlightColor || $[75] !== maxLabelWidth || $[76] !== showAllProjects || $[77] !== snippets) {
       let t32;
       if ($[79] !== highlightColor || $[80] !== maxLabelWidth || $[81] !== showAllProjects || $[82] !== snippets) {
-        t32 = (log_9: unknown, index_0: number) => {
+        t32 = (log_9: LogOption, index_0: number) => {
           const rawSummary = getLogDisplayTitle(log_9);
           const summaryWithSidechain = rawSummary + (log_9.isSidechain ? " (sidechain)" : "");
           const summary = normalizeAndTruncateToWidth(summaryWithSidechain, maxLabelWidth);
@@ -714,7 +715,7 @@ export function LogSelector(t0: Record<string, unknown>) {
       if (!sessionId_0) {
         return "";
       }
-      const sessionLogs = displayedLogs.filter((log_10: unknown) => getSessionIdFromLog(log_10) === sessionId_0);
+      const sessionLogs = displayedLogs.filter((log_10: LogOption) => getSessionIdFromLog(log_10) === sessionId_0);
       const hasMultipleLogs = sessionLogs.length > 1;
       if (!hasMultipleLogs) {
         return "";
@@ -925,7 +926,7 @@ export function LogSelector(t0: Record<string, unknown>) {
   React.useEffect(t40, t41);
   let t42;
   if ($[116] !== displayedLogs) {
-    t42 = (value: unknown) => {
+    t42 = (value: string) => {
       const index_1 = parseInt(value, 10);
       const log_11 = displayedLogs[index_1];
       if (!log_11 || prevFocusedIdRef.current === index_1.toString()) {
@@ -950,9 +951,9 @@ export function LogSelector(t0: Record<string, unknown>) {
   const handleFlatOptionsSelectFocus = t42;
   let t43;
   if ($[118] !== displayedLogs) {
-    t43 = (node: unknown) => {
+    t43 = (node: LogTreeNode) => {
       setFocusedNode(node);
-      const index_2 = displayedLogs.findIndex((log_12: unknown) => getSessionIdFromLog(log_12) === getSessionIdFromLog(node.value.log));
+      const index_2 = displayedLogs.findIndex((log_12: LogOption) => getSessionIdFromLog(log_12) === getSessionIdFromLog(node.value.log));
       if (index_2 >= 0) {
         setFocusedIndex(index_2 + 1);
       }
@@ -1040,7 +1041,7 @@ export function LogSelector(t0: Record<string, unknown>) {
   useKeybinding("confirm:no", t50, t52);
   let t53;
   if ($[131] !== agenticSearchState.status || $[132] !== branchFilterEnabled || $[133] !== focusedLog || $[134] !== handleAgenticSearch || $[135] !== hasMultipleWorktrees || $[136] !== hasTags || $[137] !== isAgenticSearchOptionFocused || $[138] !== onAgenticSearch || $[139] !== onToggleAllProjects || $[140] !== searchQuery || $[141] !== setSearchQuery || $[142] !== showAllProjects || $[143] !== showAllWorktrees || $[144] !== tagTabs || $[145] !== uniqueTags || $[146] !== viewMode) {
-    t53 = (input: unknown, key: unknown) => {
+    t53 = (input: string, key: Key) => {
       if (viewMode === "preview") {
         return;
       }
@@ -1354,24 +1355,24 @@ export function LogSelector(t0: Record<string, unknown>) {
   }
   let t70;
   if ($[202] !== agenticSearchState.status || $[203] !== branchFilterEnabled || $[204] !== columns || $[205] !== displayedLogs || $[206] !== expandedGroupSessionIds || $[207] !== flatOptions || $[208] !== focusedLog || $[209] !== focusedNode?.id || $[210] !== handleFlatOptionsSelectFocus || $[211] !== handleRenameSubmit || $[212] !== handleTreeSelectFocus || $[213] !== isAgenticSearchOptionFocused || $[214] !== onCancel || $[215] !== onSelect || $[216] !== renameCursorOffset || $[217] !== renameValue || $[218] !== treeNodes || $[219] !== viewMode || $[220] !== visibleCount) {
-    t70 = agenticSearchState.status === "searching" ? null : viewMode === "rename" && focusedLog ? <Box paddingLeft={2} flexDirection="column"><Text bold={true}>Rename session:</Text><Box paddingTop={1}><TextInput value={renameValue} onChange={setRenameValue} onSubmit={handleRenameSubmit} placeholder={getLogDisplayTitle(focusedLog, "Enter new session name")} columns={columns} cursorOffset={renameCursorOffset} onChangeCursorOffset={setRenameCursorOffset} showCursor={true} /></Box></Box> : isResumeWithRenameEnabled ? <TreeSelect nodes={treeNodes} onSelect={(node_0: unknown) => {
+    t70 = agenticSearchState.status === "searching" ? null : viewMode === "rename" && focusedLog ? <Box paddingLeft={2} flexDirection="column"><Text bold={true}>Rename session:</Text><Box paddingTop={1}><TextInput value={renameValue} onChange={setRenameValue} onSubmit={handleRenameSubmit} placeholder={getLogDisplayTitle(focusedLog, "Enter new session name")} columns={columns} cursorOffset={renameCursorOffset} onChangeCursorOffset={setRenameCursorOffset} showCursor={true} /></Box></Box> : isResumeWithRenameEnabled ? <TreeSelect nodes={treeNodes} onSelect={(node_0: LogTreeNode) => {
       onSelect(node_0.value.log);
-    }} onFocus={handleTreeSelectFocus} onCancel={onCancel} focusNodeId={focusedNode?.id} visibleOptionCount={visibleCount} layout="expanded" isDisabled={viewMode === "search" || isAgenticSearchOptionFocused} hideIndexes={false} isNodeExpanded={(nodeId: unknown) => {
+    }} onFocus={handleTreeSelectFocus} onCancel={onCancel} focusNodeId={focusedNode?.id} visibleOptionCount={visibleCount} layout="expanded" isDisabled={viewMode === "search" || isAgenticSearchOptionFocused} hideIndexes={false} isNodeExpanded={(nodeId: string | number) => {
       if (viewMode === "search" || branchFilterEnabled) {
         return true;
       }
       const sessionId_2 = typeof nodeId === "string" && nodeId.startsWith("group:") ? nodeId.substring(6) : null;
       return sessionId_2 ? expandedGroupSessionIds.has(sessionId_2) : false;
-    }} onExpand={(nodeId_0: unknown) => {
+    }} onExpand={(nodeId_0: string | number) => {
       const sessionId_3 = typeof nodeId_0 === "string" && nodeId_0.startsWith("group:") ? nodeId_0.substring(6) : null;
       if (sessionId_3) {
-        setExpandedGroupSessionIds((prev_0: unknown) => new Set(prev_0).add(sessionId_3));
+        setExpandedGroupSessionIds((prev_0: Set<string>) => new Set(prev_0).add(sessionId_3));
         logEvent("tengu_session_group_expanded", {});
       }
-    }} onCollapse={(nodeId_1: unknown) => {
+    }} onCollapse={(nodeId_1: string | number) => {
       const sessionId_4 = typeof nodeId_1 === "string" && nodeId_1.startsWith("group:") ? nodeId_1.substring(6) : null;
       if (sessionId_4) {
-        setExpandedGroupSessionIds((prev_1: unknown) => {
+        setExpandedGroupSessionIds((prev_1: Set<string>) => {
           const newSet = new Set(prev_1);
           newSet.delete(sessionId_4);
           return newSet;

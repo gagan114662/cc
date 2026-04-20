@@ -9,18 +9,32 @@ declare module '@ant/computer-use-mcp' {
     connect: (...handlerArgs: unknown[]) => Promise<void>
   }
   export type ComputerUseSessionContext = Record<string, unknown>
+  export type ComputerExecutor = Record<string, unknown>
   export type CuCallToolResult = Record<string, unknown>
   export type CuPermissionRequest = Record<string, unknown>
   export type CuPermissionResponse = Record<string, unknown>
+  export type DisplayGeometry = Record<string, unknown>
+  export type FrontmostApp = Record<string, unknown>
+  export type InstalledApp = Record<string, unknown>
+  export type ResolvePrepareCaptureResult = Record<string, unknown>
+  export type RunningApp = Record<string, unknown>
   export type ScreenshotDims = Record<string, unknown>
+  export type ScreenshotResult = Record<string, unknown>
 }
 
 declare module '@ant/computer-use-mcp/types' {
   export const DEFAULT_GRANT_FLAGS: string[]
   export type CoordinateMode = string
+  export type ComputerUseHostAdapter = Record<string, unknown>
   export type CuSubGates = Record<string, unknown>
   export type CuPermissionRequest = Record<string, unknown>
   export type CuPermissionResponse = Record<string, unknown>
+  export type Logger = {
+    debug: (...args: unknown[]) => void
+    info: (...args: unknown[]) => void
+    warn: (...args: unknown[]) => void
+    error: (...args: unknown[]) => void
+  }
 }
 
 declare module '@ant/computer-use-mcp/sentinelApps' {
@@ -45,8 +59,8 @@ declare module '@ant/computer-use-swift' {
 }
 
 declare module '@ant/computer-use-input' {
-  const computerUseInput: Record<string, unknown>
-  export = computerUseInput
+  export type ComputerUseInput = Record<string, unknown>
+  export type ComputerUseInputAPI = Record<string, unknown>
 }
 
 declare module '@anthropic-ai/mcpb' {

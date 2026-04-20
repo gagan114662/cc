@@ -102,3 +102,25 @@ export type StdinMessage =
   | SDKControlRequest
   | SDKControlResponse
   | SDKKeepAliveMessage
+
+// Response payload for the `reload_plugins` control request. Shape mirrors
+// the object sent in cli/print.ts.
+export type SDKControlReloadPluginsResponse = {
+  commands: Array<{
+    name: string
+    description: string
+    argumentHint: string
+  }>
+  agents: Array<{
+    name: string
+    description?: string
+    model?: string
+  }>
+  plugins: Array<{
+    name: string
+    path: string
+    source?: string
+  }>
+  mcpServers: unknown[]
+  error_count: number
+}

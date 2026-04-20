@@ -39,3 +39,8 @@ export type KeybindingBlock = {
   context: KeybindingContextName
   bindings: Record<string, string | null>
 }
+
+// Action identifier (e.g. "confirm", "cancel", "cycleTheme"). String-typed
+// because the action set is defined at the caller level (per-context), not
+// enumerated in a single union.
+export type KeybindingAction = string

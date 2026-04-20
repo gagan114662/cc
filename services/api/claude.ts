@@ -2,11 +2,9 @@ import type {
   BetaContentBlock,
   BetaContentBlockParam,
   BetaImageBlockParam,
-  BetaJSONOutputFormat,
   BetaMessage,
   BetaMessageDeltaUsage,
   BetaMessageStreamParams,
-  BetaOutputConfig,
   BetaRawMessageStreamEvent,
   BetaRequestDocumentBlock,
   BetaStopReason,
@@ -17,6 +15,12 @@ import type {
   BetaUsage,
   BetaMessageParam as MessageParam,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+// Structured-output config/format — present in runtime API, not yet typed
+// in the installed @anthropic-ai/sdk version. See types/anthropicBetaShim.ts.
+import type {
+  BetaJSONOutputFormat,
+  BetaOutputConfig,
+} from '../../types/anthropicBetaShim.js'
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
 import { randomUUID } from 'crypto'
