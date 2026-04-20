@@ -71,6 +71,7 @@ type ExecuteForkedWorkflowArgs = {
   skillContent: string
   stageRunner?: WorkflowStageRunner
   codeModeStatePath?: string
+  codeModeSharedStatePath?: string
 }
 
 function buildCombinedHandoff(
@@ -305,6 +306,7 @@ async function executeCodeModeWorkflow(args: {
   transcriptSubdir: string
   context: ToolUseContext
   codeModeStatePath?: string
+  codeModeSharedStatePath?: string
 }): Promise<{
   stepOutcomes: WorkflowStepOutcome[]
   stateStore: CodeModeStateStore
@@ -318,6 +320,7 @@ async function executeCodeModeWorkflow(args: {
     transcriptSubdir,
     context,
     codeModeStatePath,
+    codeModeSharedStatePath,
   } = args
 
   const codePrompt = buildWorkflowCodeModePrompt(command, skillContent, argsText)
@@ -341,6 +344,7 @@ async function executeCodeModeWorkflow(args: {
     context,
     commands: context.options.commands,
     statePath: codeModeStatePath,
+    sharedStatePath: codeModeSharedStatePath,
     runStep: async stepIndex =>
       runWorkflowStepByIndex({
         command,
@@ -572,6 +576,7 @@ export async function executeForkedWorkflow({
   skillContent,
   stageRunner,
   codeModeStatePath,
+  codeModeSharedStatePath,
 }: ExecuteForkedWorkflowArgs): Promise<ToolResult<ForkedWorkflowOutput>> {
   const workflowSteps = command.workflowSteps ?? []
   if (workflowSteps.length === 0) {
@@ -605,6 +610,7 @@ export async function executeForkedWorkflow({
             transcriptSubdir,
             context,
             codeModeStatePath,
+            codeModeSharedStatePath,
           })
           codeModeStateStore = result.stateStore
           return result.stepOutcomes

@@ -354,7 +354,7 @@ export function buildWorkflowCodeModePrompt(
     'The runtime API passed to your function has:',
     '- `workflow`: readonly workflow metadata plus `runStep(stepIndex)`, `skipStep(stepIndex, reason?)`, `getHandoff()`, `getOutcomes()`, and `hasOutcome(stepIndex)`',
     '- `args`: the raw workflow argument string',
-    '- `state`: persistent workflow state with `get(key)`, `set(key, value)`, `delete(key)`, `replace(object)`, and `snapshot()`',
+    '- `state`: persistent workflow state with `get(key)`, `set(key, value)`, `delete(key)`, `replace(object)`, and `snapshot()`; it survives later runs of the same workflow in the same project',
     '- Top-level aliases remain available: `await runStep(stepIndex)`, `await skipStep(stepIndex, reason?)`, `getHandoff()`, `getOutcomes()`, and `hasOutcome(stepIndex)`',
   )
 
@@ -385,7 +385,7 @@ export function buildWorkflowCodeModePrompt(
   }
   if (hasWorkflowCapabilityGrant(cmd, 'workspace')) {
     lines.push(
-      '- `workspace`: typed workspace/session helpers with `root()`, `sessionId()`, `transcriptProjectDir()`, `transcriptSubdir()`, `statePath()`, and `info()`',
+      '- `workspace`: typed workspace/session helpers with `root()`, `sessionId()`, `transcriptProjectDir()`, `transcriptSubdir()`, `statePath()`, `sharedStatePath()`, and `info()`',
     )
   }
   if (hasWorkflowCapabilityGrant(cmd, 'discovery')) {

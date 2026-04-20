@@ -1,4 +1,4 @@
-import { mkdir, writeFile } from 'fs/promises'
+import { mkdir, readFile, writeFile } from 'fs/promises'
 import { dirname, join } from 'path'
 import { Script, createContext } from 'node:vm'
 import { getOriginalCwd, getSessionId, getSessionProjectDir } from '../../bootstrap/state.js'
@@ -54,6 +54,7 @@ type CodeModeCapabilitySnapshot = {
     sessionId: string
     transcriptSubdir: string
     statePath: string
+    sharedStatePath: string
   }
   discovery: {
     capabilityCount: number
@@ -109,6 +110,19 @@ type PersistedCodeModeState = {
   finalState?: WorkflowFinalState
   error?: string
   updatedAt: string
+}
+
+type PersistedSharedWorkflowState = {
+  workflow: {
+    name: string
+    displayName: string
+    runtime: 'code'
+    capabilityGrants: WorkflowCapabilityGrant[]
+  }
+  userState: Record<string, unknown>
+  lastSessionId: string
+  lastTranscriptSubdir: string
+  lastUpdatedAt: string
 }
 
 type CodeModeStateApi = {
@@ -167,6 +181,7 @@ type CodeModeWorkspaceApi = {
   transcriptProjectDir(): string
   transcriptSubdir(): string
   statePath(): string
+  sharedStatePath(): string
   info(): CodeModeCapabilitySnapshot['workspace']
 }
 
@@ -212,6 +227,7 @@ type CodeModeExecutorArgs = {
   context: ToolUseContext
   commands: Command[]
   statePath?: string
+  sharedStatePath?: string
   runStep(stepIndex: number): Promise<WorkflowStepOutcome>
   skipStep(stepIndex: number, reason?: string): Promise<WorkflowStepOutcome>
   getOutcomes(): WorkflowStepOutcome[]
@@ -402,6 +418,7 @@ function buildCapabilitySnapshot(
   context: ToolUseContext,
   browserStatus: BrowserHarnessStatus,
   statePath: string,
+  sharedStatePath: string,
   transcriptSubdir: string,
 ): CodeModeCapabilitySnapshot {
   const capabilityGrants = resolveCapabilityGrants(command)
@@ -475,6 +492,7 @@ function buildCapabilitySnapshot(
       sessionId: getSessionId(),
       transcriptSubdir,
       statePath,
+      sharedStatePath,
     },
     discovery: {
       capabilityCount: visiblePromptCommands.length,
@@ -527,6 +545,27 @@ function getCodeModeStatePath(
   )
 }
 
+function slugifyWorkflowStateKey(value: string): string {
+  return value
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+}
+
+function getSharedWorkflowStatePath(
+  command: WorkflowCommand,
+  overridePath?: string,
+): string {
+  if (overridePath) {
+    return overridePath
+  }
+
+  const projectDir = getSessionProjectDir() ?? getProjectDir(getOriginalCwd())
+  const workflowSlug = slugifyWorkflowStateKey(command.name) || 'workflow'
+  return join(projectDir, 'workflow-state', `${workflowSlug}.json`)
+}
+
 function toPersistedOutcome(
   stepOutcome: WorkflowStepOutcome,
   stepIndex: number,
@@ -547,17 +586,22 @@ export class CodeModeStateStore {
 
   constructor(
     readonly path: string,
+    readonly sharedPath: string,
     private document: PersistedCodeModeState,
   ) {}
 
   static async create(args: {
     path: string
+    sharedPath: string
     command: WorkflowCommand
     argsText: string
     transcriptSubdir: string
     capabilities: CodeModeCapabilitySnapshot
   }): Promise<CodeModeStateStore> {
-    const store = new CodeModeStateStore(args.path, {
+    const sharedUserState = await CodeModeStateStore.loadSharedUserState(
+      args.sharedPath,
+    )
+    const store = new CodeModeStateStore(args.path, args.sharedPath, {
       workflow: {
         name: args.command.name,
         displayName: args.command.userFacingName?.() ?? args.command.name,
@@ -571,13 +615,37 @@ export class CodeModeStateStore {
         transcriptSubdir: args.transcriptSubdir,
       },
       phase: 'planning',
-      userState: {},
+      userState: sharedUserState,
       stepOutcomes: [],
       capabilities: args.capabilities,
       updatedAt: new Date().toISOString(),
     })
     await store.persist()
     return store
+  }
+
+  private static async loadSharedUserState(
+    sharedPath: string,
+  ): Promise<Record<string, unknown>> {
+    try {
+      const raw = await readFile(sharedPath, 'utf-8')
+      const parsed = JSON.parse(raw) as Partial<PersistedSharedWorkflowState>
+      if (
+        parsed &&
+        typeof parsed === 'object' &&
+        parsed.userState &&
+        typeof parsed.userState === 'object' &&
+        !Array.isArray(parsed.userState)
+      ) {
+        return toSerializable(parsed.userState as Record<string, unknown>)
+      }
+    } catch (error) {
+      if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+        // Ignore malformed shared state and start from an empty durable memory.
+      }
+    }
+
+    return {}
   }
 
   snapshot(): PersistedCodeModeState {
@@ -633,6 +701,21 @@ export class CodeModeStateStore {
     await this.persist()
   }
 
+  private buildSharedDocument(): PersistedSharedWorkflowState {
+    return {
+      workflow: {
+        name: this.document.workflow.name,
+        displayName: this.document.workflow.displayName,
+        runtime: this.document.workflow.runtime,
+        capabilityGrants: [...this.document.workflow.capabilityGrants],
+      },
+      userState: toSerializable(this.document.userState),
+      lastSessionId: this.document.capabilities.workspace.sessionId,
+      lastTranscriptSubdir: this.document.workflow.transcriptSubdir,
+      lastUpdatedAt: new Date().toISOString(),
+    }
+  }
+
   private async replaceUserState(
     nextState: Record<string, unknown>,
   ): Promise<void> {
@@ -647,6 +730,13 @@ export class CodeModeStateStore {
       await writeFile(
         this.path,
         `${JSON.stringify(this.document, null, 2)}\n`,
+        'utf-8',
+      )
+      const sharedDocument = this.buildSharedDocument()
+      await mkdir(dirname(this.sharedPath), { recursive: true })
+      await writeFile(
+        this.sharedPath,
+        `${JSON.stringify(sharedDocument, null, 2)}\n`,
         'utf-8',
       )
     })
@@ -744,16 +834,22 @@ export class CodeModeExecutor {
     ])
     const browserStatus = await getBrowserHarnessStatus()
     const statePath = getCodeModeStatePath(args.transcriptSubdir, args.statePath)
+    const sharedStatePath = getSharedWorkflowStatePath(
+      args.command,
+      args.sharedStatePath,
+    )
     const capabilitySnapshot = buildCapabilitySnapshot(
       allCommands,
       args.command,
       args.context,
       browserStatus,
       statePath,
+      sharedStatePath,
       args.transcriptSubdir,
     )
     const stateStore = await CodeModeStateStore.create({
       path: statePath,
+      sharedPath: sharedStatePath,
       command: args.command,
       argsText: args.argsText,
       transcriptSubdir: args.transcriptSubdir,
@@ -855,6 +951,7 @@ export class CodeModeExecutor {
         this.capabilitySnapshot.workspace.transcriptProjectDir,
       transcriptSubdir: () => this.capabilitySnapshot.workspace.transcriptSubdir,
       statePath: () => this.capabilitySnapshot.workspace.statePath,
+      sharedStatePath: () => this.capabilitySnapshot.workspace.sharedStatePath,
       info: () => ({ ...this.capabilitySnapshot.workspace }),
     })
 
