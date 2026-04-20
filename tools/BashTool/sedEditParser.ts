@@ -82,7 +82,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
 
   let i = 0
   while (i < args.length) {
-    const arg = args[i]!
+    const arg = args[i]
 
     // Handle -i flag (with or without backup suffix)
     if (arg === '-i' || arg === '--in-place') {
@@ -179,7 +179,7 @@ export function parseSedEditCommand(command: string): SedEditInfo | null {
   let j = 0
 
   while (j < rest.length) {
-    const char = rest[j]!
+    const char = rest[j]
 
     if (char === '\\' && j + 1 < rest.length) {
       // Escaped character

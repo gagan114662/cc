@@ -1224,7 +1224,7 @@ class Project {
         const isAgentSidechain =
           entry.isSidechain && entry.agentId !== undefined
         const targetFile = isAgentSidechain
-          ? getAgentTranscriptPath(asAgentId(entry.agentId!))
+          ? getAgentTranscriptPath(asAgentId(entry.agentId))
           : sessionFile
 
         // For message entries, check if UUID already exists in current session.
@@ -3287,10 +3287,10 @@ function pickDepthOneUuidCandidate(
   let ci = 0
   for (let i = lineStart; ci < candidates.length; i++) {
     if (i === candidates[ci]) {
-      if (depth === 1 && !inString) return candidates[ci]!
+      if (depth === 1 && !inString) return candidates[ci]
       ci++
     }
-    const b = buf[i]!
+    const b = buf[i]
     if (escapeNext) {
       escapeNext = false
     } else if (inString) {
@@ -3402,8 +3402,8 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
   // into the next line, caught by the bounds check.
   let leafSlot = -1
   for (let i = msgIdx.length - 3; i >= 0; i -= 3) {
-    const sc = buf.indexOf(SIDECHAIN_TRUE, msgIdx[i]!)
-    if (sc === -1 || sc >= msgIdx[i + 1]!) {
+    const sc = buf.indexOf(SIDECHAIN_TRUE, msgIdx[i])
+    if (sc === -1 || sc >= msgIdx[i + 1]) {
       leafSlot = i
       break
     }
@@ -3423,9 +3423,9 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
   while (slot !== undefined) {
     if (seen.has(slot)) break
     seen.add(slot)
-    chain.add(msgIdx[slot]!)
-    chainBytes += msgIdx[slot + 1]! - msgIdx[slot]!
-    const parentStart = msgIdx[slot + 2]!
+    chain.add(msgIdx[slot])
+    chainBytes += msgIdx[slot + 1] - msgIdx[slot]
+    const parentStart = msgIdx[slot + 2]
     if (parentStart < 0) break
     const parent = buf.toString('latin1', parentStart, parentStart + UUID_LEN)
     slot = uuidToSlot.get(parent)
@@ -3449,17 +3449,17 @@ function walkChainBeforeParse(buf: Buffer): Buffer {
   const parts: Buffer[] = []
   let m = 0
   for (let i = 0; i < msgIdx.length; i += 3) {
-    const start = msgIdx[i]!
-    while (m < metaRanges.length && metaRanges[m]! < start) {
-      parts.push(buf.subarray(metaRanges[m]!, metaRanges[m + 1]!))
+    const start = msgIdx[i]
+    while (m < metaRanges.length && metaRanges[m] < start) {
+      parts.push(buf.subarray(metaRanges[m], metaRanges[m + 1]))
       m += 2
     }
     if (chain.has(start)) {
-      parts.push(buf.subarray(start, msgIdx[i + 1]!))
+      parts.push(buf.subarray(start, msgIdx[i + 1]))
     }
   }
   while (m < metaRanges.length) {
-    parts.push(buf.subarray(metaRanges[m]!, metaRanges[m + 1]!))
+    parts.push(buf.subarray(metaRanges[m], metaRanges[m + 1]))
     m += 2
   }
   return Buffer.concat(parts)
@@ -4851,7 +4851,7 @@ function extractFirstPromptFromChunk(chunk: string): string {
         for (const block of content) {
           const b = block as Record<string, unknown>
           if (b.type === 'text' && typeof b.text === 'string') {
-            texts.push(b.text as string)
+            texts.push(b.text)
           }
         }
       }
@@ -5084,7 +5084,7 @@ export async function enrichLogs(
   let i = startIndex
 
   while (i < allLogs.length && result.length < count) {
-    const log = allLogs[i]!
+    const log = allLogs[i]
     i++
 
     const enriched = await enrichLog(log, readBuf)

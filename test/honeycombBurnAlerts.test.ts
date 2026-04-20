@@ -122,7 +122,7 @@ describe('planBurnAlertDeployment', () => {
       existingAlerts,
     )
     expect(plan.items.every(i => i.action === 'skip')).toBe(true)
-    expect(plan.items[0]!.existingId).toBeDefined()
+    expect(plan.items[0].existingId).toBeDefined()
   })
 
   test('updates when exhaustion_minutes drifted from registry', () => {

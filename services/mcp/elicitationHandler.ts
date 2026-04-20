@@ -218,7 +218,7 @@ export async function runElicitationHooks(
 ): Promise<ElicitResult | undefined> {
   try {
     const mode = params.mode === 'url' ? 'url' : 'form'
-    const url = 'url' in params ? (params.url as string) : undefined
+    const url = 'url' in params ? (params.url) : undefined
     const elicitationId =
       'elicitationId' in params
         ? (params.elicitationId as string | undefined)

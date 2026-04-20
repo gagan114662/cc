@@ -240,9 +240,9 @@ function prependBaseDir(
   baseDir: string,
 ): ContentBlockParam[] {
   const prefix = `Base directory for this skill: ${baseDir}\n\n`
-  if (blocks.length > 0 && blocks[0]!.type === 'text') {
+  if (blocks.length > 0 && blocks[0].type === 'text') {
     return [
-      { type: 'text', text: prefix + blocks[0]!.text },
+      { type: 'text', text: prefix + blocks[0].text },
       ...blocks.slice(1),
     ]
   }

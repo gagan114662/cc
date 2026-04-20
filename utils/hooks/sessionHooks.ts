@@ -186,7 +186,7 @@ function addHookToSession(
     if (existingMatcherIndex >= 0) {
       // Add to existing matcher
       updatedMatchers = [...eventMatchers]
-      const existingMatcher = updatedMatchers[existingMatcherIndex]!
+      const existingMatcher = updatedMatchers[existingMatcherIndex]
       updatedMatchers[existingMatcherIndex] = {
         matcher: existingMatcher.matcher,
         skillRoot: existingMatcher.skillRoot,

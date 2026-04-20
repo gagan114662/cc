@@ -92,7 +92,7 @@ function mockReqRes(opts: {
   res.end = ((chunk?: unknown) => {
     if (typeof chunk === 'string') captured.body = chunk
     else if (Buffer.isBuffer(chunk)) captured.body = chunk.toString('utf8')
-    return origEnd() as ServerResponse
+    return origEnd()
   }) as typeof res.end
 
   return { req, res, captured }
@@ -181,12 +181,12 @@ describe('POST /v1/webhooks/github', () => {
 
     const queue = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(queue.length).toBe(1)
-    expect(queue[0]!.id).toBe(parsed.id)
+    expect(queue[0].id).toBe(parsed.id)
     // Assignment should include enough signal for the engineering-lead
     // agent to act: repo, PR number, and title at minimum.
-    expect(queue[0]!.assignment).toContain('acme/repo')
-    expect(queue[0]!.assignment).toContain('#42')
-    expect(queue[0]!.assignment).toContain('Fix widget rendering')
+    expect(queue[0].assignment).toContain('acme/repo')
+    expect(queue[0].assignment).toContain('#42')
+    expect(queue[0].assignment).toContain('Fix widget rendering')
     const audit = readAuditTail(10, { dir: auditDir })
     expect(audit.at(-1)?.kind).toBe(GITHUB_WEBHOOK_QUEUED_AUDIT_KIND)
     expect(audit.at(-1)?.assignmentId).toBe(parsed.id)
@@ -232,7 +232,7 @@ describe('POST /v1/webhooks/github', () => {
 
     const queue = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(queue.length).toBe(1)
-    expect(queue[0]!.assignment).toContain('issue #7')
-    expect(queue[0]!.assignment).toContain('Thumbnails stretched on Safari')
+    expect(queue[0].assignment).toContain('issue #7')
+    expect(queue[0].assignment).toContain('Thumbnails stretched on Safari')
   })
 })

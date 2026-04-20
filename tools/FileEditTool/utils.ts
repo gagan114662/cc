@@ -164,7 +164,7 @@ function applyCurlyDoubleQuotes(str: string): string {
           : RIGHT_DOUBLE_CURLY_QUOTE,
       )
     } else {
-      result.push(chars[i]!)
+      result.push(chars[i])
     }
   }
   return result.join('')
@@ -192,7 +192,7 @@ function applyCurlySingleQuotes(str: string): string {
         )
       }
     } else {
-      result.push(chars[i]!)
+      result.push(chars[i])
     }
   }
   return result.join('')

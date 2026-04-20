@@ -45,9 +45,9 @@ describe('duty spans carry tenant attributes', () => {
       await withDutySpan({ dutyId: 'd1' }, async () => {})
       const spans = exporter.getFinishedSpans()
       expect(spans).toHaveLength(1)
-      expect(spans[0]!.attributes['tenant.id']).toBe(DEFAULT_TENANT.id)
-      expect(spans[0]!.attributes['tenant.name']).toBe(DEFAULT_TENANT.name)
-      expect(spans[0]!.attributes['tenant.role']).toBe(DEFAULT_TENANT.role)
+      expect(spans[0].attributes['tenant.id']).toBe(DEFAULT_TENANT.id)
+      expect(spans[0].attributes['tenant.name']).toBe(DEFAULT_TENANT.name)
+      expect(spans[0].attributes['tenant.role']).toBe(DEFAULT_TENANT.role)
     } finally {
       if (savedId !== undefined) process.env.CC_TENANT_ID = savedId
       if (savedName !== undefined) process.env.CC_TENANT_NAME = savedName
@@ -66,11 +66,11 @@ describe('duty spans carry tenant attributes', () => {
     )
     const spans = exporter.getFinishedSpans()
     expect(spans).toHaveLength(1)
-    expect(spans[0]!.attributes['tenant.id']).toBe('acme')
-    expect(spans[0]!.attributes['tenant.name']).toBe('Acme')
-    expect(spans[0]!.attributes['tenant.role']).toBe('developer')
+    expect(spans[0].attributes['tenant.id']).toBe('acme')
+    expect(spans[0].attributes['tenant.name']).toBe('Acme')
+    expect(spans[0].attributes['tenant.role']).toBe('developer')
     // employee.duty.id still present — tenant doesn't displace duty attrs.
-    expect(spans[0]!.attributes['employee.duty.id']).toBe('d2')
+    expect(spans[0].attributes['employee.duty.id']).toBe('d2')
   })
 
   test('withAssignmentSpan stamps tenant too', async () => {
@@ -84,9 +84,9 @@ describe('duty spans carry tenant attributes', () => {
     )
     const spans = exporter.getFinishedSpans()
     expect(spans).toHaveLength(1)
-    expect(spans[0]!.name).toBe('employee.assignment.run')
-    expect(spans[0]!.attributes['tenant.id']).toBe('beta')
-    expect(spans[0]!.attributes['tenant.role']).toBe('admin')
-    expect(spans[0]!.attributes['employee.assignment.id']).toBe('a1')
+    expect(spans[0].name).toBe('employee.assignment.run')
+    expect(spans[0].attributes['tenant.id']).toBe('beta')
+    expect(spans[0].attributes['tenant.role']).toBe('admin')
+    expect(spans[0].attributes['employee.assignment.id']).toBe('a1')
   })
 })

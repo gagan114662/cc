@@ -460,7 +460,7 @@ export const createAndSaveSnapshot = async (
           env: {
             ...((process.env.CLAUDE_CODE_DONT_INHERIT_ENV
               ? {}
-              : subprocessEnv()) as typeof process.env),
+              : subprocessEnv())),
             SHELL: binShell,
             GIT_EDITOR: 'true',
             CLAUDECODE: '1',

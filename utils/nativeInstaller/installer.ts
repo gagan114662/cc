@@ -923,7 +923,7 @@ export async function checkInstall(
       // Unix-style PATH instructions
       const shellType = getShellType()
       const configPaths = getShellConfigPaths()
-      const configFile = configPaths[shellType as keyof typeof configPaths]
+      const configFile = configPaths[shellType]
       const displayPath = configFile
         ? configFile.replace(homedir(), '~')
         : 'your shell config file'

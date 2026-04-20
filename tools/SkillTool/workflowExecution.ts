@@ -252,7 +252,7 @@ async function runWorkflowStepByIndex(args: {
     return existingOutcome
   }
 
-  const step = workflowSteps[stepIndex]!
+  const step = workflowSteps[stepIndex]
   const stepOutcomes = materializeWorkflowOutcomes(workflowSteps, outcomeMap)
   const combinedHandoff = buildCombinedHandoff(stepOutcomes)
   if (!hasRequiredHandoff(step.requiresHandoff, combinedHandoff)) {
@@ -369,7 +369,7 @@ async function executeCodeModeWorkflow(args: {
       }
 
       const stepOutcomes = materializeWorkflowOutcomes(workflowSteps, outcomeMap)
-      const step = workflowSteps[stepIndex]!
+      const step = workflowSteps[stepIndex]
       const summary = buildSkippedWorkflowSummary({
         step,
         stepOutcomes,

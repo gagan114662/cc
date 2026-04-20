@@ -94,10 +94,10 @@ describe('planDeployment', () => {
       existingDerived,
       existingSLOs,
     )
-    expect(plan.derivedColumns[0]!.action).toBe('skip')
-    expect(plan.derivedColumns[0]!.existingId).toBe('dc-1')
-    expect(plan.slos[0]!.action).toBe('skip')
-    expect(plan.slos[0]!.existingId).toBe('slo-1')
+    expect(plan.derivedColumns[0].action).toBe('skip')
+    expect(plan.derivedColumns[0].existingId).toBe('dc-1')
+    expect(plan.slos[0].action).toBe('skip')
+    expect(plan.slos[0].existingId).toBe('slo-1')
   })
 
   test('updates the derived column when the expression drifts', () => {
@@ -111,9 +111,9 @@ describe('planDeployment', () => {
       },
     ]
     const plan = planDeployment([API_ERROR_RATE], existingDerived, [])
-    expect(plan.derivedColumns[0]!.action).toBe('update')
-    expect(plan.derivedColumns[0]!.existingId).toBe('dc-99')
-    expect(plan.derivedColumns[0]!.reason).toContain('drifted')
+    expect(plan.derivedColumns[0].action).toBe('update')
+    expect(plan.derivedColumns[0].existingId).toBe('dc-99')
+    expect(plan.derivedColumns[0].reason).toContain('drifted')
   })
 
   test('updates the SLO when the target drifts', () => {
@@ -129,8 +129,8 @@ describe('planDeployment', () => {
       },
     ]
     const plan = planDeployment([ASSIGNMENT_LATENCY_P95], [], existingSLOs)
-    expect(plan.slos[0]!.action).toBe('update')
-    expect(plan.slos[0]!.existingId).toBe('slo-42')
+    expect(plan.slos[0].action).toBe('update')
+    expect(plan.slos[0].existingId).toBe('slo-42')
   })
 
   test('updates the SLO when the SLI alias points somewhere else', () => {
@@ -150,6 +150,6 @@ describe('planDeployment', () => {
       [],
       existingSLOs,
     )
-    expect(plan.slos[0]!.action).toBe('update')
+    expect(plan.slos[0].action).toBe('update')
   })
 })

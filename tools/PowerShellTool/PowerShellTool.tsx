@@ -198,7 +198,7 @@ export function detectBlockedSleepPattern(command: string): string | null {
   // (case-insensitive; -Seconds can be abbreviated to -s per PS convention)
   const m = /^(?:start-sleep|sleep)(?:\s+-s(?:econds)?)?\s+(\d+)\s*$/i.exec(first);
   if (!m) return null;
-  const secs = parseInt(m[1]!, 10);
+  const secs = parseInt(m[1], 10);
   if (secs < 2) return null; // sub-2s sleeps are fine (rate limiting, pacing)
 
   const rest = command.trim().slice(first.length).replace(/^[\s;|&]+/, '');

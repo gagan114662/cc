@@ -85,7 +85,7 @@ export default function TextInput(props: Props): React.ReactNode {
       g: 128,
       b: 128
     } : hueToRgb(hue);
-    invert = () => chalk.rgb(r, g, b)(BARS[barIndex]!);
+    invert = () => chalk.rgb(r, g, b)(BARS[barIndex]);
   } else {
     invert = chalk.inverse;
   }

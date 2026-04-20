@@ -769,7 +769,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
       ])
       let i = 0
       while (i < args.length) {
-        const token = args[i]!
+        const token = args[i]
         // Skip flags and their arguments
         if (token.startsWith('--') && token.includes('=')) {
           // Long flag with =value, already consumed
@@ -1017,7 +1017,7 @@ const COMMAND_ALLOWLIST: Record<string, CommandConfig> = {
       let i = 0
       let afterDoubleDash = false
       while (i < args.length) {
-        const token = args[i]!
+        const token = args[i]
         if (token === '--') {
           afterDoubleDash = true
           i++
@@ -1269,7 +1269,7 @@ export function isCommandSafeViaFlagParsing(command: string): boolean {
   }
 
   // Now we know all tokens are strings
-  const tokens = parsed as string[]
+  const tokens = parsed
 
   if (tokens.length === 0) {
     return false

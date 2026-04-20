@@ -222,7 +222,7 @@ function BashPermissionRequestInner({
       // Single rule → seed the editable input so the user can refine it.
       // Multiple/zero rules → undefined → yes-apply-suggestions handles it.
       const backendBashRules = extractRules('suggestions' in toolUseConfirm.permissionResult ? toolUseConfirm.permissionResult.suggestions : undefined).filter(r => r.toolName === BashTool.name && r.ruleContent);
-      return backendBashRules.length === 1 ? backendBashRules[0]!.ruleContent : undefined;
+      return backendBashRules.length === 1 ? backendBashRules[0].ruleContent : undefined;
     }
     const two = getSimpleCommandPrefix(command);
     if (two) return `${two}:*`;
@@ -338,7 +338,7 @@ function BashPermissionRequestInner({
       option_index: optionIndex[value_0],
       explainer_visible: explainerState.visible
     });
-    const toolNameForAnalytics = sanitizeToolNameForAnalytics(toolUseConfirm.tool.name) as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS;
+    const toolNameForAnalytics = sanitizeToolNameForAnalytics(toolUseConfirm.tool.name);
     if (value_0 === 'yes-prefix-edited') {
       const trimmedPrefix = (editablePrefix ?? '').trim();
       logUnaryPermissionEvent('tool_use_single', toolUseConfirm, 'accept');

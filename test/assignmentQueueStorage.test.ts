@@ -88,9 +88,9 @@ describe('enqueue + load round-trip', () => {
 
     const loaded = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(loaded.length).toBe(1)
-    expect(loaded[0]!.id).toBe('a-1')
-    expect(loaded[0]!.state).toBe('pending')
-    expect(loaded[0]!.assignment).toBe('refactor the widget')
+    expect(loaded[0].id).toBe('a-1')
+    expect(loaded[0].state).toBe('pending')
+    expect(loaded[0].assignment).toBe('refactor the widget')
   })
 
   test('state transitions fold — last state wins', async () => {
@@ -109,7 +109,7 @@ describe('enqueue + load round-trip', () => {
 
     const loaded = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
     expect(loaded.length).toBe(1)
-    expect(loaded[0]!.state).toBe('done')
+    expect(loaded[0].state).toBe('done')
   })
 
   test('failed state carries the error message for later inspection', async () => {
@@ -123,8 +123,8 @@ describe('enqueue + load round-trip', () => {
     )
 
     const loaded = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
-    expect(loaded[0]!.state).toBe('failed')
-    expect(loaded[0]!.lastError).toBe('runner_threw: boom')
+    expect(loaded[0].state).toBe('failed')
+    expect(loaded[0].lastError).toBe('runner_threw: boom')
   })
 
   test('two tenants write to independent files', async () => {
@@ -166,7 +166,7 @@ describe('recoverCrashedAssignments', () => {
     expect(recovered).toEqual(['a-1'])
 
     const loaded = await loadAssignmentQueue(projectRoot, DEFAULT_TENANT.id)
-    expect(loaded[0]!.state).toBe('pending')
+    expect(loaded[0].state).toBe('pending')
   })
 
   test('does NOT touch done or failed assignments', async () => {

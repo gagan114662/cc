@@ -459,7 +459,7 @@ function buildNestedObject(
   if (path.length === 0) {
     return {}
   }
-  const key = path[0]!
+  const key = path[0]
   if (path.length === 1) {
     return { [key]: value }
   }

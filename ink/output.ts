@@ -461,7 +461,7 @@ export default class Output {
               // screen.softWrap[lineY] correctly records the join point
               // even though that line's cells were never written.
               if (softWrap && from > 0 && softWrap[from] === true) {
-                prevContentEnd = x + stringWidth(lines[from - 1]!)
+                prevContentEnd = x + stringWidth(lines[from - 1])
               }
 
               lines = lines.slice(from, to)
@@ -537,7 +537,7 @@ function stylesEqual(a: AnsiCode[], b: AnsiCode[]): boolean {
   if (len !== b.length) return false
   if (len === 0) return true // Both empty
   for (let i = 0; i < len; i++) {
-    if (a[i]!.code !== b[i]!.code) return false
+    if (a[i].code !== b[i].code) return false
   }
   return true
 }
@@ -559,10 +559,10 @@ function styledCharsWithGraphemeClustering(
 
   const result: ClusteredChar[] = []
   const bufferChars: string[] = []
-  let bufferStyles: AnsiCode[] = chars[0]!.styles
+  let bufferStyles: AnsiCode[] = chars[0].styles
 
   for (let i = 0; i < charCount; i++) {
-    const char = chars[i]!
+    const char = chars[i]
     const styles = char.styles
 
     // Different styles means we need to flush and start new buffer
@@ -653,7 +653,7 @@ function writeLineToScreen(
   let offsetX = x
 
   for (let charIdx = 0; charIdx < characters.length; charIdx++) {
-    const character = characters[charIdx]!
+    const character = characters[charIdx]
     const codePoint = character.value.codePointAt(0)
 
     // Handle C0 control characters (0x00-0x1F) that cause cursor movement

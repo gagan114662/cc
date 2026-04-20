@@ -207,7 +207,7 @@ function substituteVariables(
   // content happens to contain {{varName}} matching a later variable.
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) =>
     Object.prototype.hasOwnProperty.call(variables, key)
-      ? variables[key]!
+      ? variables[key]
       : match,
   )
 }

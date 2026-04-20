@@ -183,7 +183,7 @@ export function dropTextInBriefTurns<T extends {
   const textIndexToTurn: number[] = [];
   let turn = 0;
   for (let i = 0; i < messages.length; i++) {
-    const msg = messages[i]!;
+    const msg = messages[i];
     const block = msg.message?.content[0];
     if (msg.type === 'user' && block?.type !== 'tool_result' && !msg.isMeta) {
       turn++;

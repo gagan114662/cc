@@ -281,7 +281,7 @@ function getHeaderBasedEarlyWarning(
       return {
         status: 'allowed_warning',
         resetsAt,
-        rateLimitType: rateLimitType as RateLimitType,
+        rateLimitType: rateLimitType,
         utilization,
         unifiedRateLimitFallbackAvailable,
         isUsingOverage: false,

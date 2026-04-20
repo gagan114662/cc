@@ -170,7 +170,7 @@ export function createLSPServerManager(): LSPServerManager {
     const errors = results
       .map((r, i) =>
         r.status === 'rejected'
-          ? `${toStop[i]![0]}: ${errorMessage(r.reason)}`
+          ? `${toStop[i][0]}: ${errorMessage(r.reason)}`
           : null,
       )
       .filter((e): e is string => e !== null)

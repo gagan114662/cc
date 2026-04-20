@@ -92,7 +92,7 @@ export function generateShellSuggestionsLabel(suggestions: PermissionUpdate[], s
   if (hasReadPaths && !hasDirectories && !hasCommands) {
     // Only Read rules - use "reading from" language
     if (readPaths.length === 1) {
-      const firstPath = readPaths[0]!;
+      const firstPath = readPaths[0];
       const dirName = basename(firstPath) || firstPath;
       return <Text>
           Yes, allow reading from <Text bold>{dirName}</Text>
@@ -108,7 +108,7 @@ export function generateShellSuggestionsLabel(suggestions: PermissionUpdate[], s
   if (hasDirectories && !hasReadPaths && !hasCommands) {
     // Only directory permissions - use "access to" language
     if (directories.length === 1) {
-      const firstDir = directories[0]!;
+      const firstDir = directories[0];
       const dirName = basename(firstDir) || firstDir;
       return <Text>
           Yes, and always allow access to <Text bold>{dirName}</Text>

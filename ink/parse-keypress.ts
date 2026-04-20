@@ -127,28 +127,28 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
     if ((m = DECRPM_RE.exec(s))) {
       return {
         type: 'decrpm',
-        mode: parseInt(m[1]!, 10),
-        status: parseInt(m[2]!, 10),
+        mode: parseInt(m[1], 10),
+        status: parseInt(m[2], 10),
       }
     }
 
     if ((m = DA1_RE.exec(s))) {
-      return { type: 'da1', params: splitNumericParams(m[1]!) }
+      return { type: 'da1', params: splitNumericParams(m[1]) }
     }
 
     if ((m = DA2_RE.exec(s))) {
-      return { type: 'da2', params: splitNumericParams(m[1]!) }
+      return { type: 'da2', params: splitNumericParams(m[1]) }
     }
 
     if ((m = KITTY_FLAGS_RE.exec(s))) {
-      return { type: 'kittyKeyboard', flags: parseInt(m[1]!, 10) }
+      return { type: 'kittyKeyboard', flags: parseInt(m[1], 10) }
     }
 
     if ((m = CURSOR_POSITION_RE.exec(s))) {
       return {
         type: 'cursorPosition',
-        row: parseInt(m[1]!, 10),
-        col: parseInt(m[2]!, 10),
+        row: parseInt(m[1], 10),
+        col: parseInt(m[2], 10),
       }
     }
 
@@ -159,7 +159,7 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
   if (s.startsWith('\x1b]')) {
     const m = OSC_RESPONSE_RE.exec(s)
     if (m) {
-      return { type: 'osc', code: parseInt(m[1]!, 10), data: m[2]! }
+      return { type: 'osc', code: parseInt(m[1], 10), data: m[2] }
     }
   }
 
@@ -167,7 +167,7 @@ function parseTerminalResponse(s: string): TerminalResponse | null {
   if (s.startsWith('\x1bP')) {
     const m = XTVERSION_RE.exec(s)
     if (m) {
-      return { type: 'xtversion', name: m[1]! }
+      return { type: 'xtversion', name: m[1] }
     }
   }
 
@@ -195,7 +195,7 @@ export const INITIAL_STATE: KeyParseState = {
 
 function inputToString(input: Buffer | string): string {
   if (Buffer.isBuffer(input)) {
-    if (input[0]! > 127 && input[1] === undefined) {
+    if (input[0] > 127 && input[1] === undefined) {
       ;(input[0] as unknown as number) -= 128
       return '\x1b' + String(input)
     } else {
@@ -594,7 +594,7 @@ export type ParsedInput = ParsedKey | ParsedMouse | ParsedResponse
 function parseMouseEvent(s: string): ParsedMouse | null {
   const match = SGR_MOUSE_RE.exec(s)
   if (!match) return null
-  const button = parseInt(match[1]!, 10)
+  const button = parseInt(match[1], 10)
   // Wheel events (bit 6 set, low bits 0/1 for up/down) stay as ParsedKey
   // so the keybinding system can route them to scroll handlers.
   if ((button & 0x40) !== 0) return null
@@ -602,8 +602,8 @@ function parseMouseEvent(s: string): ParsedMouse | null {
     kind: 'mouse',
     button,
     action: match[4] === 'M' ? 'press' : 'release',
-    col: parseInt(match[2]!, 10),
-    row: parseInt(match[3]!, 10),
+    col: parseInt(match[2], 10),
+    row: parseInt(match[3], 10),
     sequence: s,
   }
 }
@@ -631,7 +631,7 @@ function parseKeypress(s: string = ''): ParsedKey {
   // Example: ESC[13;2u = Shift+Enter, ESC[27u = Escape (no modifiers)
   let match: RegExpExecArray | null
   if ((match = CSI_U_RE.exec(s))) {
-    const codepoint = parseInt(match[1]!, 10)
+    const codepoint = parseInt(match[1], 10)
     // Modifier defaults to 1 (no modifiers) when not present
     const modifier = match[2] ? parseInt(match[2], 10) : 1
     const mods = decodeModifier(modifier)
@@ -655,8 +655,8 @@ function parseKeypress(s: string = ''): ParsedKey {
   // Must run before FN_KEY_RE — FN_KEY_RE only allows 2 params before ~ and
   // would leave the tail as garbage if it partially matched.
   if ((match = MODIFY_OTHER_KEYS_RE.exec(s))) {
-    const mods = decodeModifier(parseInt(match[1]!, 10))
-    const name = keycodeToName(parseInt(match[2]!, 10))
+    const mods = decodeModifier(parseInt(match[1], 10))
+    const name = keycodeToName(parseInt(match[2], 10))
     return {
       kind: 'key',
       name,
@@ -679,7 +679,7 @@ function parseKeypress(s: string = ''): ParsedKey {
   // Ctrl=0x10) — modified wheel events (e.g. Ctrl+scroll, button=80)
   // should still be recognized as wheelup/wheeldown.
   if ((match = SGR_MOUSE_RE.exec(s))) {
-    const button = parseInt(match[1]!, 10)
+    const button = parseInt(match[1], 10)
     if ((button & 0x43) === 0x40) return createNavKey(s, 'wheelup', false)
     if ((button & 0x43) === 0x41) return createNavKey(s, 'wheeldown', false)
     // Shouldn't reach here (parseMouseEvent catches non-wheel) but be safe
@@ -732,7 +732,7 @@ function parseKeypress(s: string = ''): ParsedKey {
     key.shift = true
   } else if ((parts = META_KEY_CODE_RE.exec(s))) {
     key.meta = true
-    key.shift = /^[A-Z]$/.test(parts[1]!)
+    key.shift = /^[A-Z]$/.test(parts[1])
   } else if ((parts = FN_KEY_RE.exec(s))) {
     const segs = [...s]
 

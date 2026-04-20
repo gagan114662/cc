@@ -128,7 +128,7 @@ export function readAuditTail(
     // without parsing the whole history.
     for (let i = lines.length - 1; i >= 0 && collected.length < limit; i -= 1) {
       try {
-        collected.push(JSON.parse(lines[i]!) as AuditEntry)
+        collected.push(JSON.parse(lines[i]) as AuditEntry)
       } catch {
         // Skip malformed lines. A corrupted row shouldn't brick status.
       }

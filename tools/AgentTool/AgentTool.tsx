@@ -1299,7 +1299,7 @@ export const AgentTool = buildTool({
     // Multi-agent spawn result
     const internalData = data as InternalOutput;
     if (typeof internalData === 'object' && internalData !== null && 'status' in internalData && internalData.status === 'teammate_spawned') {
-      const spawnData = internalData as TeammateSpawnedOutput;
+      const spawnData = internalData;
       return {
         tool_use_id: toolUseID,
         type: 'tool_result',

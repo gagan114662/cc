@@ -263,7 +263,7 @@ function MessageImpl(t0) {
             }
             const {
               SnipBoundaryMessage
-            } = t2 as typeof import('./messages/SnipBoundaryMessage.js');
+            } = t2;
             let t3;
             if ($[66] !== message) {
               t3 = <SnipBoundaryMessage message={message} />;

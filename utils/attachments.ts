@@ -3671,7 +3671,7 @@ async function getTeammateMailboxAttachments(
   const idleAgentByIndex = new Map<number, string>()
   const latestIdleByAgent = new Map<string, number>()
   for (let i = 0; i < allMessages.length; i++) {
-    const idle = isIdleNotification(allMessages[i]!.text)
+    const idle = isIdleNotification(allMessages[i].text)
     if (idle) {
       idleAgentByIndex.set(i, idle.from)
       latestIdleByAgent.set(idle.from, i)

@@ -121,7 +121,7 @@ export async function daemonMain(args: string[]): Promise<void> {
 
       const workerPids: number[] = []
       for (let index = 0; index < workerSlots; index += 1) {
-        const child = execa(process.execPath, [process.argv[1]!, '--daemon-worker', 'harness'], {
+        const child = execa(process.execPath, [process.argv[1], '--daemon-worker', 'harness'], {
           cwd: process.cwd(),
           detached: true,
           stdin: 'ignore',

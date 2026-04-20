@@ -88,7 +88,7 @@ export function expandPastedTextRefs(
   // pasted content are never confused for real refs. Reverse order keeps
   // earlier offsets valid after later replacements.
   for (let i = refs.length - 1; i >= 0; i--) {
-    const ref = refs[i]!
+    const ref = refs[i]
     const content = pastedContents[ref.id]
     if (content?.type !== 'text') continue
     expanded =
@@ -108,7 +108,7 @@ async function* makeLogEntryReader(): AsyncGenerator<LogEntry> {
 
   // Start with entries that have yet to be flushed to disk
   for (let i = pendingEntries.length - 1; i >= 0; i--) {
-    yield pendingEntries[i]!
+    yield pendingEntries[i]
   }
 
   // Read from global history file (shared across all projects)

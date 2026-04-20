@@ -775,7 +775,7 @@ function randomInt(max: number): number {
  * Pick a random element from an array
  */
 function pickRandom<T>(array: readonly T[]): T {
-  return array[randomInt(array.length)]!
+  return array[randomInt(array.length)]
 }
 
 /**

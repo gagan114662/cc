@@ -614,7 +614,7 @@ export async function main() {
     const rawCliArgs = process.argv.slice(2);
     const ccIdx = rawCliArgs.findIndex(a => a.startsWith('cc://') || a.startsWith('cc+unix://'));
     if (ccIdx !== -1 && _pendingConnect) {
-      const ccUrl = rawCliArgs[ccIdx]!;
+      const ccUrl = rawCliArgs[ccIdx];
       const {
         parseConnectUrl
       } = await import('./server/parseConnectUrl.js');
@@ -627,7 +627,7 @@ export async function main() {
         if (dspIdx !== -1) {
           stripped.splice(dspIdx, 1);
         }
-        process.argv = [process.argv[0]!, process.argv[1]!, 'open', ccUrl, ...stripped];
+        process.argv = [process.argv[0], process.argv[1], 'open', ccUrl, ...stripped];
       } else {
         // Interactive: strip cc:// URL and flags, run main command
         _pendingConnect.url = parsed.serverUrl;
@@ -637,7 +637,7 @@ export async function main() {
         if (dspIdx !== -1) {
           stripped.splice(dspIdx, 1);
         }
-        process.argv = [process.argv[0]!, process.argv[1]!, ...stripped];
+        process.argv = [process.argv[0], process.argv[1], ...stripped];
       }
     }
   }
@@ -652,7 +652,7 @@ export async function main() {
         enableConfigs
       } = await import('./utils/config.js');
       enableConfigs();
-      const uri = process.argv[handleUriIdx + 1]!;
+      const uri = process.argv[handleUriIdx + 1];
       const {
         handleDeepLinkUri
       } = await import('./utils/deepLink/protocolHandler.js');
@@ -690,11 +690,11 @@ export async function main() {
       if (nextArg && !nextArg.startsWith('-')) {
         _pendingAssistantChat.sessionId = nextArg;
         rawArgs.splice(0, 2); // drop 'assistant' and sessionId
-        process.argv = [process.argv[0]!, process.argv[1]!, ...rawArgs];
+        process.argv = [process.argv[0], process.argv[1], ...rawArgs];
       } else if (!nextArg) {
         _pendingAssistantChat.discover = true;
         rawArgs.splice(0, 1); // drop 'assistant'
-        process.argv = [process.argv[0]!, process.argv[1]!, ...rawArgs];
+        process.argv = [process.argv[0], process.argv[1], ...rawArgs];
       }
       // else: `claude assistant --help` → fall through to stub
     }
@@ -724,13 +724,13 @@ export async function main() {
         rawCliArgs.splice(dspIdx, 1);
       }
       const pmIdx = rawCliArgs.indexOf('--permission-mode');
-      if (pmIdx !== -1 && rawCliArgs[pmIdx + 1] && !rawCliArgs[pmIdx + 1]!.startsWith('-')) {
+      if (pmIdx !== -1 && rawCliArgs[pmIdx + 1] && !rawCliArgs[pmIdx + 1].startsWith('-')) {
         _pendingSSH.permissionMode = rawCliArgs[pmIdx + 1];
         rawCliArgs.splice(pmIdx, 2);
       }
       const pmEqIdx = rawCliArgs.findIndex(a => a.startsWith('--permission-mode='));
       if (pmEqIdx !== -1) {
-        _pendingSSH.permissionMode = rawCliArgs[pmEqIdx]!.split('=')[1];
+        _pendingSSH.permissionMode = rawCliArgs[pmEqIdx].split('=')[1];
         rawCliArgs.splice(pmEqIdx, 1);
       }
       // Forward session-resume + model flags to the remote CLI's initial spawn.
@@ -754,7 +754,7 @@ export async function main() {
         }
         const eqI = rawCliArgs.findIndex(a => a.startsWith(`${flag}=`));
         if (eqI !== -1) {
-          _pendingSSH.extraCliArgs.push(opts.as ?? flag, rawCliArgs[eqI]!.slice(flag.length + 1));
+          _pendingSSH.extraCliArgs.push(opts.as ?? flag, rawCliArgs[eqI].slice(flag.length + 1));
           rawCliArgs.splice(eqI, 1);
         }
       };
@@ -791,7 +791,7 @@ export async function main() {
       }
 
       // Rewrite argv so the main command sees remaining flags but not `ssh`.
-      process.argv = [process.argv[0]!, process.argv[1]!, ...rest];
+      process.argv = [process.argv[0], process.argv[1], ...rest];
     }
   }
 
@@ -1859,7 +1859,7 @@ async function run(): Promise<CommanderCommand> {
       process.exit(1);
     }
     const effectivePrompt = prompt || '';
-    let inputPrompt = await getInputPrompt(effectivePrompt, (inputFormat ?? 'text') as 'text' | 'stream-json');
+    let inputPrompt = await getInputPrompt(effectivePrompt, (inputFormat ?? 'text'));
     profileCheckpoint('action_after_input_prompt');
 
     // Activate proactive mode BEFORE getTools() so SleepTool.isEnabled()
@@ -3305,7 +3305,7 @@ async function run(): Promise<CommanderCommand> {
           });
         }
         if (sessions.length === 1) {
-          targetSessionId = sessions[0]!.id;
+          targetSessionId = sessions[0].id;
         } else {
           const picked = await launchAssistantSessionChooser(root, {
             sessions

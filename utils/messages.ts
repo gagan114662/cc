@@ -1506,7 +1506,7 @@ export function reorderAttachmentsForAPI(messages: Message[]): Message[] {
         // pendingAttachments is already reversed; after the final result.reverse()
         // they will appear in original order right after `message`.
         for (let j = 0; j < pendingAttachments.length; j++) {
-          result.push(pendingAttachments[j]!)
+          result.push(pendingAttachments[j])
         }
         result.push(message)
         pendingAttachments.length = 0
@@ -1519,7 +1519,7 @@ export function reorderAttachmentsForAPI(messages: Message[]): Message[] {
 
   // Any remaining attachments bubble all the way to the top.
   for (let j = 0; j < pendingAttachments.length; j++) {
-    result.push(pendingAttachments[j]!)
+    result.push(pendingAttachments[j])
   }
 
   result.reverse()
@@ -1664,7 +1664,7 @@ function appendMessageTagToUserMessage(message: UserMessage): UserMessage {
     ...message,
     message: {
       ...message.message,
-      content: newContent as typeof content,
+      content: newContent,
     },
   }
 }
@@ -3543,7 +3543,7 @@ Read the team config to discover your teammates' names. Check the task list peri
         }),
       ])
     case 'file': {
-      const fileContent = attachment.content as FileReadToolOutput
+      const fileContent = attachment.content
       switch (fileContent.type) {
         case 'image': {
           return wrapMessagesInSystemReminder([
@@ -3797,7 +3797,7 @@ Read the team config to discover your teammates' names. Check the task list peri
     case 'output_style': {
       const outputStyle =
         OUTPUT_STYLE_CONFIG[
-          attachment.style as keyof typeof OUTPUT_STYLE_CONFIG
+          attachment.style
         ]
       if (!outputStyle) {
         return []
@@ -5343,7 +5343,7 @@ export function ensureToolResultPairing(
             'type' in block &&
             block.type === 'tool_result'
           ) {
-            const trId = (block as ToolResultBlockParam).tool_use_id
+            const trId = (block).tool_use_id
             if (orphanedSet.has(trId)) return false
             if (seenTrIds.has(trId)) return false
             seenTrIds.add(trId)

@@ -117,7 +117,7 @@ async function getDesktopVersion(): Promise<string | null> {
           const cb = semverCoerce(b)!
           return ca.compare(cb)
         })
-      return versions.length > 0 ? versions[versions.length - 1]! : null
+      return versions.length > 0 ? versions[versions.length - 1] : null
     } catch {
       return null
     }

@@ -876,7 +876,7 @@ export function ManagePlugins({
           if (!pluginsByMarketplace[marketplace]) {
             pluginsByMarketplace[marketplace] = [];
           }
-          pluginsByMarketplace[marketplace]!.push(plugin);
+          pluginsByMarketplace[marketplace].push(plugin);
         }
 
         // Create marketplace info array with enabled/disabled counts
@@ -1323,7 +1323,7 @@ export function ManagePlugins({
             const newStates = [...pluginStates];
             const index = newStates.findIndex(s_5 => s_5.plugin.name === selectedPlugin.plugin.name && s_5.marketplace === selectedPlugin.marketplace);
             if (index !== -1) {
-              newStates[index]!.pendingUpdate = !selectedPlugin.pendingUpdate;
+              newStates[index].pendingUpdate = !selectedPlugin.pendingUpdate;
               setPluginStates(newStates);
               setSelectedPlugin({
                 ...selectedPlugin,
@@ -1435,7 +1435,7 @@ export function ManagePlugins({
     },
     'select:accept': () => {
       if (detailsMenuItems[detailsMenuIndex]) {
-        detailsMenuItems[detailsMenuIndex]!.action();
+        detailsMenuItems[detailsMenuIndex].action();
       }
     }
   }, {

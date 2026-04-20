@@ -59,9 +59,9 @@ describe('billing usage ledger', () => {
 
     const stored = loadUsageLedger(projectRoot, 'acme')
     expect(stored).toHaveLength(1)
-    expect(stored[0]!.tenantId).toBe('acme')
-    expect(stored[0]!.costUSD).toBe(1.25)
-    expect(stored[0]!.webSearchRequests).toBe(2)
+    expect(stored[0].tenantId).toBe('acme')
+    expect(stored[0].costUSD).toBe(1.25)
+    expect(stored[0].webSearchRequests).toBe(2)
   })
 
   test('posts billing usage to the configured Stripe-compatible webhook', async () => {

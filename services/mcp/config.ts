@@ -139,7 +139,7 @@ function getServerCommandArray(config: McpServerConfig): string[] | null {
   if (config.type !== undefined && config.type !== 'stdio') {
     return null
   }
-  const stdioConfig = config as McpStdioServerConfig
+  const stdioConfig = config
   return [stdioConfig.command, ...(stdioConfig.args ?? [])]
 }
 
@@ -570,7 +570,7 @@ function expandEnvVars(config: McpServerConfig): {
   switch (config.type) {
     case undefined:
     case 'stdio': {
-      const stdioConfig = config as McpStdioServerConfig
+      const stdioConfig = config
       expanded = {
         ...stdioConfig,
         command: expandString(stdioConfig.command),
@@ -584,10 +584,7 @@ function expandEnvVars(config: McpServerConfig): {
     case 'sse':
     case 'http':
     case 'ws': {
-      const remoteConfig = config as
-        | McpSSEServerConfig
-        | McpHTTPServerConfig
-        | McpWebSocketServerConfig
+      const remoteConfig = config
       expanded = {
         ...remoteConfig,
         url: expandString(remoteConfig.url),
@@ -901,7 +898,7 @@ export function getMcpConfigsByScope(
     local: 'localSettings',
   }
 
-  if (scope in sourceMap && !isSettingSourceEnabled(sourceMap[scope]!)) {
+  if (scope in sourceMap && !isSettingSourceEnabled(sourceMap[scope])) {
     return { servers: {}, errors: [] }
   }
 
@@ -1222,7 +1219,7 @@ export async function getClaudeCodeMcpConfigs(
     mcpErrors.push({
       type: 'mcp-server-suppressed-duplicate',
       source: name,
-      plugin: parts[1]!,
+      plugin: parts[1],
       serverName: parts.slice(2).join(':'),
       duplicateOf,
     })

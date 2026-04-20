@@ -351,7 +351,7 @@ export function findDangerousClassifierPermissions(
     // Parse tool spec: "Bash" or "Bash(pattern)" or "Agent" or "Agent(subagent_type)"
     const match = toolSpec.match(/^([^(]+)(?:\(([^)]*)\))?$/)
     if (match) {
-      const toolName = match[1]!.trim()
+      const toolName = match[1].trim()
       const ruleContent = match[2]?.trim()
 
       if (isDangerousClassifierPermission(toolName, ruleContent)) {

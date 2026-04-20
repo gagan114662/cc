@@ -376,7 +376,7 @@ Run 'claude <command> --help' for more information on a command.`);
 
   // Redirect common update flag mistakes to the update subcommand
   if (args.length === 1 && (args[0] === '--update' || args[0] === '--upgrade')) {
-    process.argv = [process.argv[0]!, process.argv[1]!, 'update'];
+    process.argv = [process.argv[0], process.argv[1], 'update'];
   }
 
   // --bare: set SIMPLE early so gates fire during module eval / commander

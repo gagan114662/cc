@@ -580,7 +580,7 @@ function parseXmlBlock(text: string): boolean | null {
     ...stripThinking(text).matchAll(/<block>(yes|no)\b(<\/block>)?/gi),
   ]
   if (matches.length === 0) return null
-  return matches[0]![1]!.toLowerCase() === 'yes'
+  return matches[0][1].toLowerCase() === 'yes'
 }
 
 /**
@@ -592,7 +592,7 @@ function parseXmlReason(text: string): string | null {
     ...stripThinking(text).matchAll(/<reason>([\s\S]*?)<\/reason>/g),
   ]
   if (matches.length === 0) return null
-  return matches[0]![1]!.trim()
+  return matches[0][1].trim()
 }
 
 /**
@@ -600,7 +600,7 @@ function parseXmlReason(text: string): string | null {
  */
 function parseXmlThinking(text: string): string | null {
   const match = /<thinking>([\s\S]*?)<\/thinking>/.exec(text)
-  return match ? match[1]!.trim() : null
+  return match ? match[1].trim() : null
 }
 
 /**

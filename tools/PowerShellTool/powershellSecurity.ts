@@ -93,7 +93,7 @@ function psExeHasParamAbbreviation(
   const normalized: ParsedCommandElement = {
     ...cmd,
     args: cmd.args.map(a =>
-      a.length > 0 && PS_ALT_PARAM_PREFIXES.has(a[0]!) ? '-' + a.slice(1) : a,
+      a.length > 0 && PS_ALT_PARAM_PREFIXES.has(a[0]) ? '-' + a.slice(1) : a,
     ),
   }
   return commandHasArgAbbreviation(normalized, fullParam, minPrefix)
@@ -364,7 +364,7 @@ function checkComObject(
     // positional-0) and run through isClmAllowedType. Closes attackVectors D4.
     let typeName: string | undefined
     for (let i = 0; i < cmd.args.length; i++) {
-      const a = cmd.args[i]!
+      const a = cmd.args[i]
       const lower = a.toLowerCase()
       // -TypeName abbrev: -t is unambiguous (no other New-Object -t* params).
       // Handle colon-bound form first: -TypeName:Foo.Bar
@@ -395,7 +395,7 @@ function checkComObject(
       // Switch params (no value argument)
       const SWITCH_PARAMS = new Set(['-strict'])
       for (let i = 0; i < cmd.args.length; i++) {
-        const a = cmd.args[i]!
+        const a = cmd.args[i]
         if (a.startsWith('-')) {
           const lower = a.toLowerCase()
           // Skip -TypeName variants (already handled by named-param loop above)
@@ -580,7 +580,7 @@ function checkStartProcess(
     if (cmd.children) {
       for (let i = 0; i < cmd.args.length; i++) {
         // Strip backticks before matching param name (bug #14): -V`erb:RunAs
-        const argClean = cmd.args[i]!.replace(/`/g, '')
+        const argClean = cmd.args[i].replace(/`/g, '')
         if (!/^[-\u2013\u2014\u2015/]v[a-z]*:/i.test(argClean)) continue
         const kids = cmd.children[i]
         if (!kids) continue

@@ -223,7 +223,7 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
   if (maybeSessionId) {
     const matchingLogs = logs.filter(l => getSessionIdFromLog(l) === maybeSessionId).sort((a, b) => b.modified.getTime() - a.modified.getTime());
     if (matchingLogs.length > 0) {
-      const log = matchingLogs[0]!;
+      const log = matchingLogs[0];
       const fullLog = isLiteLog(log) ? await loadFullLog(log) : log;
       void onResume(maybeSessionId, fullLog, 'slash_command_session_id');
       return null;
@@ -245,7 +245,7 @@ export const call: LocalJSXCommandCall = async (onDone, context, args) => {
       exact: true
     });
     if (titleMatches.length === 1) {
-      const log = titleMatches[0]!;
+      const log = titleMatches[0];
       const sessionId = getSessionIdFromLog(log);
       if (sessionId) {
         const fullLog = isLiteLog(log) ? await loadFullLog(log) : log;

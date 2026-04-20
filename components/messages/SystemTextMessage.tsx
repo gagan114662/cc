@@ -504,7 +504,7 @@ function TurnDurationMessage(t0) {
   if ($[0] !== store) {
     t1 = () => {
       const tasks = store.getState().tasks;
-      const running = (Object.values(tasks ?? {}) as TaskState[]).filter(isBackgroundTask);
+      const running = (Object.values(tasks ?? {})).filter(isBackgroundTask);
       return running.length > 0 ? getPillLabel(running) : null;
     };
     $[0] = store;

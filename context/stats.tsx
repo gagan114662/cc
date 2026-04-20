@@ -13,9 +13,9 @@ function percentile(sorted: number[], p: number): number {
   const lower = Math.floor(index);
   const upper = Math.ceil(index);
   if (lower === upper) {
-    return sorted[lower]!;
+    return sorted[lower];
   }
-  return sorted[lower]! + (sorted[upper]! - sorted[lower]!) * (index - lower);
+  return sorted[lower] + (sorted[upper] - sorted[lower]) * (index - lower);
 }
 const RESERVOIR_SIZE = 1024;
 type Histogram = {

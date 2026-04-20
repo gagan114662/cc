@@ -228,7 +228,7 @@ function collectRemovedRects(
   underAbsolute = false,
 ): void {
   if (removed.nodeName === '#text') return
-  const elem = removed as DOMElement
+  const elem = removed
   // If this node or any ancestor in the removed subtree was absolute,
   // its painted pixels may overlap non-siblings — flag for global blit
   // disable. Normal-flow removals only affect direct siblings, which
@@ -396,7 +396,7 @@ export const markDirty = (node?: DOMNode): void => {
 
   while (current) {
     if (current.nodeName !== '#text') {
-      ;(current as DOMElement).dirty = true
+      ;(current).dirty = true
       // Only mark yoga dirty on leaf nodes that have measure functions
       if (
         !markedYoga &&
@@ -419,7 +419,7 @@ export const markDirty = (node?: DOMNode): void => {
 export const scheduleRenderFrom = (node?: DOMNode): void => {
   let cur: DOMNode | undefined = node
   while (cur?.parentNode) cur = cur.parentNode
-  if (cur && cur.nodeName !== '#text') (cur as DOMElement).onRender?.()
+  if (cur && cur.nodeName !== '#text') (cur).onRender?.()
 }
 
 export const setTextNodeValue = (node: TextNode, text: string): void => {

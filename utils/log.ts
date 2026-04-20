@@ -323,13 +323,13 @@ function parseISOString(s: string): Date {
   const b = s.split(/\D+/)
   return new Date(
     Date.UTC(
-      parseInt(b[0]!, 10),
-      parseInt(b[1]!, 10) - 1,
-      parseInt(b[2]!, 10),
-      parseInt(b[3]!, 10),
-      parseInt(b[4]!, 10),
-      parseInt(b[5]!, 10),
-      parseInt(b[6]!, 10),
+      parseInt(b[0], 10),
+      parseInt(b[1], 10) - 1,
+      parseInt(b[2], 10),
+      parseInt(b[3], 10),
+      parseInt(b[4], 10),
+      parseInt(b[5], 10),
+      parseInt(b[6], 10),
     ),
   )
 }

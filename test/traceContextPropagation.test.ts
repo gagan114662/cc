@@ -73,7 +73,7 @@ describe('adoptParentTraceContextFromEnv', () => {
     const parentCtx = adoptParentTraceContextFromEnv(parentEnv)
     expect(parentCtx).toBeDefined()
     const tracer = trace.getTracer('test')
-    const child = tracer.startSpan('child-span', {}, parentCtx!)
+    const child = tracer.startSpan('child-span', {}, parentCtx)
     try {
       expect(child.spanContext().traceId).toBe(parentTraceId)
       expect(child.spanContext().spanId).not.toBe(parentSpanId)

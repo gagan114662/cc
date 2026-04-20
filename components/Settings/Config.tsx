@@ -1361,7 +1361,7 @@ export function Config({
       isDirty.current = true;
       const currentIndex = setting_0.options.indexOf(setting_0.value);
       const nextIndex = (currentIndex + 1) % setting_0.options.length;
-      setting_0.onChange(setting_0.options[nextIndex]!);
+      setting_0.onChange(setting_0.options[nextIndex]);
       return;
     }
   }, [autoUpdaterDisabledReason, filteredSettingsItems, selectedIndex, settingsData?.autoUpdatesChannel, setTabsHidden]);

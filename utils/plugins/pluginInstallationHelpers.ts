@@ -140,7 +140,7 @@ export async function cacheAndRegisterPlugin(
       : entry.source
 
   const cacheResult = await cachePlugin(source, {
-    manifest: entry as PluginMarketplaceEntry,
+    manifest: entry,
   })
 
   // For local plugins, use the original source path for Git SHA calculation

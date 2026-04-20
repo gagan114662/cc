@@ -41,7 +41,7 @@ export function BackgroundTaskStatus(t0) {
   const viewingAgentTaskId = useAppState(_temp2);
   let t3;
   if ($[0] !== tasks) {
-    t3 = (Object.values(tasks ?? {}) as TaskState[]).filter(_temp3);
+    t3 = (Object.values(tasks ?? {})).filter(_temp3);
     $[0] = tasks;
     $[1] = t3;
   } else {

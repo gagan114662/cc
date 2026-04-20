@@ -39,7 +39,7 @@ export async function getEnvironmentSelectionInfo(): Promise<EnvironmentSelectio
 
   // Find which environment would be selected
   let selectedEnvironment: EnvironmentResource =
-    environments.find(env => env.kind !== 'bridge') ?? environments[0]!
+    environments.find(env => env.kind !== 'bridge') ?? environments[0]
   let selectedEnvironmentSource: SettingSource | null = null
 
   if (defaultEnvironmentId) {

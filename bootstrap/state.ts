@@ -1454,7 +1454,7 @@ export function registerHookCallbacks(
     if (!STATE.registeredHooks[eventKey]) {
       STATE.registeredHooks[eventKey] = []
     }
-    STATE.registeredHooks[eventKey]!.push(...matchers)
+    STATE.registeredHooks[eventKey].push(...matchers)
   }
 }
 

@@ -114,7 +114,7 @@ function useClawdAnimation(): {
     return () => clearTimeout(timer);
   }, [frameIndex]);
   const seq = sequenceRef.current;
-  const current = frameIndex >= 0 && frameIndex < seq.length ? seq[frameIndex]! : IDLE;
+  const current = frameIndex >= 0 && frameIndex < seq.length ? seq[frameIndex] : IDLE;
   return {
     pose: current.pose,
     bounceOffset: current.offset,

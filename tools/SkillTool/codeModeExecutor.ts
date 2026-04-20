@@ -639,7 +639,7 @@ export class CodeModeStateStore {
         typeof parsed.userState === 'object' &&
         !Array.isArray(parsed.userState)
       ) {
-        return toSerializable(parsed.userState as Record<string, unknown>)
+        return toSerializable(parsed.userState)
       }
     } catch (error) {
       if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {

@@ -27,9 +27,9 @@ function calculatePercentiles(
   if (counts.length === 0) return null
 
   return {
-    p25: counts[Math.floor(counts.length * 0.25)]!,
-    p50: counts[Math.floor(counts.length * 0.5)]!,
-    p75: counts[Math.floor(counts.length * 0.75)]!,
+    p25: counts[Math.floor(counts.length * 0.25)],
+    p50: counts[Math.floor(counts.length * 0.5)],
+    p75: counts[Math.floor(counts.length * 0.75)],
   }
 }
 
@@ -82,7 +82,7 @@ export function generateHeatmap(
     for (let day = 0; day < 7; day++) {
       // Don't show future dates
       if (currentDate > today) {
-        grid[day]![week] = ' '
+        grid[day][week] = ' '
         currentDate.setDate(currentDate.getDate() + 1)
         continue
       }
@@ -101,7 +101,7 @@ export function generateHeatmap(
 
       // Determine intensity level based on message count
       const intensity = getIntensity(activity?.messageCount || 0, percentiles)
-      grid[day]![week] = getHeatmapChar(intensity)
+      grid[day][week] = getHeatmapChar(intensity)
 
       currentDate.setDate(currentDate.getDate() + 1)
     }
@@ -131,7 +131,7 @@ export function generateHeatmap(
     const uniqueMonths = monthStarts.map(m => m.month)
     const labelWidth = Math.floor(width / Math.max(uniqueMonths.length, 1))
     const monthLabels = uniqueMonths
-      .map(month => monthNames[month]!.padEnd(labelWidth))
+      .map(month => monthNames[month].padEnd(labelWidth))
       .join('')
 
     // 4 spaces for day label column prefix
@@ -144,8 +144,8 @@ export function generateHeatmap(
   // Grid
   for (let day = 0; day < 7; day++) {
     // Only show labels for Mon, Wed, Fri
-    const label = [1, 3, 5].includes(day) ? dayLabels[day]!.padEnd(3) : '   '
-    const row = label + ' ' + grid[day]!.join('')
+    const label = [1, 3, 5].includes(day) ? dayLabels[day].padEnd(3) : '   '
+    const row = label + ' ' + grid[day].join('')
     lines.push(row)
   }
 

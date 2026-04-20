@@ -125,7 +125,7 @@ async function waitForTaskCompletion(taskId: string, getAppState: () => {
       throw new AbortError();
     }
     const state = getAppState();
-    const task = state.tasks?.[taskId] as TaskState | undefined;
+    const task = state.tasks?.[taskId];
     if (!task) {
       return null;
     }
@@ -139,7 +139,7 @@ async function waitForTaskCompletion(taskId: string, getAppState: () => {
 
   // Timeout - return current state
   const finalState = getAppState();
-  return finalState.tasks?.[taskId] as TaskState ?? null;
+  return finalState.tasks?.[taskId] ?? null;
 }
 export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool({
   name: TASK_OUTPUT_TOOL_NAME,
@@ -193,7 +193,7 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
       };
     }
     const appState = getAppState();
-    const task = appState.tasks?.[task_id] as TaskState | undefined;
+    const task = appState.tasks?.[task_id];
     if (!task) {
       return {
         result: false,
@@ -212,7 +212,7 @@ export const TaskOutputTool: Tool<InputSchema, TaskOutputToolOutput> = buildTool
       timeout
     } = input;
     const appState = toolUseContext.getAppState();
-    const task = appState.tasks?.[task_id] as TaskState | undefined;
+    const task = appState.tasks?.[task_id];
     if (!task) {
       throw new Error(`No task found with ID: ${task_id}`);
     }

@@ -1749,7 +1749,7 @@ export function parseArgs(args: string[]): ParsedArgs {
   let continueSession = false
 
   for (let i = 0; i < args.length; i++) {
-    const arg = args[i]!
+    const arg = args[i]
     if (arg === '--help' || arg === '-h') {
       help = true
     } else if (arg === '--verbose' || arg === '-v') {
@@ -1759,11 +1759,11 @@ export function parseArgs(args: string[]): ParsedArgs {
     } else if (arg === '--no-sandbox') {
       sandbox = false
     } else if (arg === '--debug-file' && i + 1 < args.length) {
-      debugFile = resolve(args[++i]!)
+      debugFile = resolve(args[++i])
     } else if (arg.startsWith('--debug-file=')) {
       debugFile = resolve(arg.slice('--debug-file='.length))
     } else if (arg === '--session-timeout' && i + 1 < args.length) {
-      sessionTimeoutMs = parseInt(args[++i]!, 10) * 1000
+      sessionTimeoutMs = parseInt(args[++i], 10) * 1000
     } else if (arg.startsWith('--session-timeout=')) {
       sessionTimeoutMs =
         parseInt(arg.slice('--session-timeout='.length), 10) * 1000

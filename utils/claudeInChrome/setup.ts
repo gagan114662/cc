@@ -259,7 +259,7 @@ export async function installChromeNativeHostManifest(
 
   // Windows requires registry entries pointing to the manifest for each browser
   if (getPlatform() === 'windows') {
-    const manifestPath = join(manifestDirs[0]!, NATIVE_HOST_MANIFEST_NAME)
+    const manifestPath = join(manifestDirs[0], NATIVE_HOST_MANIFEST_NAME)
     registerWindowsNativeHosts(manifestPath)
   }
 

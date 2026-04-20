@@ -268,8 +268,8 @@ export function saveMcpServerUserConfig(
       if (needSecureScrub) {
         logForDebugging(
           `saveMcpServerUserConfig: scrubbed ${
-            Object.keys(existingInSecureStorage!).length -
-            Object.keys(secureScrubbed!).length
+            Object.keys(existingInSecureStorage).length -
+            Object.keys(secureScrubbed).length
           } stale non-sensitive key(s) from secureStorage for ${k}`,
         )
       }
@@ -313,7 +313,7 @@ export function saveMcpServerUserConfig(
       const scrubbed = Object.fromEntries(
         keysToScrubFromSettings.map(k => [k, undefined]),
       ) as Record<string, undefined>
-      settings.pluginConfigs[pluginId].mcpServers![serverName] = {
+      settings.pluginConfigs[pluginId].mcpServers[serverName] = {
         ...nonSensitive,
         ...scrubbed,
       } as UserConfigValues
@@ -961,7 +961,7 @@ export async function loadMcpbFile(
 
   return {
     manifest,
-    mcpConfig: mcpConfig as McpServerConfig,
+    mcpConfig: mcpConfig,
     extractedPath: extractPath,
     contentHash,
   }

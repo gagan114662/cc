@@ -140,7 +140,7 @@ export async function reconcileMarketplaces(
     ...diff.missing.map(
       (name): WorkItem => ({
         name,
-        source: normalizeSource(declared[name]!.source),
+        source: normalizeSource(declared[name].source),
         action: 'install',
       }),
     ),
@@ -199,7 +199,7 @@ export async function reconcileMarketplaces(
   const failed: ReconcileResult['failed'] = []
 
   for (let i = 0; i < toProcess.length; i++) {
-    const { name, source, action } = toProcess[i]!
+    const { name, source, action } = toProcess[i]
     opts?.onProgress?.({
       type: 'installing',
       name,

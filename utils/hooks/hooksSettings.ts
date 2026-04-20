@@ -127,7 +127,7 @@ export function getAllHooks(appState: AppState): IndividualHookConfig[] {
       }
 
       for (const [event, matchers] of Object.entries(sourceSettings.hooks)) {
-        for (const matcher of matchers as HookMatcher[]) {
+        for (const matcher of matchers) {
           for (const hookCommand of matcher.hooks) {
             hooks.push({
               event: event as HookEvent,

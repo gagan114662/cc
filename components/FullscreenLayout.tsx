@@ -243,7 +243,7 @@ export function computeUnseenDivider(messages: readonly Message[], dividerIndex:
   // dividerBeforeIndex search, so their UUID wouldn't be found (CC-724).
   // Hook attachments use randomUUID() so nothing shares their 24-char prefix.
   let anchorIdx = dividerIndex;
-  while (anchorIdx < messages.length && (messages[anchorIdx]?.type === 'progress' || isNullRenderingAttachment(messages[anchorIdx]!))) {
+  while (anchorIdx < messages.length && (messages[anchorIdx]?.type === 'progress' || isNullRenderingAttachment(messages[anchorIdx]))) {
     anchorIdx++;
   }
   const uuid = messages[anchorIdx]?.uuid;

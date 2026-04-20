@@ -37,7 +37,7 @@ export function AgentEditor({
   const [editMode, setEditMode] = useState<EditMode>('menu');
   const [selectedMenuIndex, setSelectedMenuIndex] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [selectedColor, setSelectedColor] = useState<AgentColorName | undefined>(agent.color as AgentColorName | undefined);
+  const [selectedColor, setSelectedColor] = useState<AgentColorName | undefined>(agent.color);
   const handleOpenInEditor = useCallback(async () => {
     const filePath = getActualAgentFilePath(agent);
     const result = await editFileInEditor(filePath);

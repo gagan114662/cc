@@ -140,11 +140,11 @@ export function MarkdownTable({
   } else if (totalMin <= availableWidth) {
     // Need to shrink - give each column its min, distribute remaining space
     const extraSpace = availableWidth - totalMin;
-    const overflows = idealWidths.map((ideal, i) => ideal - minWidths[i]!);
+    const overflows = idealWidths.map((ideal, i) => ideal - minWidths[i]);
     const totalOverflow = overflows.reduce((sum_1, o) => sum_1 + o, 0);
     columnWidths = minWidths.map((min, i_0) => {
       if (totalOverflow === 0) return min;
-      const extra = Math.floor(overflows[i_0]! / totalOverflow * extraSpace);
+      const extra = Math.floor(overflows[i_0] / totalOverflow * extraSpace);
       return min + extra;
     });
   } else {
@@ -160,8 +160,8 @@ export function MarkdownTable({
     let maxLines = 1;
     // Check header
     for (let i_1 = 0; i_1 < token.header.length; i_1++) {
-      const content = formatCell(token.header[i_1]!.tokens);
-      const wrapped = wrapText(content, columnWidths[i_1]!, {
+      const content = formatCell(token.header[i_1].tokens);
+      const wrapped = wrapText(content, columnWidths[i_1], {
         hard: needsHardWrap
       });
       maxLines = Math.max(maxLines, wrapped.length);
@@ -170,7 +170,7 @@ export function MarkdownTable({
     for (const row_1 of token.rows) {
       for (let i_2 = 0; i_2 < row_1.length; i_2++) {
         const content_0 = formatCell(row_1[i_2]?.tokens);
-        const wrapped_0 = wrapText(content_0, columnWidths[i_2]!, {
+        const wrapped_0 = wrapText(content_0, columnWidths[i_2], {
           hard: needsHardWrap
         });
         maxLines = Math.max(maxLines, wrapped_0.length);
@@ -191,7 +191,7 @@ export function MarkdownTable({
     // Get wrapped lines for each cell (preserving ANSI formatting)
     const cellLines = cells.map((cell, colIndex_1) => {
       const formattedText = formatCell(cell.tokens);
-      const width = columnWidths[colIndex_1]!;
+      const width = columnWidths[colIndex_1];
       return wrapText(formattedText, width, {
         hard: needsHardWrap
       });
@@ -208,11 +208,11 @@ export function MarkdownTable({
     for (let lineIdx = 0; lineIdx < maxLines_0; lineIdx++) {
       let line = '│';
       for (let colIndex_2 = 0; colIndex_2 < cells.length; colIndex_2++) {
-        const lines_1 = cellLines[colIndex_2]!;
-        const offset = verticalOffsets[colIndex_2]!;
+        const lines_1 = cellLines[colIndex_2];
+        const offset = verticalOffsets[colIndex_2];
         const contentLineIdx = lineIdx - offset;
-        const lineText = contentLineIdx >= 0 && contentLineIdx < lines_1.length ? lines_1[contentLineIdx]! : '';
-        const width_0 = columnWidths[colIndex_2]!;
+        const lineText = contentLineIdx >= 0 && contentLineIdx < lines_1.length ? lines_1[contentLineIdx] : '';
+        const width_0 = columnWidths[colIndex_2];
         // Headers always centered; data uses table alignment
         const align = isHeader ? 'center' : token.align?.[colIndex_2] ?? 'left';
         line += ' ' + padAligned(lineText, stringWidth(lineText), width_0, align) + ' │';
@@ -278,7 +278,7 @@ export function MarkdownTable({
 
         // Subsequent lines with small indent (skip empty lines)
         for (let i_3 = 1; i_3 < wrappedValue.length; i_3++) {
-          const line_1 = wrappedValue[i_3]!;
+          const line_1 = wrappedValue[i_3];
           if (!line_1.trim()) continue;
           lines_2.push(`${wrapIndent}${line_1}`);
         }

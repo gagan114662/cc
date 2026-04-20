@@ -57,7 +57,7 @@ export async function processBashCommand(inputString: string, precedingInputBloc
     }) => {
       setToolJSX({
         jsx: <>
-            <BashModeProgress input={inputString!} progress={progress.data} verbose={context.options.verbose} />
+            <BashModeProgress input={inputString} progress={progress.data} verbose={context.options.verbose} />
             {jsx}
           </>,
         shouldHidePromptInput: false,

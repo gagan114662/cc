@@ -214,7 +214,7 @@ export function deserializeMessagesWithInterruptDetection(
           isMeta: true,
         }),
       ])
-      filteredMessages.push(continuationMessage!)
+      filteredMessages.push(continuationMessage)
       turnInterruptionState = {
         kind: 'interrupted_prompt',
         message: continuationMessage!,

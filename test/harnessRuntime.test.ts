@@ -361,10 +361,10 @@ describe('harness runtime', () => {
 
       expect(result.enqueued).toHaveLength(1)
       expect(result.state.queue).toHaveLength(1)
-      expect(result.state.jobs[result.enqueued[0]!]?.jobId).toBe(
+      expect(result.state.jobs[result.enqueued[0]]?.jobId).toBe(
         'review-comment-follow-up',
       )
-      expect(result.state.jobs[result.enqueued[0]!]?.sourceKind).toBe('webhook')
+      expect(result.state.jobs[result.enqueued[0]]?.sourceKind).toBe('webhook')
     } finally {
       process.env.CLAUDE_CONFIG_DIR = previousClaudeConfigDir
     }
