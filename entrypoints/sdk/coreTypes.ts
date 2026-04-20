@@ -21,6 +21,11 @@ export * from './coreTypes.generated.js'
 // Re-export utility types that can't be expressed as Zod schemas
 export type { NonNullableUsage } from './sdkUtilityTypes.js'
 
+// Success variant of SDKResultMessage — used by the bridge for session archival
+// and anywhere that needs to narrow result messages to the non-error shape.
+import type { SDKResultMessage } from './coreTypes.generated.js'
+export type SDKResultSuccess = Extract<SDKResultMessage, { subtype: 'success' }>
+
 // Const arrays for runtime usage
 export const HOOK_EVENTS = [
   'PreToolUse',

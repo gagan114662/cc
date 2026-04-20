@@ -225,7 +225,7 @@ export type AttachmentMessage<A extends Attachment = Attachment> = {
   attachment: A
 }
 
-export type ProgressMessage = {
+export type ProgressMessage<P = Record<string, unknown>> = {
   type: 'progress'
   uuid: string
   timestamp: string
@@ -233,8 +233,7 @@ export type ProgressMessage = {
   parentToolUseID?: string
   data: {
     message: UserMessage | AssistantMessage
-    [key: string]: unknown
-  }
+  } & P
 }
 
 export type TombstoneMessage = {
