@@ -6,9 +6,11 @@ global. The file is 1,758 lines and imported by 273 call sites — a
 big-bang refactor is neither reviewable nor safe. This document is the
 ledger the follow-up slices hang off of.
 
-**Status:** telemetry counter tagging (item 1b) is now complete across
-every emission site. The inMemoryErrorLog partitioning landed in the
-prior slice. The rest of the work is planned below in order of value.
+**Status:** telemetry counter tagging (item 1b) is complete across
+every emission site, the in-memory error log partitioning landed in the
+prior slice, and the OTel providers now live in
+`services/observability/providers.ts` instead of `bootstrap/state.ts`.
+The remaining work is planned below in order of value.
 
 ## Field inventory (by category)
 
@@ -25,7 +27,7 @@ scope returns the same value; writing them once at startup is correct.
 |---|---|
 | `originalCwd`, `projectRoot`, `cwd` | One process = one working dir |
 | `startTime` | Process start timestamp, used for uptime only |
-| `meter`, `loggerProvider`, `meterProvider`, `tracerProvider`, `eventLogger` | OTel providers — share attributes, not instances |
+| `meter` | Process-wide OTel meter handle |
 | `sessionCounter`, `locCounter`, `prCounter`, `commitCounter`, `costCounter`, `tokenCounter`, `codeEditToolDecisionCounter`, `activeTimeCounter` | OTel counters — tenant is carried on `.add()` attrs (item 1b ✅) |
 | `clientType`, `sessionSource`, `sessionProjectDir` | Startup-time immutable after boot |
 | `flagSettingsPath`, `flagSettingsInline`, `allowedSettingSources` | Flag surface, one per process |
@@ -107,10 +109,11 @@ later slices don't require rewriting earlier ones.
    OTel counters be the source of truth for cost.** Depends on slice 3
    landing so per-session aggregation moves to the scope carrier.
 
-5. **Extract Category A OTel providers into
+5. ~~**Extract Category A OTel providers into
    `services/observability/providers.ts` — leaf module, no more
-   `bootstrap/state.ts` exports for them.** Cosmetic; unblocks
-   bootstrap-isolation cleanup for the eslint custom-rules suite.
+   `bootstrap/state.ts` exports for them.**~~ ✅ shipped — provider
+   storage now resets through `resetStateForTests()` without living in
+   the singleton `STATE`.
 
 ## What this PR ships
 

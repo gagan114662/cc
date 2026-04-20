@@ -1,5 +1,6 @@
 import type { Attributes } from '@opentelemetry/api'
-import { getEventLogger, getPromptId } from 'src/bootstrap/state.js'
+import { getPromptId } from 'src/bootstrap/state.js'
+import { getEventLogger } from 'src/services/observability/providers.js'
 import { logForDebugging } from '../debug.js'
 import { isEnvTruthy } from '../envUtils.js'
 import { getTelemetryAttributes } from '../telemetryAttributes.js'
