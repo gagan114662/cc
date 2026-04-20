@@ -20,8 +20,8 @@ export function It2SetupPrompt(t0: Props) {
     tmuxAvailable
   } = t0;
   const [step, setStep] = useState("initial");
-  const [packageManager, setPackageManager] = useState(null);
-  const [error, setError] = useState(null);
+  const [packageManager, setPackageManager] = useState<any>(null);
+  const [error, setError] = useState<any>(null);
   const exitState = useExitOnCtrlCDWithKeybindings();
   let t1;
   let t2;

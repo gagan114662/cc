@@ -60,7 +60,7 @@ export function GlobalSearchDialog(t0: Props) {
   const [isSearching, setIsSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(undefined);
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState<any>(null);
   const abortRef = useRef(null);
   const timeoutRef = useRef(null);
   let t2;

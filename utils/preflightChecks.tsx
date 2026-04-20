@@ -80,7 +80,7 @@ export function PreflightStep(t0: PreflightStepProps) {
   const {
     onSuccess
   } = t0;
-  const [result, setResult] = useState(null);
+  const [result, setResult] = useState<any>(null);
   const [isChecking, setIsChecking] = useState(true);
   const showSpinner = useTimeout(1000) && isChecking;
   let t1;

@@ -47,7 +47,7 @@ export function QuickOpenDialog(t0: Props) {
   const [results, setResults] = useState(t1);
   const [query, setQuery] = useState("");
   const [focusedPath, setFocusedPath] = useState(undefined);
-  const [preview, setPreview] = useState(null);
+  const [preview, setPreview] = useState<any>(null);
   const queryGenRef = useRef(0);
   let t2;
   let t3;

@@ -534,10 +534,10 @@ export function PermissionRuleList(t0: Props) {
   const handleDenialStateChange = t4;
   const [selectedRule, setSelectedRule] = useState();
   const [lastFocusedRuleKey, setLastFocusedRuleKey] = useState();
-  const [addingRuleToTab, setAddingRuleToTab] = useState(null);
-  const [validatedRule, setValidatedRule] = useState(null);
+  const [addingRuleToTab, setAddingRuleToTab] = useState<any>(null);
+  const [validatedRule, setValidatedRule] = useState<any>(null);
   const [isAddingWorkspaceDirectory, setIsAddingWorkspaceDirectory] = useState(false);
-  const [removingDirectory, setRemovingDirectory] = useState(null);
+  const [removingDirectory, setRemovingDirectory] = useState<any>(null);
   const [isSearchMode, setIsSearchMode] = useState(false);
   const [headerFocused, setHeaderFocused] = useState(true);
   let t5;

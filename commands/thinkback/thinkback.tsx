@@ -390,9 +390,9 @@ function ThinkbackFlow(t0: { onDone: (result?: string, options?: { display?: Com
     onDone
   } = t0;
   const [installComplete, setInstallComplete] = useState(false);
-  const [installError, setInstallError] = useState(null);
-  const [skillDir, setSkillDir] = useState(null);
-  const [hasGenerated, setHasGenerated] = useState(null);
+  const [installError, setInstallError] = useState<any>(null);
+  const [skillDir, setSkillDir] = useState<any>(null);
+  const [hasGenerated, setHasGenerated] = useState<any>(null);
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = function handleReady() {

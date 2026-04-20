@@ -57,7 +57,7 @@ export function PermissionPrompt<T extends string>(t0: PermissionPromptProps<T>)
   const [rejectFeedback, setRejectFeedback] = useState("");
   const [acceptInputMode, setAcceptInputMode] = useState(false);
   const [rejectInputMode, setRejectInputMode] = useState(false);
-  const [focusedValue, setFocusedValue] = useState(null);
+  const [focusedValue, setFocusedValue] = useState<any>(null);
   const [acceptFeedbackModeEntered, setAcceptFeedbackModeEntered] = useState(false);
   const [rejectFeedbackModeEntered, setRejectFeedbackModeEntered] = useState(false);
   let t2;

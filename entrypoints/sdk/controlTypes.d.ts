@@ -142,35 +142,17 @@ export type SDKControlRequest = {
 export type SDKSystemExtendedMessage =
   | {
       type: 'system'
-      subtype: 'session_state_changed'
-      uuid: string
-      session_id: string
-      [key: string]: unknown
-    }
-  | {
-      type: 'system'
-      subtype: 'task_notification'
-      uuid: string
-      session_id: string
-      [key: string]: unknown
-    }
-  | {
-      type: 'system'
-      subtype: 'task_started'
-      uuid: string
-      session_id: string
-      [key: string]: unknown
-    }
-  | {
-      type: 'system'
-      subtype: 'task_progress'
-      uuid: string
-      session_id: string
-      [key: string]: unknown
-    }
-  | {
-      type: 'system'
-      subtype: 'post_turn_summary'
+      subtype:
+        | 'session_state_changed'
+        | 'task_notification'
+        | 'task_started'
+        | 'task_progress'
+        | 'post_turn_summary'
+        | 'hook_started'
+        | 'hook_progress'
+        | 'elicitation_complete'
+        | 'files_persisted'
+        | 'bridge_state'
       uuid: string
       session_id: string
       [key: string]: unknown
@@ -200,6 +182,14 @@ export type SDKPromptSuggestionMessage = {
   [key: string]: unknown
 }
 
+export type SDKRateLimitEventMessage = {
+  type: 'rate_limit_event'
+  rate_limit_info: unknown
+  uuid: string
+  session_id: string
+  [key: string]: unknown
+}
+
 // Rebuild aggregate stdin/stdout message unions so they use the augmented
 // SDKControlRequest (with our extended initialize subtype), not the
 // upstream node_modules version.
@@ -209,6 +199,7 @@ export type StdoutMessage =
   | SDKStreamlinedTextMessage
   | SDKStreamlinedToolUseSummaryMessage
   | SDKPromptSuggestionMessage
+  | SDKRateLimitEventMessage
   | SDKControlResponse
   | SDKControlRequest
   | SDKControlCancelRequest

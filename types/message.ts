@@ -308,8 +308,11 @@ export type GroupedToolUseMessage = {
   type: 'grouped_tool_use'
   uuid: string
   timestamp?: string
+  toolName?: string
   messages: Array<AssistantMessage | UserMessage>
   results?: unknown[]
+  displayMessage?: AssistantMessage | UserMessage
+  messageId?: string
 }
 
 export type CollapsedReadSearchGroup = {

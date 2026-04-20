@@ -30,7 +30,7 @@ export function DesktopHandoff(t0: Props) {
     onDone
   } = t0;
   const [state, setState] = useState("checking");
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
   const [downloadMessage, setDownloadMessage] = useState("");
   let t1;
   if ($[0] !== error || $[1] !== onDone || $[2] !== state) {

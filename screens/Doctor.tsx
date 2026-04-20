@@ -118,10 +118,10 @@ export function Doctor(t0: Props) {
     t1 = $[1];
   }
   const tools = t1;
-  const [diagnostic, setDiagnostic] = useState(null);
-  const [agentInfo, setAgentInfo] = useState(null);
-  const [contextWarnings, setContextWarnings] = useState(null);
-  const [versionLockInfo, setVersionLockInfo] = useState(null);
+  const [diagnostic, setDiagnostic] = useState<any>(null);
+  const [agentInfo, setAgentInfo] = useState<any>(null);
+  const [contextWarnings, setContextWarnings] = useState<any>(null);
+  const [versionLockInfo, setVersionLockInfo] = useState<any>(null);
   const validationErrors = useSettingsErrors();
   let t2;
   if ($[2] === Symbol.for("react.memo_cache_sentinel")) {

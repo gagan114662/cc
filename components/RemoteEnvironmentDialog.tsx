@@ -37,9 +37,9 @@ export function RemoteEnvironmentDialog(t0: Props) {
     t1 = $[0];
   }
   const [environments, setEnvironments] = useState(t1);
-  const [selectedEnvironment, setSelectedEnvironment] = useState(null);
-  const [selectedEnvironmentSource, setSelectedEnvironmentSource] = useState(null);
-  const [error, setError] = useState(null);
+  const [selectedEnvironment, setSelectedEnvironment] = useState<any>(null);
+  const [selectedEnvironmentSource, setSelectedEnvironmentSource] = useState<any>(null);
+  const [error, setError] = useState<any>(null);
   let t2;
   let t3;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {

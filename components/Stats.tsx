@@ -136,7 +136,7 @@ function StatsContent(t0: StatsContentProps) {
   const [statsCache, setStatsCache] = useState(t1);
   const [isLoadingFiltered, setIsLoadingFiltered] = useState(false);
   const [activeTab, setActiveTab] = useState("Overview");
-  const [copyStatus, setCopyStatus] = useState(null);
+  const [copyStatus, setCopyStatus] = useState<any>(null);
   let t2;
   let t3;
   if ($[1] !== dateRange || $[2] !== statsCache) {

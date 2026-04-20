@@ -40,8 +40,8 @@ function BtwSideQuestion(t0: BtwComponentProps) {
     context,
     onDone
   } = t0;
-  const [response, setResponse] = useState(null);
-  const [error, setError] = useState(null);
+  const [response, setResponse] = useState<any>(null);
+  const [error, setError] = useState<any>(null);
   const [frame, setFrame] = useState(0);
   const scrollRef = useRef(null);
   const {

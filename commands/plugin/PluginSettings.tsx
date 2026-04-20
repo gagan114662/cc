@@ -366,7 +366,7 @@ function ErrorsTabContent(t0: { setViewState: (v: ViewState) => void; setActiveT
   const installationStatus = useAppState(_temp3);
   const setAppState = useSetAppState();
   const [selectedIndex, setSelectedIndex] = useState(0);
-  const [actionMessage, setActionMessage] = useState(null);
+  const [actionMessage, setActionMessage] = useState<any>(null);
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
@@ -758,8 +758,8 @@ export function PluginSettings(t0: PluginSettingsProps) {
   const [activeTab, setActiveTab] = useState(t2);
   const [inputValue, setInputValue] = useState(viewState.type === "add-marketplace" ? viewState.initialValue || "" : "");
   const [cursorOffset, setCursorOffset] = useState(0);
-  const [error, setError] = useState(null);
-  const [result, setResult] = useState(null);
+  const [error, setError] = useState<any>(null);
+  const [result, setResult] = useState<any>(null);
   const [childSearchActive, setChildSearchActive] = useState(false);
   const setAppState = useSetAppState();
   const pluginErrorCount = useAppState(_temp0);

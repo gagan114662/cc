@@ -76,7 +76,7 @@ function ToggleTagAndClose(t0: { tagName: string; onDone: (result: string, optio
     onDone
   } = t0;
   const [showConfirm, setShowConfirm] = React.useState(false);
-  const [sessionId, setSessionId] = React.useState(null);
+  const [sessionId, setSessionId] = React.useState<any>(null);
   let t1;
   if ($[0] !== tagName) {
     t1 = recursivelySanitizeUnicode(tagName).trim();

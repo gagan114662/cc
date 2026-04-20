@@ -312,14 +312,26 @@ function getCollapsibleToolInfo(
   if (msg.type === 'grouped_tool_use') {
     // For grouped tool uses, check the first message's input
     const firstContent = msg.messages[0]?.message.content[0]
+    const toolUseContent =
+      firstContent && (firstContent as { type?: unknown }).type === 'tool_use'
+        ? (firstContent as { type: 'tool_use'; name: string; input: unknown })
+        : undefined
     const info = getSearchOrReadFromContent(
-      firstContent
-        ? { type: 'tool_use', name: msg.toolName, input: firstContent.input }
+      toolUseContent
+        ? {
+            type: 'tool_use',
+            name: msg.toolName ?? toolUseContent.name,
+            input: toolUseContent.input,
+          }
         : undefined,
       tools,
     )
-    if (info && firstContent?.type === 'tool_use') {
-      return { name: msg.toolName, input: firstContent.input, ...info }
+    if (info && toolUseContent) {
+      return {
+        name: msg.toolName ?? toolUseContent.name,
+        input: toolUseContent.input,
+        ...info,
+      }
     }
   }
   return null
@@ -356,10 +368,16 @@ function isNonCollapsibleToolUse(
     }
   }
   if (msg.type === 'grouped_tool_use') {
-    const firstContent = msg.messages[0]?.message.content[0]
+    const firstContent = msg.messages[0]?.message.content[0] as
+      | { type?: string; name?: string; input?: unknown }
+      | undefined
     if (
       firstContent?.type === 'tool_use' &&
-      !isToolSearchOrRead(msg.toolName, firstContent.input, tools)
+      !isToolSearchOrRead(
+        msg.toolName ?? firstContent.name ?? '',
+        firstContent.input,
+        tools,
+      )
     ) {
       return true
     }
@@ -415,10 +433,16 @@ function isCollapsibleToolUse(
     )
   }
   if (msg.type === 'grouped_tool_use') {
-    const firstContent = msg.messages[0]?.message.content[0]
+    const firstContent = msg.messages[0]?.message.content[0] as
+      | { type?: string; name?: string; input?: unknown }
+      | undefined
     return (
       firstContent?.type === 'tool_use' &&
-      isToolSearchOrRead(msg.toolName, firstContent.input, tools)
+      isToolSearchOrRead(
+        msg.toolName ?? firstContent.name ?? '',
+        firstContent.input,
+        tools,
+      )
     )
   }
   return false

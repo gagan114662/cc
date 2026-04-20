@@ -20,7 +20,7 @@ export function PromptStep() {
   } = useWizard<AgentWizardData>();
   const [systemPrompt, setSystemPrompt] = useState(wizardData.systemPrompt || "");
   const [cursorOffset, setCursorOffset] = useState(systemPrompt.length);
-  const [error, setError] = useState(null);
+  const [error, setError] = useState<any>(null);
   let t0;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t0 = {

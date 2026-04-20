@@ -23,7 +23,7 @@ type PluginData = NonNullable<Awaited<ReturnType<typeof getPluginById>>>;
  */
 export function usePluginRecommendationBase() {
   const $ = _c(6);
-  const [recommendation, setRecommendation] = React.useState(null);
+  const [recommendation, setRecommendation] = React.useState<any>(null);
   const isCheckingRef = React.useRef(false);
   let t0;
   if ($[0] !== recommendation) {
