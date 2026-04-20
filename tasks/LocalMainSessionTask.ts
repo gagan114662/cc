@@ -9,7 +9,7 @@
  * This reuses the LocalAgentTask state structure since the behavior is similar.
  */
 
-import type { UUID } from 'crypto'
+type UUID = string
 import { randomBytes } from 'crypto'
 import {
   OUTPUT_FILE_TAG,

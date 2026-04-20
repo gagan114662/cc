@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+type UUID = string
 import { randomUUID } from 'crypto'
 import { getIsNonInteractiveSession, getSessionId } from '../bootstrap/state.js'
 import type { SdkWorkflowProgress } from '../types/tools.js'

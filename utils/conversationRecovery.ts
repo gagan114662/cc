@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+type UUID = string
 import { relative } from 'path'
 import { getCwd } from 'src/utils/cwd.js'
 import { addInvokedSkill } from '../bootstrap/state.js'

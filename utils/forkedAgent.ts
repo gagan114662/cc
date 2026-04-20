@@ -8,7 +8,7 @@
  * 4. Isolate mutable state to prevent interference with the main agent loop
  */
 
-import type { UUID } from 'crypto'
+type UUID = string
 import { randomUUID } from 'crypto'
 import type { PromptCommand } from '../commands.js'
 import type { QuerySource } from '../constants/querySource.js'

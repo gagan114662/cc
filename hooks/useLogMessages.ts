@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+type UUID = string
 import { useEffect, useRef } from 'react'
 import { useAppState } from '../state/AppState.js'
 import type { AppState } from '../state/AppStateStore.js'

@@ -3,7 +3,7 @@ import type {
   ContentBlockParam,
   ImageBlockParam,
 } from '@anthropic-ai/sdk/resources/messages.mjs'
-import type { UUID } from 'crypto'
+type UUID = string
 import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import { detectImageFormatFromBase64 } from '../utils/imageResizer.js'
 

@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+type UUID = string
 import { dirname } from 'path'
 import {
   getMainLoopModelOverride,

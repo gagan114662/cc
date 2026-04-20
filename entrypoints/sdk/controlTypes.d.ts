@@ -48,10 +48,9 @@ import type {
   SDKControlCancelRequest,
   SDKKeepAliveMessage,
 } from '@anthropic-ai/claude-agent-sdk/entrypoints/sdk/controlTypes.js'
-import type {
-  SDKMessage,
-  SDKUserMessage,
-} from '@anthropic-ai/claude-agent-sdk/entrypoints/sdk/coreTypes.js'
+// Use local coreTypes overrides so SDKMessage/SDKUserMessage carry the
+// widened uuid/session_id (plain string instead of branded UUID).
+import type { SDKMessage, SDKUserMessage } from './coreTypes.js'
 
 // Extended initialize request — phantom types in node_modules are narrower
 // than the real runtime shape. The Zod schema in controlSchemas.ts already

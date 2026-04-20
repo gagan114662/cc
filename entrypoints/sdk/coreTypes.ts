@@ -35,6 +35,58 @@ export type ModelUsage = {
 // Re-export utility types that can't be expressed as Zod schemas
 export type { NonNullableUsage } from './sdkUtilityTypes.js'
 
+// Override SDKUserMessage / SDKUserMessageReplay so `uuid` and `session_id`
+// accept plain strings (the upstream UUID brand forces every callsite to
+// cast). Field shapes mirror the upstream union.
+import type { MessageParam as APIUserMessage } from '@anthropic-ai/sdk/resources/index.mjs'
+import type {
+  SDKAssistantMessage,
+  SDKSystemMessage,
+  SDKPartialAssistantMessage,
+  SDKCompactBoundaryMessage,
+  SDKStatusMessage,
+  SDKHookResponseMessage,
+  SDKToolProgressMessage,
+  SDKAuthStatusMessage,
+} from './coreTypes.generated.js'
+
+type SDKUserMessageContentLocal = {
+  type: 'user'
+  message: APIUserMessage
+  parent_tool_use_id: string | null
+  isSynthetic?: boolean
+  tool_use_result?: unknown
+}
+
+export type SDKUserMessage = SDKUserMessageContentLocal & {
+  uuid?: string
+  session_id: string
+  timestamp?: string
+  priority?: number | string
+}
+
+export type SDKUserMessageReplay = SDKUserMessageContentLocal & {
+  uuid: string
+  session_id: string
+  isReplay?: boolean
+  timestamp?: string
+  priority?: number | string
+}
+
+// Rebuild SDKMessage so the widened user-message types are visible.
+export type SDKMessage =
+  | SDKAssistantMessage
+  | SDKUserMessage
+  | SDKUserMessageReplay
+  | SDKResultMessage
+  | SDKSystemMessage
+  | SDKPartialAssistantMessage
+  | SDKCompactBoundaryMessage
+  | SDKStatusMessage
+  | SDKHookResponseMessage
+  | SDKToolProgressMessage
+  | SDKAuthStatusMessage
+
 // Success variant of SDKResultMessage — used by the bridge for session archival
 // and anywhere that needs to narrow result messages to the non-error shape.
 import type { SDKResultMessage, BaseHookInput } from './coreTypes.generated.js'
