@@ -63,7 +63,7 @@ export type AssistantMessage = {
 // System message — union of subtypes, discriminated on `.subtype`
 // ---------------------------------------------------------------------------
 
-export type SystemMessageLevel = 'info' | 'warning' | 'error'
+export type SystemMessageLevel = 'info' | 'warning' | 'error' | 'suggestion'
 
 type SystemMessageBase = {
   type: 'system'
@@ -90,6 +90,7 @@ export type CompactMetadata = {
   preTokens: number
   userContext?: string
   messagesSummarized: number
+  preCompactDiscoveredTools?: string[]
 }
 
 export type SystemCompactBoundaryMessage = SystemMessageBase & {
@@ -317,6 +318,7 @@ export type CollapsedReadSearchGroup = {
   uuid: string
   timestamp?: string
   messages: Array<AssistantMessage | UserMessage>
+  relevantMemories?: Array<{ path: string; content: string; mtimeMs: number }>
 }
 
 export type RenderableMessage =
