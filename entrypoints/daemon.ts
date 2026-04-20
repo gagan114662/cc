@@ -55,8 +55,14 @@ import {
   SLACK_WEBHOOK_ROUTE,
   handleSlackWebhookRequest,
 } from '../services/webhooks/slackRoute.js'
-import { getQueueBackend } from '../services/assignmentQueue/backend.js'
-import type { AssignmentRunner } from '../services/assignmentQueue/backend.js'
+import {
+  coordinationModeForQueueBackend,
+  getQueueBackend,
+} from '../services/assignmentQueue/backend.js'
+import type {
+  AssignmentRunner,
+  QueueBackend,
+} from '../services/assignmentQueue/backend.js'
 import { listAssignmentQueueTenants } from '../services/assignmentQueue/storage.js'
 import {
   getEmployeeStore,
@@ -81,6 +87,11 @@ type DaemonArgs = {
   // Disable the automatic per-tenant drain loop entirely. Tests that
   // drive drainOnce directly set this so the daemon doesn't race them.
   disableDrainer?: boolean
+  // Lets tests or supervisors inject a concrete queue backend instance
+  // for this daemon. Used by the distributed-coordination proof so two
+  // daemons in one test process can still talk to the same Redis queue
+  // through distinct backend instances, mirroring two real machines.
+  queueBackend?: QueueBackend
   // Override the subprocess-based runner with a caller-supplied one
   // (tests use a fake). Defaults to the subprocess runner below.
   assignmentRunner?: AssignmentRunner
@@ -118,6 +129,7 @@ type DaemonState = {
   // so one daemon can legitimately schedule work for multiple tenants.
   tenant: TenantContext
   configLoaded: boolean
+  queueBackendKind: QueueBackend['kind'] | null
   // Key is `${tenantId}:${dutyId}` — tenants may legitimately use the
   // same duty id, and a flat `dutyId` key would silently overwrite.
   duties: Map<string, ScheduledDuty>
@@ -169,6 +181,10 @@ function defaultAssignmentRunner(state: DaemonState): AssignmentRunner {
   }
 }
 
+async function resolveQueueBackend(state: DaemonState): Promise<QueueBackend> {
+  return state.args.queueBackend ?? (await getQueueBackend())
+}
+
 function scheduleDrainTick(
   state: DaemonState,
   tenant: TenantContext,
@@ -188,7 +204,7 @@ async function drainTick(
   if (state.shuttingDown) return
   state.drainInFlight.add(tenant.id)
   try {
-    const backend = await getQueueBackend()
+    const backend = await resolveQueueBackend(state)
     await backend.drainOnce({
       projectRoot: state.args.projectRoot,
       tenant,
@@ -462,7 +478,8 @@ async function runDutySubprocess(
   }
 }
 
-function buildHealthBody(state: DaemonState): string {
+async function buildHealthBody(state: DaemonState): Promise<string> {
+  const queueBackend = await resolveQueueBackend(state)
   const duties = Array.from(state.duties.values()).map(s => ({
     id: s.duty.id,
     tenantId: s.tenant.id,
@@ -487,6 +504,10 @@ function buildHealthBody(state: DaemonState): string {
         name: state.tenant.name,
         role: state.tenant.role,
       },
+      queueBackend: {
+        kind: queueBackend.kind,
+        coordinationMode: coordinationModeForQueueBackend(queueBackend.kind),
+      },
       duties,
       drainerTenantIds: state.drainerTenants.map(t => t.id),
     },
@@ -502,10 +523,22 @@ function startHttp(state: DaemonState): Server {
       return
     }
     if (req.url === '/health') {
-      res.writeHead(state.shuttingDown ? 503 : 200, {
-        'content-type': 'application/json',
-      })
-      res.end(buildHealthBody(state))
+      void buildHealthBody(state)
+        .then(body => {
+          res.writeHead(state.shuttingDown ? 503 : 200, {
+            'content-type': 'application/json',
+          })
+          res.end(body)
+        })
+        .catch(err => {
+          log('error', 'health_body_failed', {
+            error: err instanceof Error ? err.message : String(err),
+          })
+          if (!res.headersSent) {
+            res.writeHead(500, { 'content-type': 'application/json' })
+            res.end(JSON.stringify({ error: 'internal_error' }))
+          }
+        })
       return
     }
     if (req.url === '/ready') {
@@ -523,6 +556,9 @@ function startHttp(state: DaemonState): Server {
         ...(state.args.auditDir ? { auditDir: state.args.auditDir } : {}),
         startedAt: state.startedAt.toISOString(),
         status: state.shuttingDown ? 'draining' : 'ok',
+        ...(state.queueBackendKind
+          ? { queueBackendKind: state.queueBackendKind }
+          : {}),
         scheduledDutyCount: state.duties.size,
         drainerTenantIds: state.drainerTenants.map(t => t.id),
       }).catch(err => {
@@ -548,6 +584,9 @@ function startHttp(state: DaemonState): Server {
       void handleEmployeeAssignRequest(req, res, {
         projectRoot: state.args.projectRoot,
         ...(state.args.auditDir ? { auditDir: state.args.auditDir } : {}),
+        ...(state.args.queueBackend
+          ? { queueBackend: state.args.queueBackend }
+          : {}),
       }).catch(err => {
         log('error', 'assign_route_failed', {
           error: err instanceof Error ? err.message : String(err),
@@ -690,7 +729,7 @@ export async function stopDaemon(
   // Close queue backend after HTTP is down so no late enqueue can
   // race against a closed Redis connection. JSONL's close is a noop.
   try {
-    const backend = await getQueueBackend()
+    const backend = await resolveQueueBackend(state)
     await backend.close()
   } catch (err) {
     log('error', 'queue_backend_close_failed', {
@@ -724,6 +763,7 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
     startedAt: new Date(),
     tenant: resolveTenantContext(),
     configLoaded: false,
+    queueBackendKind: null,
     duties: new Map(),
     drainerTimers: new Map(),
     drainerTenants: [],
@@ -788,7 +828,8 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
   // also crash mid-drain.
   state.drainerTenants = resolveDrainerTenants(tenantDuties, args.projectRoot)
   let recoveredTotal = 0
-  const backend = await getQueueBackend()
+  const backend = await resolveQueueBackend(state)
+  state.queueBackendKind = backend.kind
   for (const tenant of state.drainerTenants) {
     const recovered = await backend.recover({
       projectRoot: args.projectRoot,
@@ -814,6 +855,7 @@ export async function startDaemon(args: DaemonArgs): Promise<DaemonState> {
     projectRoot: args.projectRoot,
     tenantCount: tenantDuties.length,
     dutyCount,
+    queueBackend: backend.kind,
     drainerTenantCount: state.drainerTenants.length,
     recoveredAssignments: recoveredTotal,
     port: args.port,

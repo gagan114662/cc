@@ -54,6 +54,21 @@ function redisConnectionOpts() {
   return { connection: { url } }
 }
 
+async function listDrainableJobs(
+  queue: Queue<JobPayload>,
+): Promise<Job<JobPayload>[]> {
+  const waitingJobs = await queue.getJobs(['waiting', 'delayed'], 0, -1)
+  if (waitingJobs.length > 0) return waitingJobs
+
+  // BullMQ can acknowledge add() before the new waiting job is
+  // visible to an immediate read in the same tick. One short retry
+  // keeps drainOnce deterministic for callers that enqueue and then
+  // drain right away, while still preserving the daemon's timer-loop
+  // semantics for long-running workers.
+  await new Promise(resolve => setTimeout(resolve, 25))
+  return queue.getJobs(['waiting', 'delayed'], 0, -1)
+}
+
 export function createRedisQueueBackend(): QueueBackend {
   // One Queue per tenant — BullMQ's Queue is cheap (a pipelined
   // pub/sub client) and sharing a single queue across tenants would
@@ -98,7 +113,7 @@ export function createRedisQueueBackend(): QueueBackend {
       // semantics. A long-running Worker would block; we want the
       // daemon's timer loop to stay in control of cadence.
       const queue = getQueue(tenant.id)
-      const waitingJobs = await queue.getJobs(['waiting', 'delayed'], 0, -1)
+      const waitingJobs = await listDrainableJobs(queue)
       if (waitingJobs.length === 0) return
 
       // Single-concurrency Worker instantiated for this pass. On each

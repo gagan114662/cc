@@ -128,6 +128,10 @@ describe('GET /v1/outcomes', () => {
       expect(status).toBe(200)
       expect(body.status).toBe('ok')
       expect(body.projectRoot).toBe(projectRoot)
+      expect(body.queueBackend).toEqual({
+        kind: 'jsonl',
+        coordinationMode: 'local-append-only',
+      })
       expect(body.totals.tenantCount).toBe(3)
       expect(body.totals.assignments).toEqual({
         total: 3,
