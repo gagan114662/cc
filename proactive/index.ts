@@ -26,6 +26,14 @@ export function isProactiveActive(): boolean {
   return false
 }
 
+// Used by cli/print.ts scheduleProactiveTick + main loop to suppress
+// tick injection while the user has paused proactive mode. Complements
+// pauseProactive/resumeProactive. Phantom stub; real impl tracks
+// pause state alongside activation.
+export function isProactivePaused(): boolean {
+  return false
+}
+
 export function activateProactive(_source: string): void {
   throw new Error('not implemented')
 }

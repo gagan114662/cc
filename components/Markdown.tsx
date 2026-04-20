@@ -75,7 +75,7 @@ function cachedLexer(content: string): Token[] {
  * - Tables are rendered as React components with proper flexbox layout
  * - Other content is rendered as ANSI strings via formatToken
  */
-export function Markdown(props: unknown) {
+export function Markdown(props: Props) {
   const $ = _c(4);
   const settings = useSettings();
   if (settings.syntaxHighlightingDisabled) {
@@ -99,7 +99,7 @@ export function Markdown(props: unknown) {
   }
   return t0;
 }
-function MarkdownWithHighlight(props: unknown) {
+function MarkdownWithHighlight(props: Props) {
   const $ = _c(4);
   let t0;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {

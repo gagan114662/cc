@@ -23,10 +23,16 @@ export type OAuthProfileResponse = {
       | string
     uuid?: string
     name?: string
+    has_extra_usage_enabled?: boolean
+    billing_type?: BillingType
+    subscription_created_at?: string
   }
   account?: {
     uuid?: string
     email_address?: string
+    email?: string
+    display_name?: string
+    created_at?: string
   }
   [key: string]: unknown
 }
