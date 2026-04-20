@@ -847,7 +847,7 @@ export function ManagePlugins({
           }) => p.name === selectedPlugin!.plugin.name);
           if (entry_0?.mcpServers) {
             const spec = entry_0.mcpServers;
-            hasMcpb = typeof spec === 'string' && isMcpbSource(spec) || Array.isArray(spec) && spec.some((s_3: unknown) => typeof s_3 === 'string' && isMcpbSource(s_3));
+            hasMcpb = typeof spec === 'string' && isMcpbSource(spec) || Array.isArray(spec) && spec.some((s_3: any) => typeof s_3 === 'string' && isMcpbSource(s_3));
           }
         } catch (err) {
           logForDebugging(`Failed to read raw marketplace.json: ${err}`);

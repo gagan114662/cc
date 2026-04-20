@@ -28,7 +28,7 @@ export function ClaudeMdExternalIncludesDialog(t0: Props) {
   React.useEffect(_temp, t1);
   let t2;
   if ($[1] !== onDone) {
-    t2 = (value: unknown) => {
+    t2 = (value: any) => {
       if (value === "no") {
         logEvent("tengu_claude_md_external_includes_dialog_declined", {});
         saveCurrentProjectConfig(_temp2);
@@ -114,17 +114,17 @@ export function ClaudeMdExternalIncludesDialog(t0: Props) {
   }
   return t11;
 }
-function _temp4(include: unknown, i: number) {
+function _temp4(include: any, i: number) {
   return <Text key={i} dimColor={true}>{"  "}{include.path}</Text>;
 }
-function _temp3(current_0: unknown) {
+function _temp3(current_0: any) {
   return {
     ...current_0,
     hasClaudeMdExternalIncludesApproved: true,
     hasClaudeMdExternalIncludesWarningShown: true
   };
 }
-function _temp2(current: unknown) {
+function _temp2(current: any) {
   return {
     ...current,
     hasClaudeMdExternalIncludesApproved: false,

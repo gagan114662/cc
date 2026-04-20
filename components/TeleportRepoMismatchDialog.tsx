@@ -38,7 +38,7 @@ export function TeleportRepoMismatchDialog(t0: Props) {
         return;
       }
       removePathFromRepo(targetRepo, value);
-      const updatedPaths = availablePaths.filter((p: unknown) => p !== value);
+      const updatedPaths = availablePaths.filter((p: any) => p !== value);
       setAvailablePaths(updatedPaths);
       setValidating(false);
       setErrorMessage(`${getDisplayPath(value)} no longer contains the correct repository. Select another path.`);
@@ -95,7 +95,7 @@ export function TeleportRepoMismatchDialog(t0: Props) {
   }
   return t4;
 }
-function _temp(path: unknown) {
+function _temp(path: any) {
   return {
     label: <Text>Use <Text bold={true}>{getDisplayPath(path)}</Text></Text>,
     value: path

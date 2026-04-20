@@ -23,7 +23,9 @@ type TextBlockParam = Anthropic.TextBlockParam
 type Tool = Anthropic.Tool
 type ToolChoice = Anthropic.ToolChoice
 type BetaMessage = Anthropic.Beta.Messages.BetaMessage
-type BetaJSONOutputFormat = Anthropic.Beta.Messages.BetaJSONOutputFormat
+// BetaJSONOutputFormat not yet in published SDK types; shim shape mirrors
+// the runtime wire format accepted by the messages endpoint.
+import type { BetaJSONOutputFormat } from '../types/anthropicBetaShim.js'
 type BetaThinkingConfigParam = Anthropic.Beta.Messages.BetaThinkingConfigParam
 
 export type SideQueryOptions = {

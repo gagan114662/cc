@@ -1452,13 +1452,13 @@ export function LogSelector(t0: LogSelectorProps) {
  * Extracts searchable text content from a message.
  * Handles both string content and structured content blocks.
  */
-function _temp7(r_0: unknown) {
+function _temp7(r_0: any) {
   return r_0.log;
 }
-function _temp6(log_6: unknown) {
+function _temp6(log_6: any) {
   return log_6.messages[0]?.uuid;
 }
-function _temp5(fuseIndex_0: unknown, debouncedDeepSearchQuery_0: unknown, setDeepSearchResults_0: unknown, setIsSearching_0: unknown) {
+function _temp5(fuseIndex_0: any, debouncedDeepSearchQuery_0: unknown, setDeepSearchResults_0: unknown, setIsSearching_0: unknown) {
   const results = fuseIndex_0.search(debouncedDeepSearchQuery_0);
   results.sort(_temp3);
   setDeepSearchResults_0({
@@ -1467,14 +1467,14 @@ function _temp5(fuseIndex_0: unknown, debouncedDeepSearchQuery_0: unknown, setDe
   });
   setIsSearching_0(false);
 }
-function _temp4(r: unknown) {
+function _temp4(r: any) {
   return {
     log: r.item.log,
     score: r.score,
     searchableText: r.item.searchableText
   };
 }
-function _temp3(a: unknown, b: unknown) {
+function _temp3(a: any, b: unknown) {
   const aTime = new Date(a.item.log.modified).getTime();
   const bTime = new Date(b.item.log.modified).getTime();
   const timeDiff = bTime - aTime;
@@ -1483,7 +1483,7 @@ function _temp3(a: unknown, b: unknown) {
   }
   return (a.score ?? 1) - (b.score ?? 1);
 }
-function _temp2(log_1: unknown) {
+function _temp2(log_1: any) {
   const currentSessionId = getSessionId();
   const logSessionId = getSessionIdFromLog(log_1);
   const isCurrentSession = currentSessionId && logSessionId === currentSessionId;
@@ -1502,7 +1502,7 @@ function _temp2(log_1: unknown) {
   }
   return false;
 }
-function _temp(log: unknown) {
+function _temp(log: any) {
   return [log, buildSearchableText(log)];
 }
 function extractSearchableText(message: SerializedMessage): string {

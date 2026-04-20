@@ -68,7 +68,7 @@ export function HooksConfigMenu(t0: Props) {
   const [restrictedByPolicy, setRestrictedByPolicy] = useState(_temp2);
   let t2;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-    t2 = (source: unknown) => {
+    t2 = (source: any) => {
       if (source === "policySettings") {
         const settings_0 = getSettings_DEPRECATED();
         const hooksDisabled_0 = settings_0?.disableAllHooks === true;
@@ -382,7 +382,7 @@ export function HooksConfigMenu(t0: Props) {
       {
         let t21;
         if ($[61] !== combinedToolNames) {
-          t21 = (event_2: unknown) => {
+          t21 = (event_2: any) => {
             if (getMatcherMetadata(event_2, combinedToolNames) !== undefined) {
               setModeState({
                 mode: "select-matcher",
@@ -421,7 +421,7 @@ export function HooksConfigMenu(t0: Props) {
         const t21 = hookEventMetadata[modeState.event];
         let t22;
         if ($[70] !== modeState.event) {
-          t22 = (matcher: unknown) => {
+          t22 = (matcher: any) => {
             setModeState({
               mode: "select-hook",
               event: modeState.event,
@@ -463,7 +463,7 @@ export function HooksConfigMenu(t0: Props) {
         const t21 = hookEventMetadata[modeState.event];
         let t22;
         if ($[79] !== modeState.event) {
-          t22 = (hook_1: unknown) => {
+          t22 = (hook_1: any) => {
             setModeState({
               mode: "view-hook",
               event: modeState.event,
@@ -558,13 +558,13 @@ export function HooksConfigMenu(t0: Props) {
 function _temp6() {
   return <Text>Esc to close</Text>;
 }
-function _temp5(sum: unknown, hooks: unknown) {
+function _temp5(sum: any, hooks: unknown) {
   return sum + hooks.length;
 }
-function _temp4(tool: unknown) {
+function _temp4(tool: any) {
   return tool.name;
 }
-function _temp3(s: unknown) {
+function _temp3(s: any) {
   return s.mcp;
 }
 function _temp2() {

@@ -66,7 +66,7 @@ export function OutputStylePicker(t0: OutputStylePickerProps) {
   useEffect(t2, t3);
   let t4;
   if ($[3] !== onComplete) {
-    t4 = (style: unknown) => {
+    t4 = (style: any) => {
       const outputStyle = style as OutputStyle;
       onComplete(outputStyle);
     };

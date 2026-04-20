@@ -203,7 +203,7 @@ function StatsContent(t0: StatsContentProps) {
   useKeybinding("confirm:no", handleClose, t5);
   let t6;
   if ($[8] !== activeTab || $[9] !== dateRange || $[10] !== displayStats || $[11] !== onClose) {
-    t6 = (input: unknown, key: unknown) => {
+    t6 = (input: any, key: unknown) => {
       if (key.ctrl && (input === "c" || input === "d")) {
         onClose("Stats dialog dismissed", {
           display: "system"
@@ -309,7 +309,7 @@ function StatsContent(t0: StatsContentProps) {
   }
   return t12;
 }
-function _temp(prev_0: unknown) {
+function _temp(prev_0: any) {
   return prev_0 === "Overview" ? "Models" : "Overview";
 }
 function DateRangeSelector(t0: Record<string, unknown>) {
@@ -813,18 +813,18 @@ function ModelsTab(t0: Record<string, unknown>) {
           return <ModelEntry key={model_0} model={model_0} usage={usage_0} totalTokens={totalTokens} />;
         })}</Box>{t9}</Box>{t10}</Box>;
 }
-function _temp1(item: unknown, i: number) {
+function _temp1(item: any, i: number) {
   return <Text key={item.model}>{i > 0 ? " \xB7 " : ""}<Ansi>{item.coloredBullet}</Ansi> {item.model}</Text>;
 }
 function _temp0(t0: ModelEntryProps) {
   const [model] = t0;
   return model;
 }
-function _temp9(sum: unknown, t0: ModelEntryProps) {
+function _temp9(sum: any, t0: ModelEntryProps) {
   const [, usage] = t0;
   return sum + usage.inputTokens + usage.outputTokens;
 }
-function _temp8(prev_0: unknown) {
+function _temp8(prev_0: any) {
   return Math.max(prev_0 - 2, 0);
 }
 function _temp7(t0: ModelEntryProps, t1: unknown) {

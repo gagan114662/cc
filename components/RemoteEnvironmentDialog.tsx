@@ -88,7 +88,7 @@ export function RemoteEnvironmentDialog(t0: Props) {
         return;
       }
       setLoadingState("updating");
-      const selectedEnv = environments.find((env: unknown) => env.environment_id === value);
+      const selectedEnv = environments.find((env: any) => env.environment_id === value);
       if (!selectedEnv) {
         onDone("Error: Selected environment not found");
         return;
@@ -331,7 +331,7 @@ function MultipleEnvironmentsContent(t0: Record<string, unknown>) {
   }
   return t7;
 }
-function _temp(env: unknown) {
+function _temp(env: any) {
   return {
     label: <Text>{env.name} <Text dimColor={true}>({env.environment_id})</Text></Text>,
     value: env.environment_id

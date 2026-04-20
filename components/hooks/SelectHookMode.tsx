@@ -63,7 +63,7 @@ export function SelectHookMode(t0: Props) {
   }
   let t3;
   if ($[7] !== hooksForSelectedMatcher || $[8] !== onSelect) {
-    t3 = (value: unknown) => {
+    t3 = (value: any) => {
       const index_0 = parseInt(value, 10);
       const hook_0 = hooksForSelectedMatcher[index_0];
       if (hook_0) {
@@ -99,7 +99,7 @@ export function SelectHookMode(t0: Props) {
   }
   return t5;
 }
-function _temp2(hook: unknown, index: number) {
+function _temp2(hook: any, index: number) {
   return {
     label: `[${hook.config.type}] ${getHookDisplayText(hook.config)}`,
     value: index.toString(),

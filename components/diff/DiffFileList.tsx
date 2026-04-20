@@ -96,7 +96,7 @@ export function DiffFileList(t0: Props) {
     }
     let t5;
     if ($[21] !== maxPathWidth || $[22] !== selectedIndex || $[23] !== startIndex) {
-      t5 = (file: unknown, index: number) => <FileItem key={file.path} file={file} isSelected={startIndex + index === selectedIndex} maxPathWidth={maxPathWidth} />;
+      t5 = (file: any, index: number) => <FileItem key={file.path} file={file} isSelected={startIndex + index === selectedIndex} maxPathWidth={maxPathWidth} />;
       $[21] = maxPathWidth;
       $[22] = selectedIndex;
       $[23] = startIndex;

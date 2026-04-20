@@ -60,7 +60,7 @@ export function SelectEventMode(t0: Props) {
   }
   let t4;
   if ($[5] !== onSelectEvent) {
-    t4 = (value: unknown) => {
+    t4 = (value: any) => {
       onSelectEvent(value as HookEvent);
     };
     $[5] = onSelectEvent;
@@ -78,7 +78,7 @@ export function SelectEventMode(t0: Props) {
   }
   let t6;
   if ($[9] !== hooksByEvent || $[10] !== t5) {
-    t6 = t5.map((t7: unknown) => {
+    t6 = t5.map((t7: any) => {
       const [name, metadata] = t7;
       const count = hooksByEvent[name as HookEvent] || 0;
       return {

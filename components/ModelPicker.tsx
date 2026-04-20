@@ -76,7 +76,7 @@ export function ModelPicker(t0: Props) {
   const modelOptions = t3;
   let t4;
   bb0: {
-    if (initial !== null && !modelOptions.some((opt: unknown) => opt.value === initial)) {
+    if (initial !== null && !modelOptions.some((opt: any) => opt.value === initial)) {
       let t5;
       if ($[4] !== initial) {
         t5 = modelDisplayString(initial);
@@ -124,7 +124,7 @@ export function ModelPicker(t0: Props) {
   const selectOptions = t5;
   let t6;
   if ($[14] !== initialValue || $[15] !== selectOptions) {
-    t6 = selectOptions.some((_: unknown) => _.value === initialValue) ? initialValue : selectOptions[0]?.value ?? undefined;
+    t6 = selectOptions.some((_: any) => _.value === initialValue) ? initialValue : selectOptions[0]?.value ?? undefined;
     $[14] = initialValue;
     $[15] = selectOptions;
     $[16] = t6;
@@ -136,7 +136,7 @@ export function ModelPicker(t0: Props) {
   const hiddenCount = Math.max(0, selectOptions.length - visibleCount);
   let t7;
   if ($[17] !== focusedValue || $[18] !== selectOptions) {
-    t7 = selectOptions.find((opt_1: unknown) => opt_1.value === focusedValue)?.label;
+    t7 = selectOptions.find((opt_1: any) => opt_1.value === focusedValue)?.label;
     $[17] = focusedValue;
     $[18] = selectOptions;
     $[19] = t7;
@@ -170,7 +170,7 @@ export function ModelPicker(t0: Props) {
   const displayEffort = effort === "max" && !focusedSupportsMax ? "high" : effort;
   let t10;
   if ($[25] !== effortValue || $[26] !== hasToggledEffort) {
-    t10 = (value: unknown) => {
+    t10 = (value: any) => {
       setFocusedValue(value);
       if (!hasToggledEffort && effortValue === undefined) {
         setEffort(getDefaultEffortLevelForOption(value));
@@ -185,7 +185,7 @@ export function ModelPicker(t0: Props) {
   const handleFocus = t10;
   let t11;
   if ($[28] !== focusedDefaultEffort || $[29] !== focusedSupportsEffort || $[30] !== focusedSupportsMax) {
-    t11 = (direction: unknown) => {
+    t11 = (direction: any) => {
       if (!focusedSupportsEffort) {
         return;
       }
@@ -386,16 +386,16 @@ export function ModelPicker(t0: Props) {
   return t29;
 }
 function _temp4() {}
-function _temp3(opt_0: unknown) {
+function _temp3(opt_0: any) {
   return {
     ...opt_0,
     value: opt_0.value === null ? NO_PREFERENCE : opt_0.value
   };
 }
-function _temp2(s_0: unknown) {
+function _temp2(s_0: any) {
   return s_0.effortValue;
 }
-function _temp(s: unknown) {
+function _temp(s: any) {
   return isFastModeEnabled() ? s.fastMode : false;
 }
 function resolveOptionModel(value?: string): string | undefined {

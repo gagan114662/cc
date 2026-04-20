@@ -169,13 +169,13 @@ export function usePostCompactSurvey(messages: unknown, isLoading: unknown, t0: 
   }
   return t11;
 }
-function _temp4(msg_0: unknown) {
+function _temp4(msg_0: any) {
   return msg_0.uuid;
 }
-function _temp3(msg: unknown) {
+function _temp3(msg: any) {
   return isCompactBoundaryMessage(msg);
 }
-function _temp2(appearanceId_0: unknown, selected: unknown) {
+function _temp2(appearanceId_0: any, selected: unknown) {
   const smCompactionEnabled_0 = shouldUseSessionMemoryCompaction();
   logEvent("tengu_post_compact_survey_event", {
     event_type: "responded" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -190,7 +190,7 @@ function _temp2(appearanceId_0: unknown, selected: unknown) {
     survey_type: "post_compact"
   });
 }
-function _temp(appearanceId: unknown) {
+function _temp(appearanceId: any) {
   const smCompactionEnabled = shouldUseSessionMemoryCompaction();
   logEvent("tengu_post_compact_survey_event", {
     event_type: "appeared" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

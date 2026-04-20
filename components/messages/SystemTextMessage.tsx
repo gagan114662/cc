@@ -384,7 +384,7 @@ function StopHookSummaryMessage(t0: { message: SystemStopHookSummaryMessage; add
   }
   let t13;
   if ($[34] !== hookErrors || $[35] !== message.hookLabel) {
-    t13 = hookErrors.length > 0 && hookErrors.map((err: unknown, idx_1: number) => <Text key={idx_1}><Text dimColor={true}>⎿  </Text>{message.hookLabel ?? "Stop"} hook error: {err as React.ReactNode}</Text>);
+    t13 = hookErrors.length > 0 && hookErrors.map((err: any, idx_1: number) => <Text key={idx_1}><Text dimColor={true}>⎿  </Text>{message.hookLabel ?? "Stop"} hook error: {err as React.ReactNode}</Text>);
     $[34] = hookErrors;
     $[35] = message.hookLabel;
     $[36] = t13;

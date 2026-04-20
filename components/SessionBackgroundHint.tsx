@@ -98,7 +98,7 @@ export function SessionBackgroundHint(t0: Props) {
   }
   return t5;
 }
-function _temp2(c: unknown) {
+function _temp2(c: any) {
   return c.hasUsedBackgroundTask ? c : {
     ...c,
     hasUsedBackgroundTask: true

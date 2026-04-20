@@ -50,7 +50,7 @@ export function PromptDialog(t0: Props) {
   }
   let t4;
   if ($[5] !== onRespond) {
-    t4 = (value: unknown) => {
+    t4 = (value: any) => {
       onRespond(value);
     };
     $[5] = onRespond;
@@ -80,7 +80,7 @@ export function PromptDialog(t0: Props) {
   }
   return t6;
 }
-function _temp(opt: unknown) {
+function _temp(opt: any) {
   return {
     label: opt.label,
     value: opt.key,

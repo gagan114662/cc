@@ -287,7 +287,7 @@ export function MCPSettings(t0: Props) {
         let t10;
         let t9;
         if ($[46] !== viewState.server) {
-          t9 = (_: unknown, index: number) => setViewState({
+          t9 = (_: any, index: number) => setViewState({
             type: "server-tool-detail",
             server: viewState.server,
             toolIndex: index

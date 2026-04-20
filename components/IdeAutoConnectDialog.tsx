@@ -84,7 +84,7 @@ export function IdeDisableAutoConnectDialog(t0: IdeDisableAutoConnectDialogProps
   } = t0;
   let t1;
   if ($[0] !== onComplete) {
-    t1 = (value: unknown) => {
+    t1 = (value: any) => {
       const disableAutoConnect = value === "yes";
       if (disableAutoConnect) {
         saveGlobalConfig(_temp);
@@ -141,7 +141,7 @@ export function IdeDisableAutoConnectDialog(t0: IdeDisableAutoConnectDialogProps
   }
   return t5;
 }
-function _temp(current: unknown) {
+function _temp(current: any) {
   return {
     ...current,
     autoConnectIde: false

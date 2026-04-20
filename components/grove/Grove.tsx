@@ -318,7 +318,7 @@ export function GroveDialog(t0: Record<string, unknown>) {
   }
   let t12;
   if ($[24] !== onChange) {
-    t12 = (value_0: unknown) => onChange(value_0 as 'accept_opt_in' | 'accept_opt_out' | 'defer');
+    t12 = (value_0: any) => onChange(value_0 as 'accept_opt_in' | 'accept_opt_out' | 'defer');
     $[24] = onChange;
     $[25] = t12;
   } else {
@@ -346,7 +346,7 @@ export function GroveDialog(t0: Record<string, unknown>) {
   }
   return t14;
 }
-function _temp(exitState: unknown) {
+function _temp(exitState: any) {
   return exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : <Byline><KeyboardShortcutHint shortcut="Enter" action="confirm" /><KeyboardShortcutHint shortcut="Esc" action="cancel" /></Byline>;
 }
 type PrivacySettingsDialogProps = {
@@ -417,7 +417,7 @@ export function PrivacySettingsDialog(t0: PrivacySettingsDialogProps) {
   }
   let t4;
   if ($[7] !== domainExcluded) {
-    t4 = (exitState: unknown) => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : domainExcluded ? <KeyboardShortcutHint shortcut="Esc" action="cancel" /> : <Byline><KeyboardShortcutHint shortcut="Enter/Tab/Space" action="toggle" /><KeyboardShortcutHint shortcut="Esc" action="cancel" /></Byline>;
+    t4 = (exitState: any) => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : domainExcluded ? <KeyboardShortcutHint shortcut="Esc" action="cancel" /> : <Byline><KeyboardShortcutHint shortcut="Enter/Tab/Space" action="toggle" /><KeyboardShortcutHint shortcut="Esc" action="cancel" /></Byline>;
     $[7] = domainExcluded;
     $[8] = t4;
   } else {

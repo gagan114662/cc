@@ -129,7 +129,7 @@ function _temp4(line_0: string, i: number) {
 function _temp3(line: string) {
   return line.length > 0;
 }
-function _temp2(e: unknown) {
+function _temp2(e: any) {
   logForDebugging("QR code generation failed", e);
 }
 function _temp(s: AppState) {

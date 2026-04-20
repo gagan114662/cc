@@ -151,7 +151,7 @@ export function NotebookEditPermissionRequest(props: PermissionRequestProps) {
   }
   return t15;
 }
-function _temp(input: unknown) {
+function _temp(input: any) {
   const result = NotebookEditTool.inputSchema.safeParse(input);
   if (!result.success) {
     logError(new Error(`Failed to parse notebook edit input: ${result.error.message}`));

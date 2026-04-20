@@ -254,7 +254,7 @@ function TeamDetailView(t0: TeamDetailViewProps) {
   const t1 = `Team ${teamName}`;
   let t2;
   if ($[0] !== selectedIndex || $[1] !== teammates) {
-    t2 = teammates.length === 0 ? <Text dimColor={true}>No teammates</Text> : <Box flexDirection="column">{teammates.map((teammate: unknown, index: number) => <TeammateListItem key={teammate.agentId} teammate={teammate} isSelected={index === selectedIndex} />)}</Box>;
+    t2 = teammates.length === 0 ? <Text dimColor={true}>No teammates</Text> : <Box flexDirection="column">{teammates.map((teammate: any, index: number) => <TeammateListItem key={teammate.agentId} teammate={teammate} isSelected={index === selectedIndex} />)}</Box>;
     $[0] = selectedIndex;
     $[1] = teammates;
     $[2] = t2;
@@ -420,7 +420,7 @@ function TeammateDetailView(t0: TeammateDetailViewProps) {
   useEffect(t2, t3);
   let t4;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
-    t4 = (input: unknown) => {
+    t4 = (input: any) => {
       if (input === "p") {
         setPromptExpanded(_temp);
       }
@@ -538,10 +538,10 @@ function TeammateDetailView(t0: TeammateDetailViewProps) {
   }
   return t13;
 }
-function _temp2(task_0: unknown) {
+function _temp2(task_0: any) {
   return <Text key={task_0.id} color={task_0.status === "completed" ? "success" : undefined}>{task_0.status === "completed" ? figures.tick : "\u25FC"}{" "}{task_0.subject}</Text>;
 }
-function _temp(prev: unknown) {
+function _temp(prev: any) {
   return !prev;
 }
 async function killTeammate(paneId: string, backendType: PaneBackendType | undefined, teamName: string, teammateId: string, teammateName: string, setAppState: (f: (prev: AppState) => AppState) => void): Promise<void> {

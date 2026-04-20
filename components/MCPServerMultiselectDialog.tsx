@@ -124,7 +124,7 @@ export function MCPServerMultiselectDialog(t0: Props) {
   }
   return t9;
 }
-function _temp(server_0: unknown) {
+function _temp(server_0: any) {
   return {
     label: server_0,
     value: server_0

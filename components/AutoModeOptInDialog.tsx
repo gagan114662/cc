@@ -109,7 +109,7 @@ export function AutoModeOptInDialog(t0: Props) {
   }
   let t8;
   if ($[9] !== onChange) {
-    t8 = (value_0: unknown) => onChange(value_0 as 'accept' | 'accept-default' | 'decline');
+    t8 = (value_0: any) => onChange(value_0 as 'accept' | 'accept-default' | 'decline');
     $[9] = onChange;
     $[10] = t8;
   } else {

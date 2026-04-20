@@ -70,27 +70,49 @@ export type SDKControlInitializeRequest = {
 
 // Additional control-request subtypes not yet typed upstream. The runtime
 // dispatcher in cli/print.ts handles all of these; the Zod schema in
-// controlSchemas.ts accepts them too. Phantom fields are kept permissive
-// (unknown) because the consumer casts per-subtype at the callsite.
+// controlSchemas.ts accepts them too. Field shapes mirror the wire format
+// used by the dispatcher; remaining unknowns are kept open via the index sig.
 export type SDKControlExtendedRequest =
-  | { subtype: 'end_session'; [key: string]: unknown }
+  | { subtype: 'end_session'; reason?: string; [key: string]: unknown }
   | { subtype: 'get_context_usage'; [key: string]: unknown }
-  | { subtype: 'cancel_async_message'; [key: string]: unknown }
-  | { subtype: 'seed_read_state'; [key: string]: unknown }
+  | {
+      subtype: 'cancel_async_message'
+      message_uuid: string
+      [key: string]: unknown
+    }
+  | {
+      subtype: 'seed_read_state'
+      path: string
+      mtime: number
+      [key: string]: unknown
+    }
   | { subtype: 'reload_plugins'; [key: string]: unknown }
   | { subtype: 'mcp_reconnect'; serverName: string; [key: string]: unknown }
   | { subtype: 'mcp_toggle'; [key: string]: unknown }
-  | { subtype: 'channel_enable'; [key: string]: unknown }
+  | { subtype: 'channel_enable'; serverName: string; [key: string]: unknown }
   | { subtype: 'mcp_authenticate'; [key: string]: unknown }
   | { subtype: 'mcp_oauth_callback_url'; [key: string]: unknown }
   | { subtype: 'mcp_clear_auth'; [key: string]: unknown }
   | { subtype: 'claude_authenticate'; [key: string]: unknown }
-  | { subtype: 'claude_oauth_callback'; [key: string]: unknown }
+  | {
+      subtype: 'claude_oauth_callback'
+      authorizationCode: string
+      state: string
+      [key: string]: unknown
+    }
   | { subtype: 'claude_oauth_wait_for_completion'; [key: string]: unknown }
-  | { subtype: 'apply_flag_settings'; [key: string]: unknown }
+  | {
+      subtype: 'apply_flag_settings'
+      settings: Record<string, unknown>
+      [key: string]: unknown
+    }
   | { subtype: 'generate_session_title'; [key: string]: unknown }
   | { subtype: 'get_settings'; [key: string]: unknown }
-  | { subtype: 'remote_control'; [key: string]: unknown }
+  | {
+      subtype: 'remote_control'
+      enabled?: boolean
+      [key: string]: unknown
+    }
   | { subtype: 'side_question'; [key: string]: unknown }
   | { subtype: 'stop_task'; [key: string]: unknown }
 

@@ -303,7 +303,7 @@ export function FullscreenLayout(t0: Record<string, unknown>) {
   const chromeCtx = t4;
   let t5;
   if ($[1] !== scrollRef) {
-    t5 = (listener: unknown) => scrollRef?.current?.subscribe(listener) ?? _temp;
+    t5 = (listener: any) => scrollRef?.current?.subscribe(listener) ?? _temp;
     $[1] = scrollRef;
     $[2] = t5;
   } else {
@@ -478,7 +478,7 @@ function _temp3() {
     ink.onHyperlinkClick = undefined;
   };
 }
-function _temp2(url: unknown) {
+function _temp2(url: any) {
   if (url.startsWith("file:")) {
     try {
       openPath(fileURLToPath(url));

@@ -194,7 +194,7 @@ function _temp2(res: (value: { type: "timeout" }) => void) {
     type: "timeout" as const
   });
 }
-function _temp(r: unknown) {
+function _temp(r: any) {
   return {
     type: "result" as const,
     result: r

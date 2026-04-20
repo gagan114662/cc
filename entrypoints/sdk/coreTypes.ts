@@ -18,6 +18,20 @@ export type {
 // Re-export all generated types
 export * from './coreTypes.generated.js'
 
+// Widen ModelUsage to include maxOutputTokens — tracked by stats.ts /
+// statsCache.ts but not in the upstream SDK's ModelUsage. Explicit named
+// export shadows the `export *` one above.
+export type ModelUsage = {
+  inputTokens: number
+  outputTokens: number
+  cacheReadInputTokens: number
+  cacheCreationInputTokens: number
+  webSearchRequests: number
+  costUSD: number
+  contextWindow: number
+  maxOutputTokens?: number
+}
+
 // Re-export utility types that can't be expressed as Zod schemas
 export type { NonNullableUsage } from './sdkUtilityTypes.js'
 

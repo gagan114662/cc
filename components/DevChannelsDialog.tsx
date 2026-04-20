@@ -96,7 +96,7 @@ export function DevChannelsDialog(t0: Props) {
   }
   return t8;
 }
-function _temp2(c: unknown) {
+function _temp2(c: any) {
   return c.kind === "plugin" ? `plugin:${c.name}@${c.marketplace}` : `server:${c.name}`;
 }
 function _temp() {

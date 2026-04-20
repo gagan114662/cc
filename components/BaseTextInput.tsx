@@ -90,12 +90,12 @@ export function BaseTextInput(t0: BaseTextInputComponentProps) {
   });
   const commandWithoutArgs = props.value && props.value.trim().indexOf(" ") === -1 || props.value && props.value.endsWith(" ");
   const showArgumentHint = Boolean(props.argumentHint && props.value && commandWithoutArgs && props.value.startsWith("/"));
-  const cursorFiltered = props.showCursor && props.highlights ? props.highlights.filter((h: unknown) => h.dimColor || props.cursorOffset < h.start || props.cursorOffset >= h.end) : props.highlights;
+  const cursorFiltered = props.showCursor && props.highlights ? props.highlights.filter((h: any) => h.dimColor || props.cursorOffset < h.start || props.cursorOffset >= h.end) : props.highlights;
   const {
     viewportCharOffset,
     viewportCharEnd
   } = inputState;
-  const filteredHighlights = cursorFiltered && viewportCharOffset > 0 ? cursorFiltered.filter((h_0: unknown) => h_0.end > viewportCharOffset && h_0.start < viewportCharEnd).map((h_1: unknown) => ({
+  const filteredHighlights = cursorFiltered && viewportCharOffset > 0 ? cursorFiltered.filter((h_0: any) => h_0.end > viewportCharOffset && h_0.start < viewportCharEnd).map((h_1: any) => ({
     ...h_1,
     start: Math.max(0, h_1.start - viewportCharOffset),
     end: h_1.end - viewportCharOffset

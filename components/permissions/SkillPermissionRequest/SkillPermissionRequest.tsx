@@ -358,7 +358,7 @@ export function SkillPermissionRequest(props: PermissionRequestProps) {
   }
   return t19;
 }
-function _temp(input: unknown) {
+function _temp(input: any) {
   const result = SkillTool.inputSchema.safeParse(input);
   if (!result.success) {
     logError(new Error(`Failed to parse skill tool input: ${result.error.message}`));

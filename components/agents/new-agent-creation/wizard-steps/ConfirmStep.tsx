@@ -36,7 +36,7 @@ export function ConfirmStep(t0: Props) {
   const {
     goBack,
     wizardData
-  } = useWizard();
+  } = useWizard<AgentWizardData>();
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = {

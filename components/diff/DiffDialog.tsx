@@ -260,7 +260,7 @@ export function DiffDialog(t0: Record<string, unknown>) {
   const headerSubtitle = currentTurn ? currentTurn.userPromptPreview ? `"${currentTurn.userPromptPreview}"` : "" : "(git diff HEAD)";
   let t18;
   if ($[40] !== sourceIndex || $[41] !== sources) {
-    t18 = sources.length > 1 ? <Box>{sourceIndex > 0 && <Text dimColor={true}>◀ </Text>}{sources.map((source: unknown, i: number) => {
+    t18 = sources.length > 1 ? <Box>{sourceIndex > 0 && <Text dimColor={true}>◀ </Text>}{sources.map((source: any, i: number) => {
         const isSelected = i === sourceIndex;
         const label = source.type === "current" ? "Current" : `T${source.turn.turnIndex}`;
         return <Text key={i} dimColor={!isSelected} bold={isSelected}>{i > 0 ? " \xB7 " : ""}{label}</Text>;
@@ -328,7 +328,7 @@ export function DiffDialog(t0: Record<string, unknown>) {
   const handleCancel = t22;
   let t23;
   if ($[51] !== dismissShortcut || $[52] !== sources.length || $[53] !== viewMode) {
-    t23 = (exitState: unknown) => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : viewMode === "list" ? <Byline>{sources.length > 1 && <Text>←/→ source</Text>}<Text>↑/↓ select</Text><Text>Enter view</Text><Text>{dismissShortcut} close</Text></Byline> : <Byline><Text>← back</Text><Text>{dismissShortcut} close</Text></Byline>;
+    t23 = (exitState: any) => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : viewMode === "list" ? <Byline>{sources.length > 1 && <Text>←/→ source</Text>}<Text>↑/↓ select</Text><Text>Enter view</Text><Text>{dismissShortcut} close</Text></Byline> : <Byline><Text>← back</Text><Text>{dismissShortcut} close</Text></Byline>;
     $[51] = dismissShortcut;
     $[52] = sources.length;
     $[53] = viewMode;
@@ -368,13 +368,13 @@ export function DiffDialog(t0: Record<string, unknown>) {
   }
   return t25;
 }
-function _temp3(prev_1: unknown) {
+function _temp3(prev_1: any) {
   return Math.max(0, prev_1 - 1);
 }
-function _temp2(prev: unknown) {
+function _temp2(prev: any) {
   return Math.max(0, prev - 1);
 }
-function _temp(turn: unknown) {
+function _temp(turn: any) {
   return {
     type: "turn",
     turn

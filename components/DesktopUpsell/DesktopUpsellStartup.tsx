@@ -144,7 +144,7 @@ export function DesktopUpsellStartup(t0: Props) {
   }
   return t8;
 }
-function _temp2(prev_0: unknown) {
+function _temp2(prev_0: any) {
   if (prev_0.desktopUpsellDismissed) {
     return prev_0;
   }

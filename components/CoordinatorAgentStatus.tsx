@@ -86,7 +86,7 @@ export function useCoordinatorTaskCount() {
   t0 = 0;
   return t0;
 }
-function _temp(s: unknown) {
+function _temp(s: any) {
   return s.tasks;
 }
 function MainLine(t0: AgentLineProps) {

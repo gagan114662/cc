@@ -61,7 +61,7 @@ export function MCPServerDesktopImportDialog(t0: Props) {
   useEffect(t3, t4);
   let t5;
   if ($[5] !== existingServers || $[6] !== serverNames) {
-    t5 = serverNames.filter((name: unknown) => existingServers[name] !== undefined);
+    t5 = serverNames.filter((name: any) => existingServers[name] !== undefined);
     $[5] = existingServers;
     $[6] = serverNames;
     $[7] = t5;
@@ -91,7 +91,7 @@ export function MCPServerDesktopImportDialog(t0: Props) {
   const [theme] = useTheme();
   let t6;
   if ($[8] !== onDone || $[9] !== scope || $[10] !== theme) {
-    t6 = (importedCount_0: unknown) => {
+    t6 = (importedCount_0: any) => {
       if (importedCount_0 > 0) {
         writeToStdout(`\n${color("success", theme)(`Successfully imported ${importedCount_0} MCP ${plural(importedCount_0, "server")} to ${scope} config.`)}\n`);
       } else {
@@ -148,11 +148,11 @@ export function MCPServerDesktopImportDialog(t0: Props) {
   let t13;
   let t14;
   if ($[19] !== collisions || $[20] !== serverNames) {
-    t13 = serverNames.map((server: unknown) => ({
+    t13 = serverNames.map((server: any) => ({
       label: `${server}${collisions.includes(server) ? " (already exists)" : ""}`,
       value: server
     }));
-    t14 = serverNames.filter((name_0: unknown) => !collisions.includes(name_0));
+    t14 = serverNames.filter((name_0: any) => !collisions.includes(name_0));
     $[19] = collisions;
     $[20] = serverNames;
     $[21] = t13;

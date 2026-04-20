@@ -67,7 +67,7 @@ export function SedEditPermissionRequest(t0: SedEditPermissionRequestProps) {
   }
   return t2;
 }
-function _temp(e: unknown): FileReadResult {
+function _temp(e: any): FileReadResult {
   if (!isENOENT(e)) {
     throw e;
   }
@@ -153,7 +153,7 @@ function SedEditPermissionRequestInner(t0: SedEditPermissionRequestProps & { con
   const noChangesMessage = t3;
   let t4;
   if ($[11] !== filePath || $[12] !== newContent) {
-    t4 = (input: unknown) => {
+    t4 = (input: any) => {
       const parsed = BashTool.inputSchema.parse(input);
       return {
         ...parsed,

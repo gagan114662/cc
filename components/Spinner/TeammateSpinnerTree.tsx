@@ -200,13 +200,13 @@ export function TeammateSpinnerTree(t0: Props) {
   }
   return t7;
 }
-function _temp3(s_1: unknown) {
+function _temp3(s_1: any) {
   return s_1.showTeammateMessagePreview;
 }
-function _temp2(s_0: unknown) {
+function _temp2(s_0: any) {
   return s_0.viewingAgentTaskId;
 }
-function _temp(s: unknown) {
+function _temp(s: any) {
   return s.tasks;
 }
 function HideRow(t0: Record<string, unknown>) {

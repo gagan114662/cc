@@ -172,7 +172,7 @@ function MessageRowImpl(t0: Record<string, unknown>) {
       if ($[23] !== inProgressToolUseIDs || $[24] !== msg.messages) {
         let t6;
         if ($[26] !== inProgressToolUseIDs) {
-          t6 = (m: unknown) => {
+          t6 = (m: any) => {
             const content = m.message.content[0];
             return content?.type === "tool_use" && inProgressToolUseIDs.has(content.id);
           };
@@ -290,7 +290,7 @@ function MessageRowImpl(t0: Record<string, unknown>) {
  * Checks if a message is "streaming" - i.e., its content may still be changing.
  * Exported for testing.
  */
-function _temp(c: unknown) {
+function _temp(c: any) {
   return c.type === "text";
 }
 export function isMessageStreaming(msg: RenderableMessage, streamingToolUseIDs: Set<string>): boolean {

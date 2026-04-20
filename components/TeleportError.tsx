@@ -91,7 +91,7 @@ export function TeleportError(t0: TeleportErrorProps) {
   const handleLoginWithClaudeAI = t6;
   let t7;
   if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
-    t7 = (value: unknown) => {
+    t7 = (value: any) => {
       if (value === "login") {
         handleLoginWithClaudeAI();
       } else {

@@ -35,7 +35,7 @@ export function ClaudeInChromeOnboarding(t0: Props) {
   React.useEffect(t1, t2);
   let t3;
   if ($[2] !== onDone) {
-    t3 = (_input: unknown, key: unknown) => {
+    t3 = (_input: any, key: unknown) => {
       if (key.return) {
         onDone();
       }
@@ -112,7 +112,7 @@ export function ClaudeInChromeOnboarding(t0: Props) {
   }
   return t11;
 }
-function _temp(current: unknown) {
+function _temp(current: any) {
   return {
     ...current,
     hasCompletedClaudeInChromeOnboarding: true

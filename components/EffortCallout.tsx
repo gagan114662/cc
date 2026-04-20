@@ -88,7 +88,7 @@ export function EffortCallout(t0: Props) {
   const defaultLevel = t7;
   let t8;
   if ($[9] !== defaultLevel) {
-    t8 = (value: unknown) => {
+    t8 = (value: any) => {
       const effortLevel = value === defaultLevel ? undefined : value;
       updateSettingsForSource("userSettings", {
         effortLevel: toPersistableEffort(effortLevel)
