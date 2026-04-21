@@ -98,7 +98,9 @@ const skillSearchModules = feature('EXPERIMENTAL_SKILL_SEARCH')
       featureCheck:
         require('../services/skillSearch/featureCheck.js') as typeof import('../services/skillSearch/featureCheck.js'),
       prefetch:
-        require('../services/skillSearch/prefetch.js') as typeof import('../services/skillSearch/prefetch.js'),
+        require('../services/skillSearch/prefetch.js') as typeof import('../services/skillSearch/prefetch.js') & {
+          getTurnZeroSkillDiscovery?: (...args: unknown[]) => Promise<unknown>
+        },
     }
   : null
 const autoModeStateModule = feature('TRANSCRIPT_CLASSIFIER')
@@ -205,7 +207,9 @@ const BRIEF_TOOL_NAME: string | null =
       ).BRIEF_TOOL_NAME
     : null
 const sessionTranscriptModule = feature('KAIROS')
-  ? (require('../services/sessionTranscript/sessionTranscript.js') as typeof import('../services/sessionTranscript/sessionTranscript.js'))
+  ? (require('../services/sessionTranscript/sessionTranscript.js') as typeof import('../services/sessionTranscript/sessionTranscript.js') & {
+      flushOnDateChange?: (messages: unknown, currentDate: unknown) => void
+    })
   : null
 /* eslint-enable @typescript-eslint/no-require-imports */
 import { hasUltrathinkKeyword, isUltrathinkEnabled } from './thinking.js'
@@ -803,12 +807,12 @@ export async function getAttachments(
         skillSearchModules &&
         !options?.skipSkillDiscovery
           ? [
-              maybe('skill_discovery', () =>
-                skillSearchModules.prefetch.getTurnZeroSkillDiscovery(
+              maybe('skill_discovery', async () =>
+                ((await skillSearchModules.prefetch.getTurnZeroSkillDiscovery?.(
                   input,
                   messages ?? [],
                   context,
-                ),
+                )) ?? []) as unknown[],
               ),
             ]
           : []),
@@ -1004,7 +1008,7 @@ export async function getAttachments(
     ...userAttachmentResults.flat(),
     ...threadAttachmentResults.flat(),
     ...mainThreadAttachmentResults.flat(),
-  ].filter(a => a !== undefined && a !== null)
+  ].filter(a => a !== undefined && a !== null) as Attachment[]
 }
 
 async function maybe<A>(label: string, f: () => Promise<A[]>): Promise<A[]> {
@@ -1441,7 +1445,7 @@ export function getDateChangeAttachments(
   // message timestamp so a multi-day gap flushes each day correctly.
   if (feature('KAIROS')) {
     if (getKairosActive() && messages !== undefined) {
-      sessionTranscriptModule?.flushOnDateChange(messages, currentDate)
+      sessionTranscriptModule?.flushOnDateChange?.(messages, currentDate)
     }
   }
 
@@ -2673,7 +2677,7 @@ function buildCapabilityDiscoveryText(
     messages
       ?.filter(message => isHumanTurn(message) && !isThinkingMessage(message))
       .slice(-3)
-      .map(message => getUserMessageText(message).trim())
+      .map(message => (getUserMessageText(message) ?? '').trim())
       .filter(Boolean) ?? []
 
   for (const recentMessage of recentHumanMessages) {
@@ -3996,12 +4000,14 @@ export function getContextEfficiencyAttachment(
   // isn't in the tool list. Lazy require keeps this file snip-string-free.
   const { isSnipRuntimeEnabled, shouldNudgeForSnips } =
     // eslint-disable-next-line @typescript-eslint/no-require-imports
-    require('../services/compact/snipCompact.js') as typeof import('../services/compact/snipCompact.js')
+    require('../services/compact/snipCompact.js') as typeof import('../services/compact/snipCompact.js') & {
+      shouldNudgeForSnips?: (...args: unknown[]) => boolean
+    }
   if (!isSnipRuntimeEnabled()) {
     return []
   }
 
-  if (!shouldNudgeForSnips(messages)) {
+  if (!shouldNudgeForSnips?.(messages)) {
     return []
   }
 

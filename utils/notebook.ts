@@ -67,14 +67,14 @@ function processOutput(output: NotebookCellOutput) {
     case 'display_data':
       return {
         output_type: output.output_type,
-        text: processOutputText(output.data?.['text/plain']),
+        text: processOutputText(output.data?.['text/plain'] as string | string[] | undefined),
         image: output.data && extractImage(output.data),
       }
     case 'error':
       return {
         output_type: output.output_type,
         text: processOutputText(
-          `${output.ename}: ${output.evalue}\n${output.traceback.join('\n')}`,
+          `${output.ename}: ${output.evalue}\n${(output.traceback ?? []).join('\n')}`,
         ),
       }
   }
@@ -109,7 +109,7 @@ function processCell(
         },
       ]
     } else {
-      cellData.outputs = outputs
+      cellData.outputs = outputs.filter((o): o is NonNullable<typeof o> => o !== undefined) as never
     }
   }
 
@@ -144,7 +144,7 @@ function cellOutputToToolResult(output: NotebookCellSourceOutput) {
       type: 'image',
       source: {
         data: output.image.image_data,
-        media_type: output.image.media_type,
+        media_type: output.image.media_type as 'image/png' | 'image/jpeg' | 'image/gif' | 'image/webp',
         type: 'base64',
       },
     })
@@ -169,7 +169,7 @@ export async function readNotebook(
   const buffer = await getFsImplementation().readFileBytes(fullPath)
   const content = buffer.toString('utf-8')
   const notebook = jsonParse(content) as NotebookContent
-  const language = notebook.metadata.language_info?.name ?? 'python'
+  const language = notebook.metadata?.language_info?.name ?? 'python'
   if (cellId) {
     const cell = notebook.cells.find((c: NotebookCell) => c.id === cellId)
     if (!cell) {
