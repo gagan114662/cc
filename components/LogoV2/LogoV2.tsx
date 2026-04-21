@@ -40,6 +40,11 @@ import { useShowGuestPassesUpsell, incrementGuestPassesSeenCount } from './Guest
 import { useShowOverageCreditUpsell, incrementOverageCreditUpsellSeenCount, createOverageCreditFeed } from './OverageCreditUpsell.js';
 import { plural } from '../../utils/stringUtils.js';
 import { useAppState } from '../../state/AppState.js';
+
+// Phantom stubs — never rendered (callsites are gated `false && ...`) but
+// kept so the JSX type-checks without resurrecting upstream modules.
+const GateOverridesWarning = (): React.JSX.Element | null => null;
+const ExperimentEnrollmentNotice = (): React.JSX.Element | null => null;
 import { getEffortSuffix } from '../../utils/effort.js';
 import { useMainLoopModel } from '../../hooks/useMainLoopModel.js';
 import { renderModelSetting } from '../../utils/model/model.js';
@@ -72,7 +77,7 @@ export function LogoV2() {
   const agent = useAppState(_temp);
   const effortValue = useAppState(_temp2);
   const config = getGlobalConfig();
-  let changelog;
+  let changelog: ReturnType<typeof getRecentReleaseNotesSync> | [] = [];
   try {
     changelog = getRecentReleaseNotesSync(3);
   } catch {
