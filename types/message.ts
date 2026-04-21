@@ -383,7 +383,9 @@ export type CollapsedReadSearchGroup = {
   prs?: Array<{ action: string; number: number; url?: string }>
   hookCount?: number
   hookTotalMs?: number
-  hookInfos?: Array<{ command: string; durationMs?: number }>
+  hookInfos?: Array<
+    { command: string; durationMs?: number } | StopHookInfo
+  >
 }
 
 export type RenderableMessage =
