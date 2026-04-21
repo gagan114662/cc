@@ -2,8 +2,10 @@
 // external build. Kept structural so render/frame code type-checks.
 
 export type Cursor = {
-  row: number
-  col: number
+  row?: number
+  col?: number
+  x?: number
+  y?: number
   visible: boolean
   shape?: 'block' | 'underline' | 'bar'
   blinking?: boolean
