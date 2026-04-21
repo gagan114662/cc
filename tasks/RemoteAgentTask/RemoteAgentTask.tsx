@@ -257,8 +257,8 @@ function extractReviewFromLog(log: SDKMessage[]): string | null {
     // The final echo before hook exit may land in either the last
     // hook_progress or the terminal hook_response depending on buffering;
     // both have flat stdout.
-    if (msg?.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')) {
-      const tagged = extractTag(msg.stdout, REMOTE_REVIEW_TAG);
+    if (msg?.type === 'system' && ((msg.subtype as string) === 'hook_progress' || (msg.subtype as string) === 'hook_response')) {
+      const tagged = extractTag((msg as { stdout?: string }).stdout ?? '', REMOTE_REVIEW_TAG);
       if (tagged?.trim()) return tagged.trim();
     }
   }
@@ -273,7 +273,7 @@ function extractReviewFromLog(log: SDKMessage[]): string | null {
   // Hook-stdout concat fallback: a single echo should land in one event, but
   // large JSON payloads can flush across two if the pipe buffer fills
   // mid-write. Per-message scan above misses a tag split across events.
-  const hookStdout = log.filter(msg => msg.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')).map(msg => msg.stdout).join('');
+  const hookStdout = log.filter(msg => msg.type === 'system' && ((msg.subtype as string) === 'hook_progress' || (msg.subtype as string) === 'hook_response')).map(msg => (msg as { stdout?: string }).stdout ?? '').join('');
   const hookTagged = extractTag(hookStdout, REMOTE_REVIEW_TAG);
   if (hookTagged?.trim()) return hookTagged.trim();
 
@@ -296,8 +296,8 @@ function extractReviewTagFromLog(log: SDKMessage[]): string | null {
   // hook_progress / hook_response per-message scan (bughunter path)
   for (let i = log.length - 1; i >= 0; i--) {
     const msg = log[i];
-    if (msg?.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')) {
-      const tagged = extractTag(msg.stdout, REMOTE_REVIEW_TAG);
+    if (msg?.type === 'system' && ((msg.subtype as string) === 'hook_progress' || (msg.subtype as string) === 'hook_response')) {
+      const tagged = extractTag((msg as { stdout?: string }).stdout ?? '', REMOTE_REVIEW_TAG);
       if (tagged?.trim()) return tagged.trim();
     }
   }
@@ -312,7 +312,7 @@ function extractReviewTagFromLog(log: SDKMessage[]): string | null {
   }
 
   // Hook-stdout concat fallback for split tags
-  const hookStdout = log.filter(msg => msg.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response')).map(msg => msg.stdout).join('');
+  const hookStdout = log.filter(msg => msg.type === 'system' && ((msg.subtype as string) === 'hook_progress' || (msg.subtype as string) === 'hook_response')).map(msg => (msg as { stdout?: string }).stdout ?? '').join('');
   const hookTagged = extractTag(hookStdout, REMOTE_REVIEW_TAG);
   if (hookTagged?.trim()) return hookTagged.trim();
   return null;
@@ -629,8 +629,8 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
         const open = `<${REMOTE_REVIEW_PROGRESS_TAG}>`;
         const close = `</${REMOTE_REVIEW_PROGRESS_TAG}>`;
         for (const ev of response.newEvents) {
-          if (ev.type === 'system' && (ev.subtype === 'hook_progress' || ev.subtype === 'hook_response')) {
-            const s = ev.stdout;
+          if (ev.type === 'system' && ((ev.subtype as string) === 'hook_progress' || (ev.subtype as string) === 'hook_response')) {
+            const s = (ev as { stdout?: string }).stdout ?? '';
             const closeAt = s.lastIndexOf(close);
             const openAt = closeAt === -1 ? -1 : s.lastIndexOf(open, closeAt);
             if (openAt !== -1 && closeAt > openAt) {
@@ -657,7 +657,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
       // Hook events count as output only for remote-review — bughunter's
       // SessionStart hook produces zero assistant turns so stableIdle would
       // never arm without this.
-      const hasAnyOutput = accumulatedLog.some(msg => msg.type === 'assistant' || task.isRemoteReview && msg.type === 'system' && (msg.subtype === 'hook_progress' || msg.subtype === 'hook_response'));
+      const hasAnyOutput = accumulatedLog.some(msg => msg.type === 'assistant' || task.isRemoteReview && msg.type === 'system' && ((msg.subtype as string) === 'hook_progress' || (msg.subtype as string) === 'hook_response'));
       if (response.sessionStatus === 'idle' && !logGrew && hasAnyOutput) {
         consecutiveIdlePolls++;
       } else {
@@ -678,7 +678,7 @@ function startRemoteSessionPolling(taskId: string, context: TaskContext): () => 
       // in prompt mode from blocking stableIdle — the code_review container
       // only registers SessionStart, but the 30min-hang failure mode is
       // worth defending against.
-      const hasSessionStartHook = accumulatedLog.some(m => m.type === 'system' && (m.subtype === 'hook_started' || m.subtype === 'hook_progress' || m.subtype === 'hook_response') && (m as {
+      const hasSessionStartHook = accumulatedLog.some(m => m.type === 'system' && ((m.subtype as string) === 'hook_started' || (m.subtype as string) === 'hook_progress' || (m.subtype as string) === 'hook_response') && (m as {
         hook_event?: string;
       }).hook_event === 'SessionStart');
       const hasAssistantEvents = accumulatedLog.some(m => m.type === 'assistant');
