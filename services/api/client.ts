@@ -159,30 +159,36 @@ export async function getAnthropicClient({
         ? process.env.ANTHROPIC_SMALL_FAST_MODEL_AWS_REGION
         : getAWSRegion()
 
-    const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] = {
+    const bedrockArgs: ConstructorParameters<typeof AnthropicBedrock>[0] & {
+      skipAuth?: boolean
+      defaultHeaders?: Record<string, string>
+      awsAccessKey?: string | null
+      awsSecretKey?: string | null
+      awsSessionToken?: string | null
+    } = {
       ...ARGS,
       awsRegion,
       ...(isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH) && {
         skipAuth: true,
       }),
       ...(isDebugToStdErr() && { logger: createStderrLogger() }),
-    }
+    } as never
 
     // Add API key authentication if available
     if (process.env.AWS_BEARER_TOKEN_BEDROCK) {
       bedrockArgs.skipAuth = true
       // Add the Bearer token for Bedrock API key authentication
       bedrockArgs.defaultHeaders = {
-        ...bedrockArgs.defaultHeaders,
+        ...(bedrockArgs.defaultHeaders as Record<string, string>),
         Authorization: `Bearer ${process.env.AWS_BEARER_TOKEN_BEDROCK}`,
-      }
+      } as never
     } else if (!isEnvTruthy(process.env.CLAUDE_CODE_SKIP_BEDROCK_AUTH)) {
       // Refresh auth and get credentials with cache clearing
       const cachedCredentials = await refreshAndGetAwsCredentials()
       if (cachedCredentials) {
-        bedrockArgs.awsAccessKey = cachedCredentials.accessKeyId
-        bedrockArgs.awsSecretKey = cachedCredentials.secretAccessKey
-        bedrockArgs.awsSessionToken = cachedCredentials.sessionToken
+        bedrockArgs.awsAccessKey = cachedCredentials.accessKeyId as never
+        bedrockArgs.awsSecretKey = cachedCredentials.secretAccessKey as never
+        bedrockArgs.awsSessionToken = cachedCredentials.sessionToken as never
       }
     }
     // we have always been lying about the return type - this doesn't support batching or models

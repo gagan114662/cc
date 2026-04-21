@@ -6,7 +6,6 @@ import { TEAMMATE_MESSAGE_TAG } from '../constants/xml.js'
 import { useTerminalNotification } from '../ink/useTerminalNotification.js'
 import { sendNotification } from '../services/notifier.js'
 import {
-  type AppState,
   useAppState,
   useAppStateStore,
   useSetAppState,

@@ -122,7 +122,7 @@ describe('deterministic harness runtime', () => {
     )
 
     expect(result.kind).toBe('block')
-    expect(result.reason).toContain('missing evidenceIds')
+    expect((result as { reason?: string }).reason).toContain('missing evidenceIds')
   })
 
   test('requires a human gate between plan and implement', () => {
@@ -180,6 +180,6 @@ describe('deterministic harness runtime', () => {
     )
 
     expect(result.kind).toBe('block')
-    expect(result.reason).toContain('passing release verifier')
+    expect((result as { reason?: string }).reason).toContain('passing release verifier')
   })
 })

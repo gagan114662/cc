@@ -7,6 +7,7 @@ import type { ShellCommandRunner } from 'src/services/harness/shell.js'
 import { runReviewerSuites } from 'src/services/harness/reviewers.js'
 
 const reviewJobSpec: JobSpec = {
+  agentKind: 'claude',
   id: 'pr-review-on-push',
   title: 'PR review on push',
   description: 'review',
@@ -43,6 +44,7 @@ const reviewJobSpec: JobSpec = {
 const queuedJob: QueuedHarnessJob = {
   instanceId: 'job-1',
   jobId: 'pr-review-on-push',
+  agentKind: 'claude',
   sourceKind: 'github',
   repoId: 'repo_test',
   dedupeKey: 'dedupe-1',

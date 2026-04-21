@@ -14,10 +14,11 @@ export function isSnipRuntimeEnabled(): boolean {
 }
 
 export function isSnipBoundaryMessage(message: Message): boolean {
+  const m = message as { type: string; content?: unknown }
   return (
-    message.type === 'system' &&
-    typeof message.content === 'string' &&
-    message.content.includes('history snip')
+    m.type === 'system' &&
+    typeof m.content === 'string' &&
+    (m.content as string).includes('history snip')
   )
 }
 

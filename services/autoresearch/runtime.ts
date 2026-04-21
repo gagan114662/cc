@@ -1217,7 +1217,7 @@ function recomputeTeacherFreeze(
     nextState = openAudit(nextState, {
       reason: 'benchmark_instability',
       summary: 'Benchmark instability exceeded the configured freeze threshold.',
-    })
+    } as never)
   }
 
   const openAudits = nextState.audits.filter(audit => audit.status === 'open')

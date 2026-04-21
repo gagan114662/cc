@@ -64,7 +64,7 @@ describe('scoped OAuth token resolution', () => {
       ['user:inference', 'user:profile', 'user:sessions:claude_code'],
       {
         refreshToken: 'refresh-token',
-        expiresAt: '2099-01-01T00:00:00.000Z',
+        expiresAt: '2099-01-01T00:00:00.000Z' as unknown as number,
       },
     )
 
@@ -73,7 +73,7 @@ describe('scoped OAuth token resolution', () => {
       getStoredTokens: async () =>
         createTokens('stored-token', ['user:inference', 'user:profile'], {
           refreshToken: 'refresh-token',
-          expiresAt: '2000-01-01T00:00:00.000Z',
+          expiresAt: '2000-01-01T00:00:00.000Z' as unknown as number,
         }),
       isTokenExpired: () => true,
       refreshToken: async refreshToken => {

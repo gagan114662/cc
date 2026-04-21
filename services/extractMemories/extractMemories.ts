@@ -416,7 +416,7 @@ export function initExtractMemories(): void {
         promptMessages: [createUserMessage({ content: userPrompt })],
         cacheSafeParams,
         canUseTool,
-        querySource: 'extract_memories',
+        querySource: 'extract_memories' as never,
         forkLabel: 'extract_memories',
         // The extractMemories subagent does not need to record to transcript.
         // Doing so can create race conditions with the main thread.
@@ -490,7 +490,7 @@ export function initExtractMemories(): void {
       if (memoryPaths.length > 0) {
         const msg = createMemorySavedMessage(memoryPaths)
         if (feature('TEAMMEM')) {
-          msg.teamCount = teamCount
+          ;(msg as { teamCount?: number }).teamCount = teamCount
         }
         appendSystemMessage?.(msg)
       }

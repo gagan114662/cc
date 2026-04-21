@@ -133,7 +133,7 @@ async function* runToolsSerially(
         _.message.content.some(
           _ => _.type === 'tool_use' && _.id === toolUse.id,
         ),
-      ),
+      )!,
       canUseTool,
       currentContext,
     )) {
@@ -166,7 +166,7 @@ async function* runToolsConcurrently(
           _.message.content.some(
             _ => _.type === 'tool_use' && _.id === toolUse.id,
           ),
-        ),
+        )!,
         canUseTool,
         toolUseContext,
       )
