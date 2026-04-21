@@ -17,6 +17,6 @@ export const EMPTY_USAGE: Readonly<NonNullableUsage> = {
     ephemeral_5m_input_tokens: 0,
   },
   inference_geo: '',
-  iterations: [],
+  iterations: 0,
   speed: 'standard',
 }

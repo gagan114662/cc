@@ -53,14 +53,14 @@ export function AgentsMenu(t0: Props) {
     allAgents,
     activeAgents: agents
   } = agentDefinitions;
-  let t2;
+  let t2: string[];
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = [];
     $[1] = t2;
   } else {
-    t2 = $[1];
+    t2 = $[1] as string[];
   }
-  const [changes, setChanges] = useState(t2);
+  const [changes, setChanges] = useState<string[]>(t2);
   const mergedTools = useMergedTools(tools, mcpTools, toolPermissionContext);
   useExitOnCtrlCDWithKeybindings();
   let t3;

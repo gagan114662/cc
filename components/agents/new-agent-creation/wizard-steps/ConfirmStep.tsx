@@ -154,7 +154,7 @@ export function ConfirmStep(t0: Props) {
     let t25;
     if ($[39] !== agent.agentType || $[40] !== wizardData.location) {
       t25 = getNewRelativeAgentFilePath({
-        source: wizardData.location,
+        source: wizardData.location as 'userSettings' | 'projectSettings' | 'localSettings' | 'flagSettings' | 'policySettings' | 'built-in',
         agentType: agent.agentType
       });
       $[39] = agent.agentType;

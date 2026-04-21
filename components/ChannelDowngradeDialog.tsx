@@ -22,7 +22,7 @@ export function ChannelDowngradeDialog(t0: Props) {
   let t1;
   if ($[0] !== onChoice) {
     t1 = function handleSelect(value: unknown) {
-      onChoice(value);
+      onChoice(value as import('./ChannelDowngradeDialog.js').ChannelDowngradeChoice);
     };
     $[0] = onChoice;
     $[1] = t1;

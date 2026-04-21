@@ -63,13 +63,13 @@ export function SkillsMenu(t0: any) {
   let groups;
   if ($[2] !== skills) {
     groups = {
-      policySettings: [],
-      userSettings: [],
-      projectSettings: [],
-      localSettings: [],
-      flagSettings: [],
-      plugin: [],
-      mcp: []
+      policySettings: [] as any[],
+      userSettings: [] as any[],
+      projectSettings: [] as any[],
+      localSettings: [] as any[],
+      flagSettings: [] as any[],
+      plugin: [] as any[],
+      mcp: [] as any[]
     };
     for (const skill of skills) {
       const source = skill.source as SkillSource;
@@ -229,7 +229,7 @@ function _temp3(skill_0: any) {
   const pluginName = skill_0.source === "plugin" ? skill_0.pluginInfo?.pluginManifest.name : undefined;
   return <Box key={`${skill_0.name}-${skill_0.source}`}><Text>{getCommandName(skill_0)}</Text><Text dimColor={true}>{pluginName ? ` · ${pluginName}` : ""} · {tokenDisplay} description tokens</Text></Box>;
 }
-function _temp2(a: any, b: unknown) {
+function _temp2(a: any, b: any) {
   return getCommandName(a).localeCompare(getCommandName(b));
 }
 function _temp(cmd: any) {

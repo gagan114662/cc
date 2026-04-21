@@ -152,14 +152,14 @@ export function AddWorkspaceDirectory(t0: Props) {
   } = t0;
   const [directoryInput, setDirectoryInput] = useState("");
   const [error, setError] = useState<any>(null);
-  let t1;
+  let t1: SuggestionItem[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as SuggestionItem[];
   }
-  const [suggestions, setSuggestions] = useState(t1);
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>(t1);
   const [selectedSuggestion, setSelectedSuggestion] = useState(0);
   let t2;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {

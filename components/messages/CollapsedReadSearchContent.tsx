@@ -219,7 +219,7 @@ export function CollapsedReadSearchContent({
           pattern?: string;
           file_path?: string;
         };
-        incomingHint = input.file_path ?? (input.pattern ? `"${input.pattern}"` : undefined) ?? input.command ?? latest.toolName;
+        incomingHint = input.file_path ?? (input.pattern ? `"${input.pattern}"` : undefined) ?? input.command ?? (latest.toolName as string | undefined);
       }
     }
   }
@@ -249,7 +249,7 @@ export function CollapsedReadSearchContent({
               {message.hookCount === 1 ? 'hook' : 'hooks'} (
               {formatSecondsShort(message.hookTotalMs ?? 0)})
             </Text>
-            {message.hookInfos.map((info: { command: string; durationMs?: number }, idx: number) => <Text key={`hook-${idx}`} dimColor>
+            {message.hookInfos.map((info: any, idx: number) => <Text key={`hook-${idx}`} dimColor>
                 {'     ⎿ '}
                 {info.command} ({formatSecondsShort(info.durationMs ?? 0)})
               </Text>)}

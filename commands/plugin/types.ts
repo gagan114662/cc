@@ -13,6 +13,7 @@ export type ViewState =
   | {
       type: 'manage-plugins'
       targetPlugin?: string
+      targetMarketplace?: string
       action?: 'uninstall' | 'enable' | 'disable'
     }
   | { type: 'add-marketplace'; initialValue?: string }

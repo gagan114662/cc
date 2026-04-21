@@ -43,7 +43,7 @@ function BtwSideQuestion(t0: BtwComponentProps) {
   const [response, setResponse] = useState<any>(null);
   const [error, setError] = useState<any>(null);
   const [frame, setFrame] = useState(0);
-  const scrollRef = useRef(null);
+  const scrollRef = useRef<import('../../ink/components/ScrollBox.js').ScrollBoxHandle | null>(null);
   const {
     rows
   } = useModalOrTerminalSize(useTerminalSize());

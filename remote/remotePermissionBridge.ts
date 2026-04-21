@@ -39,7 +39,7 @@ export function createSyntheticAssistantMessage(
         cache_creation_input_tokens: 0,
         cache_read_input_tokens: 0,
       },
-    } as AssistantMessage['message'],
+    } as unknown as AssistantMessage['message'],
     requestId: undefined,
     timestamp: new Date().toISOString(),
   }

@@ -327,12 +327,12 @@ export function FullscreenLayout(t0: any) {
     t6 = $[5];
   }
   const pillVisible = useSyncExternalStore(subscribe, t6);
-  let t7;
+  let t7: React.DependencyList;
   if ($[6] === Symbol.for("react.memo_cache_sentinel")) {
     t7 = [];
     $[6] = t7;
   } else {
-    t7 = $[6];
+    t7 = $[6] as React.DependencyList;
   }
   useLayoutEffect(_temp3, t7);
   if (isFullscreenEnvEnabled()) {

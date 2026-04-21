@@ -10,6 +10,7 @@ const leadJobSpec: JobSpec =
 const queuedJob: QueuedHarnessJob = {
   instanceId: 'job-1',
   jobId: 'red-main-repair',
+  agentKind: 'claude',
   sourceKind: 'manual',
   repoId: 'repo_test',
   dedupeKey: 'dedupe-1',

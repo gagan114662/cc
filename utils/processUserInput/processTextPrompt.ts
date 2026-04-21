@@ -75,7 +75,7 @@ export function processTextPrompt(
     const userMessage = createUserMessage({
       content: [...textContent, ...imageContentBlocks],
       uuid: uuid,
-      imagePasteIds: imagePasteIds.length > 0 ? imagePasteIds : undefined,
+      imagePasteIds: imagePasteIds.length > 0 ? (imagePasteIds as any) : undefined,
       permissionMode,
       isMeta: isMeta || undefined,
     })

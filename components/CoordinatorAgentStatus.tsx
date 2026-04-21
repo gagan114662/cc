@@ -89,7 +89,7 @@ export function useCoordinatorTaskCount() {
 function _temp(s: any) {
   return s.tasks;
 }
-function MainLine(t0: AgentLineProps) {
+function MainLine(t0: Omit<AgentLineProps, 'task'>) {
   const $ = _c(10);
   const {
     isSelected,

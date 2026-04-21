@@ -18,7 +18,9 @@ export type QuerySource =
   // SDK / auto / verification paths
   | 'sdk'
   | 'auto_mode'
+  | 'auto_mode_critique'
   | 'auto_dream'
+  | 'away_summary'
   | 'verification_agent'
   | `verification_agent:${string}`
   // Compaction + context management
@@ -50,7 +52,10 @@ export type QuerySource =
   // Skills / memory / docs
   | 'magic_docs'
   | 'memdir_relevance'
+  | 'skill_improvement'
   | 'skill_improvement_apply'
   // Misc
   | 'feedback'
   | 'model_validation'
+  | 'bash_classifier'
+  | 'marble_origami'

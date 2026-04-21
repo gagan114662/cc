@@ -22,7 +22,7 @@ export function MCPServerMultiselectDialog(t0: Props) {
   } = t0;
   let t1;
   if ($[0] !== onDone || $[1] !== serverNames) {
-    t1 = function onSubmit(selectedServers: unknown) {
+    t1 = function onSubmit(selectedServers: string[]) {
       const currentSettings = getSettings_DEPRECATED() || {};
       const enabledServers = currentSettings.enabledMcpjsonServers || [];
       const disabledServers = currentSettings.disabledMcpjsonServers || [];

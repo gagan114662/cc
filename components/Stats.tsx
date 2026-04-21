@@ -80,7 +80,7 @@ function createAllTimeStatsPromise(): Promise<StatsResult> {
     };
   });
 }
-export function Stats(t0: StatsContentProps) {
+export function Stats(t0: Pick<StatsContentProps, 'onClose'>) {
   const $ = _c(4);
   const {
     onClose

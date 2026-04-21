@@ -75,7 +75,7 @@ async function loadMcpServersFromMcpb(
       `Loaded MCP server "${serverName}" from MCPB (extracted to ${successResult.extractedPath})`,
     )
 
-    return { [serverName]: successResult.mcpConfig }
+    return { [serverName as string]: successResult.mcpConfig }
   } catch (error) {
     const errorMsg = errorMessage(error)
     logForDebugging(`Failed to load MCPB ${mcpbPath}: ${errorMsg}`, {

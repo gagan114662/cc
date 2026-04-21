@@ -263,7 +263,7 @@ function List<T>(t0: ListProps<T>) {
         const actualIndex = windowStart + i;
         const isFocused = actualIndex === focusedIndex;
         const atLowEdge = i === 0 && windowStart > 0;
-        const atHighEdge = i === visible.length - 1 && windowStart + visibleCount < total;
+        const atHighEdge = i === visible.length - 1 && windowStart + (visibleCount ?? 0) < total;
         return <ListItem key={getKey(item)} isFocused={isFocused} showScrollUp={direction === "up" ? atHighEdge : atLowEdge} showScrollDown={direction === "up" ? atLowEdge : atHighEdge} styled={false}>{renderItem(item, isFocused)}</ListItem>;
       };
       $[14] = direction;

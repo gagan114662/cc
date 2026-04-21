@@ -29,7 +29,7 @@ export function AutoUpdaterWrapper(t0: Props) {
   const [useNativeInstaller, setUseNativeInstaller] = React.useState<any>(null);
   const [isPackageManager, setIsPackageManager] = React.useState<any>(null);
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       const checkInstallation = async function checkInstallation() {
@@ -49,7 +49,7 @@ export function AutoUpdaterWrapper(t0: Props) {
     $[1] = t2;
   } else {
     t1 = $[0];
-    t2 = $[1];
+    t2 = $[1] as React.DependencyList;
   }
   React.useEffect(t1, t2);
   if (useNativeInstaller === null || isPackageManager === null) {

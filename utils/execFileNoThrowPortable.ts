@@ -69,14 +69,14 @@ export function execSyncWithDefaults_DEPRECATED(
   abortSignal?.throwIfAborted()
   using _ = slowLogging`exec: ${command.slice(0, 200)}`
   try {
-    const result = execaSync(command, {
+    const result = (execaSync as any)(command, {
       env: process.env,
       maxBuffer: 1_000_000,
       timeout: finalTimeout,
       cwd: getCwd(),
       stdio,
-      shell: true, // execSync typically runs shell commands
-      reject: false, // Don't throw on non-zero exit codes
+      shell: true,
+      reject: false,
       input,
     })
     if (!result.stdout) {

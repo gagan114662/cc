@@ -703,7 +703,7 @@ function DiscoverPluginsKeyHint(t0: { hasSelection: boolean; canToggle: boolean 
 /**
  * Context-aware empty state message for the Discover screen
  */
-function EmptyStateMessage(t0: { reason: string }) {
+function EmptyStateMessage(t0: { reason: string | null }) {
   const $ = _c(6);
   const {
     reason

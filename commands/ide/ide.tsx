@@ -321,7 +321,7 @@ function RunningIDESelector(t0: { runningIDEs: IdeType[]; onSelectIDE: (ide: Ide
     onSelectIDE,
     onDone
   } = t0;
-  const [selectedValue, setSelectedValue] = useState(runningIDEs[0] ?? "");
+  const [selectedValue, setSelectedValue] = useState<string>((runningIDEs[0] as string) ?? "");
   let t1;
   if ($[0] !== onSelectIDE) {
     t1 = (value: string) => {

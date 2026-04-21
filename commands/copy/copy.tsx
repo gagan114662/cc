@@ -125,7 +125,7 @@ function CopyPicker(t0: PickerProps) {
     messageAge,
     onDone
   } = t0;
-  const focusedRef = useRef("full");
+  const focusedRef = useRef<PickerSelection>("full");
   const t1 = `${fullText.length} chars, ${countCharInString(fullText, "\n") + 1} lines`;
   let t2;
   if ($[0] !== t1) {
@@ -261,7 +261,7 @@ function CopyPicker(t0: PickerProps) {
   let t8;
   if ($[20] === Symbol.for("react.memo_cache_sentinel")) {
     t8 = (value: PickerSelection) => {
-      focusedRef.current = value as unknown as string;
+      focusedRef.current = value;
     };
     $[20] = t8;
   } else {

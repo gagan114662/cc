@@ -306,9 +306,9 @@ export function addPluginScopeToLspServers(
     const scopedName = `plugin:${pluginName}:${name}`
     scopedServers[scopedName] = {
       ...config,
-      scope: 'dynamic', // Use dynamic scope for plugin servers
+      scope: 'dynamic',
       source: pluginName,
-    }
+    } as unknown as ScopedLspServerConfig
   }
 
   return scopedServers

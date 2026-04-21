@@ -14,7 +14,7 @@ export function AwsAuthStatusBox() {
   }
   const [status, setStatus] = useState(t0);
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       const unsubscribe = AwsAuthStatusManager.getInstance().subscribe(setStatus);
@@ -25,7 +25,7 @@ export function AwsAuthStatusBox() {
     $[2] = t2;
   } else {
     t1 = $[1];
-    t2 = $[2];
+    t2 = $[2] as React.DependencyList;
   }
   useEffect(t1, t2);
   if (!status.isAuthenticating && !status.error && status.output.length === 0) {

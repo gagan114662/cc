@@ -297,7 +297,7 @@ export function addToTotalSessionCost(
   // concurrent submissions from different tenants all fold into
   // DEFAULT_TENANT downstream.
   const baseAttrs =
-    isFastModeEnabled() && usage.speed === 'fast'
+    isFastModeEnabled() && (usage as any).speed === 'fast'
       ? { model, speed: 'fast' }
       : { model }
   const attrs = { ...baseAttrs, ...tenantAttributesForTelemetry() }

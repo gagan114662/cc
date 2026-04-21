@@ -2307,7 +2307,8 @@ function getInitialPasteId(messages: Message[]): number {
       // Check image paste IDs
       if (message.imagePasteIds) {
         for (const id of message.imagePasteIds) {
-          if (id > maxId) maxId = id;
+          const n = Number(id);
+          if (n > maxId) maxId = n;
         }
       }
       // Check text paste references in message content

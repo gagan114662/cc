@@ -225,7 +225,7 @@ export function PermissionPrompt<T extends string>(t0: PermissionPromptProps<T>)
   const handleSelect = t5;
   let handlers;
   if ($[27] !== handleSelect || $[28] !== options) {
-    handlers = {};
+    handlers = {} as Record<string, () => void>;
     for (const opt_3 of options) {
       if (opt_3.keybinding) {
         handlers[opt_3.keybinding] = () => handleSelect(opt_3.value);

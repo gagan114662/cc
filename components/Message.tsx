@@ -252,7 +252,7 @@ function MessageImpl(t0: Props) {
           } = require("../services/compact/snipProjection.js") as typeof import('../services/compact/snipProjection.js');
           const {
             isSnipMarkerMessage
-          } = require("../services/compact/snipCompact.js") as typeof import('../services/compact/snipCompact.js');
+          } = require("../services/compact/snipCompact.js") as any;
           if (isSnipBoundaryMessage(message)) {
             let t2;
             if ($[65] === Symbol.for("react.memo_cache_sentinel")) {

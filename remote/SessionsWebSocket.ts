@@ -4,9 +4,10 @@ import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
 import type {
   SDKControlCancelRequest,
   SDKControlRequest,
-  SDKControlRequestInner,
   SDKControlResponse,
 } from '../entrypoints/sdk/controlTypes.js'
+
+type SDKControlRequestInner = SDKControlRequest['request']
 import { logForDebugging } from '../utils/debug.js'
 import { errorMessage } from '../utils/errors.js'
 import { logError } from '../utils/log.js'

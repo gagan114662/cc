@@ -255,17 +255,15 @@ export function convertSDKMessage(
       logForDebugging('[sdkMessageAdapter] Ignoring auth_status message')
       return { type: 'ignored' }
 
-    case 'tool_use_summary':
-      // Tool use summaries are SDK-only events, not displayed in REPL
-      logForDebugging('[sdkMessageAdapter] Ignoring tool_use_summary message')
-      return { type: 'ignored' }
-
-    case 'rate_limit_event':
-      // Rate limit events are SDK-only events, not displayed in REPL
-      logForDebugging('[sdkMessageAdapter] Ignoring rate_limit_event message')
-      return { type: 'ignored' }
-
     default: {
+      if ((msg as { type: string }).type === 'tool_use_summary') {
+        logForDebugging('[sdkMessageAdapter] Ignoring tool_use_summary message')
+        return { type: 'ignored' }
+      }
+      if ((msg as { type: string }).type === 'rate_limit_event') {
+        logForDebugging('[sdkMessageAdapter] Ignoring rate_limit_event message')
+        return { type: 'ignored' }
+      }
       // Gracefully ignore unknown message types. The backend may send new
       // types before the client is updated; logging helps with debugging
       // without crashing or losing the session.

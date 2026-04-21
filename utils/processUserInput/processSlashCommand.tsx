@@ -698,7 +698,7 @@ async function getMessagesForSlashCommand(commandName: string, args: string, set
               // (UUIDs never repeat, so they're never looked up).
               resetMicrocompactState();
               return {
-                messages: buildPostCompactMessages(compactionResultWithSlashMessages),
+                messages: buildPostCompactMessages(compactionResultWithSlashMessages) as any,
                 shouldQuery: false,
                 command
               };

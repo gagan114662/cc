@@ -134,13 +134,13 @@ export function useIsOverlayActive() {
  * // Use for TextInput focus - allows typing during autocomplete
  * focus: !isSearchingHistory && !isModalOverlayActive
  */
-function _temp2(s: { activeOverlays: Set<string> }) {
+function _temp2(s: any) {
   return s.activeOverlays.size > 0;
 }
 export function useIsModalOverlayActive() {
   return useAppState(_temp3);
 }
-function _temp3(s: { activeOverlays: Set<string> }) {
+function _temp3(s: any) {
   for (const id of s.activeOverlays) {
     if (!NON_MODAL_OVERLAYS.has(id)) {
       return true;

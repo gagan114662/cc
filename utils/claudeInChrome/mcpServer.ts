@@ -276,6 +276,7 @@ export async function runClaudeInChromeMcpServer(): Promise<void> {
 }
 
 class DebugLogger implements Logger {
+  [key: string]: any
   silly(message: string, ...args: unknown[]): void {
     logForDebugging(format(message, ...args), { level: 'debug' })
   }

@@ -109,13 +109,13 @@ export function FileEditToolUpdatedMessage(t0: Props) {
   }
   return t8;
 }
-function _temp4(acc_0: any, hunk_0: unknown) {
+function _temp4(acc_0: any, hunk_0: any) {
   return acc_0 + count(hunk_0.lines, _temp3);
 }
 function _temp3(__0: any) {
   return __0.startsWith("-");
 }
-function _temp2(acc: any, hunk: unknown) {
+function _temp2(acc: any, hunk: any) {
   return acc + count(hunk.lines, _temp);
 }
 function _temp(_: any) {

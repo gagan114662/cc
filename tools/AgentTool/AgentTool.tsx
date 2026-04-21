@@ -1084,7 +1084,7 @@ export const AgentTool = buildTool({
             if (message.type === 'progress' && (message.data.type === 'bash_progress' || message.data.type === 'powershell_progress') && onProgress) {
               onProgress({
                 toolUseID: message.toolUseID,
-                data: message.data
+                data: message.data as any
               });
             }
             if (message.type !== 'assistant' && message.type !== 'user') {

@@ -93,9 +93,9 @@ export function Settings(t0: Props) {
   } else {
     t6 = $[12];
   }
-  let t7;
+  let t7: React.ReactNode[];
   if ($[13] !== contentHeight) {
-    t7 = false ? [<Tab key="gates" title="Gates"><Gates onOwnsEscChange={setGatesOwnsEsc} contentHeight={contentHeight} /></Tab>] : [];
+    t7 = [];
     $[13] = contentHeight;
     $[14] = t7;
   } else {
@@ -116,7 +116,7 @@ export function Settings(t0: Props) {
   const t10 = tabsHidden || insideModal ? undefined : contentHeight;
   let t11;
   if ($[19] !== selectedTab || $[20] !== t10 || $[21] !== t9 || $[22] !== tabs || $[23] !== tabsHidden) {
-    t11 = <Pane color="permission"><Tabs color="permission" selectedTab={selectedTab} onTabChange={setSelectedTab} hidden={tabsHidden} initialHeaderFocused={t9} contentHeight={t10}>{tabs}</Tabs></Pane>;
+    t11 = <Pane color="permission"><Tabs color="permission" selectedTab={selectedTab} onTabChange={setSelectedTab as (tabId: string) => void} hidden={tabsHidden} initialHeaderFocused={t9} contentHeight={t10}>{tabs}</Tabs></Pane>;
     $[19] = selectedTab;
     $[20] = t10;
     $[21] = t9;

@@ -74,7 +74,7 @@ export function CommandKeybindingHandlers(t0: Props) {
   const commandActions = t2;
   let map;
   if ($[3] !== commandActions || $[4] !== onSubmit) {
-    map = {};
+    map = {} as Record<string, () => void>;
     for (const action of commandActions) {
       const commandName = action.slice(8);
       map[action] = () => {

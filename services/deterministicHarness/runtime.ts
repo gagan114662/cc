@@ -1,7 +1,6 @@
 import { createHash } from 'node:crypto'
 import { mkdir, readFile, writeFile } from 'node:fs/promises'
 import path from 'node:path'
-// @ts-expect-error -- picomatch ships no types in this build
 import picomatch from 'picomatch'
 import type {
   HookInput,

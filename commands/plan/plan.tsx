@@ -11,7 +11,7 @@ import { prepareContextForPlanMode } from '../../utils/permissions/permissionSet
 import { getPlan, getPlanFilePath } from '../../utils/plans.js';
 import { editFileInEditor } from '../../utils/promptEditor.js';
 import { renderToString } from '../../utils/staticRender.js';
-function PlanDisplay(t0: { planContent: string; planPath: string; editorName: string }) {
+function PlanDisplay(t0: { planContent: string; planPath: string; editorName: string | undefined }) {
   const $ = _c(11);
   const {
     planContent,
@@ -112,7 +112,7 @@ export async function call(onDone: LocalJSXCommandOnDone, context: LocalJSXComma
   }
   const editor = getExternalEditor();
   const editorName = editor ? toIDEDisplayName(editor) : undefined;
-  const display = <PlanDisplay planContent={planContent} planPath={planPath} editorName={editorName} />;
+  const display = <PlanDisplay planContent={planContent} planPath={planPath!} editorName={editorName} />;
 
   // Render to string and pass to onDone like local commands do
   const output = await renderToString(display);

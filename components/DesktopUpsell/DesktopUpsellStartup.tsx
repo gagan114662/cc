@@ -40,12 +40,12 @@ export function DesktopUpsellStartup(t0: Props) {
     onDone
   } = t0;
   const [showHandoff, setShowHandoff] = useState(false);
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as React.DependencyList;
   }
   useEffect(_temp, t1);
   if (showHandoff) {

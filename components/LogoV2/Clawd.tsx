@@ -95,7 +95,7 @@ export function Clawd(t0: Props) {
     }
     return t3;
   }
-  const p = POSES[pose];
+  const p = POSES[pose as ClawdPose];
   let t3;
   if ($[4] !== p.r1L) {
     t3 = <Text color="clawd_body">{p.r1L}</Text>;
@@ -192,7 +192,7 @@ function AppleTerminalClawd(t0: any) {
   } else {
     t1 = $[0];
   }
-  const t2 = APPLE_EYES[pose];
+  const t2 = APPLE_EYES[pose as ClawdPose];
   let t3;
   if ($[1] !== t2) {
     t3 = <Text color="clawd_background" backgroundColor="clawd_body">{t2}</Text>;

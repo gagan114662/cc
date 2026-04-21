@@ -57,7 +57,7 @@ async function main(): Promise<void> {
     throw new Error('assignment prompt did not include assignment text')
   }
 
-  const systemPrompt = ENGINEERING_LEAD_AGENT.getSystemPrompt()
+  const systemPrompt = ENGINEERING_LEAD_AGENT.getSystemPrompt({ toolUseContext: { options: {} as any } })
   if (!systemPrompt.includes('engineering lead')) {
     throw new Error('engineering lead system prompt did not render')
   }

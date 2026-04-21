@@ -18,12 +18,12 @@ export function ClaudeMdExternalIncludesDialog(t0: Props) {
     isStandaloneDialog,
     externalIncludes
   } = t0;
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as React.DependencyList;
   }
   React.useEffect(_temp, t1);
   let t2;

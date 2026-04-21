@@ -1,5 +1,5 @@
 import { spawnSync } from "node:child_process";
-import { validateReport } from "./reportUtils.ts";
+import { validateReport } from "./reportUtils.js";
 
 function openUrl(previewUrl: string): void {
   if (process.platform === "darwin") {

@@ -196,11 +196,11 @@ export function RecentDenialsTab(t0: Props) {
   }
   return t13;
 }
-function _temp3() {
-  return new Set();
+function _temp3(): Set<number> {
+  return new Set<number>();
 }
-function _temp2() {
-  return new Set();
+function _temp2(): Set<number> {
+  return new Set<number>();
 }
 function _temp() {
   return getAutoModeDenials();

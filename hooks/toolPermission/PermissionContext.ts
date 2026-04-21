@@ -234,7 +234,7 @@ function createPermissionContext(
             const finalInput = decision.updatedInput ?? updatedInput ?? input
             return await this.handleHookAllow(
               finalInput,
-              decision.updatedPermissions ?? [],
+              (decision.updatedPermissions ?? []) as any,
               permissionPromptStartTimeMs,
             )
           } else if (decision.behavior === 'deny') {

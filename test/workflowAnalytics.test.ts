@@ -111,7 +111,7 @@ describe('workflow analytics', () => {
     const command = {
       ...makeWorkflowCommand(),
       workflowRuntime: 'code' as const,
-      capabilityGrants: ['browser', 'github', 'discovery'] as const,
+      capabilityGrants: ['browser', 'github', 'discovery'] as ('mcp' | 'github' | 'cli' | 'discovery' | 'browser' | 'docs' | 'workspace')[],
     }
     const analyticsDir = await mkdtemp(join(tmpdir(), 'cc-workflow-analytics-'))
     const analyticsPath = join(analyticsDir, 'workflow-analytics.json')

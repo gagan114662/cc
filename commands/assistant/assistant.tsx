@@ -74,10 +74,9 @@ export async function call(
       onInstalled={dir =>
         onDone(
           `Assistant mode enabled. Local settings were updated and the assistant workspace is ready at ${dir}.`,
-          { display: 'system' },
         )
       }
-      onCancel={() => onDone(undefined, { display: 'skip' })}
+      onCancel={() => onDone(undefined)}
       onError={message => onDone(`Assistant installation failed: ${message}`)}
     />
   )

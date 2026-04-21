@@ -417,11 +417,11 @@ function StopHookSummaryMessage(t0: { message: SystemStopHookSummaryMessage; add
   return t15;
 }
 function _temp3(info_0: StopHookInfoWithCommand, idx_0: number) {
-  const durationStr_0 = false && info_0.durationMs !== undefined ? ` (${formatSecondsShort(info_0.durationMs)})` : "";
+  const durationStr_0 = false && info_0.durationMs !== undefined ? ` (${formatSecondsShort(info_0.durationMs as number)})` : "";
   return <Text key={`cmd-${idx_0}`} dimColor={true}>⎿  {info_0.command === "prompt" ? `prompt: ${info_0.promptText || ""}` : info_0.command}{durationStr_0}</Text>;
 }
 function _temp2(info: StopHookInfoWithCommand, idx: number) {
-  const durationStr = false && info.durationMs !== undefined ? ` (${formatSecondsShort(info.durationMs)})` : "";
+  const durationStr = false && info.durationMs !== undefined ? ` (${formatSecondsShort(info.durationMs as number)})` : "";
   return <Text key={`cmd-${idx}`} dimColor={true}>{"     \u23BF "}{info.command === "prompt" ? `prompt: ${info.promptText || ""}` : info.command}{durationStr}</Text>;
 }
 function _temp(sum: number, h: StopHookInfo) {

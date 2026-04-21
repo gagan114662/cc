@@ -138,9 +138,9 @@ export function isInProtectedNamespace(): boolean {
   // DCE'd so the require() and namespace allowlist never appear in the bundle.
   if (process.env.USER_TYPE === 'ant') {
     /* eslint-disable @typescript-eslint/no-require-imports */
-    return (
+    return Boolean((
       require('./protectedNamespace.js') as typeof import('./protectedNamespace.js')
-    ).checkProtectedNamespace()
+    ).getProtectedNamespace())
     /* eslint-enable @typescript-eslint/no-require-imports */
   }
   return false

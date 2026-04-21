@@ -28,7 +28,7 @@ export function ConfirmStepWrapper({
   const saveAgent = useCallback(async (openInEditor: boolean): Promise<void> => {
     if (!wizardData?.finalAgent) return;
     try {
-      await saveAgentToFile(wizardData.location, wizardData.finalAgent.agentType, wizardData.finalAgent.whenToUse, wizardData.finalAgent.tools, wizardData.finalAgent.getSystemPrompt(), true, wizardData.finalAgent.color, wizardData.finalAgent.model, wizardData.finalAgent.memory);
+      await saveAgentToFile(wizardData.location as 'userSettings' | 'projectSettings' | 'localSettings' | 'flagSettings' | 'policySettings' | 'built-in', wizardData.finalAgent.agentType, wizardData.finalAgent.whenToUse, wizardData.finalAgent.tools, wizardData.finalAgent.getSystemPrompt(), true, wizardData.finalAgent.color, wizardData.finalAgent.model, wizardData.finalAgent.memory);
       setAppState(state => {
         if (!wizardData.finalAgent) return state;
         const allAgents = state.agentDefinitions.allAgents.concat(wizardData.finalAgent);
@@ -43,7 +43,7 @@ export function ConfirmStepWrapper({
       });
       if (openInEditor) {
         const filePath = getNewAgentFilePath({
-          source: wizardData.location!,
+          source: wizardData.location! as 'userSettings' | 'projectSettings' | 'localSettings' | 'flagSettings' | 'policySettings',
           agentType: wizardData.finalAgent.agentType
         });
         await editFileInEditor(filePath);

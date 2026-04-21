@@ -536,7 +536,7 @@ export async function runForkedAgent({
     // Track the last recorded message UUID for parent chain continuity
     lastRecordedUuid =
       initialMessages.length > 0
-        ? initialMessages[initialMessages.length - 1]!.uuid
+        ? (initialMessages[initialMessages.length - 1]!.uuid ?? null)
         : null
   }
 

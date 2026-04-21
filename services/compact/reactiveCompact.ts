@@ -26,3 +26,24 @@ export function buildReactiveCompactMessages(..._args: unknown[]): unknown {
     'buildReactiveCompactMessages: not implemented in external build',
   )
 }
+
+export function isReactiveOnlyMode(..._args: unknown[]): boolean {
+  return false
+}
+
+export async function reactiveCompactOnPromptTooLong(
+  ..._args: unknown[]
+): Promise<{
+  ok: boolean
+  reason?:
+    | 'too_few_groups'
+    | 'aborted'
+    | 'exhausted'
+    | 'error'
+    | 'media_unstrippable'
+  result: CompactionResult
+}> {
+  throw new Error(
+    'reactiveCompactOnPromptTooLong: not implemented in external build',
+  )
+}

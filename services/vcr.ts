@@ -179,7 +179,7 @@ function mapMessages(
 ): (UserMessage | AssistantMessage)['message']['content'][] {
   return messages.map(_ => {
     if (typeof _ === 'string') {
-      return f(_)
+      return f(_) as any
     }
     return _.map(_ => {
       switch (_.type) {

@@ -83,7 +83,7 @@ export function IdleReturnDialog(t0: Props) {
   }
   let t9;
   if ($[10] !== onDone) {
-    t9 = <Select options={t8} onChange={value => onDone(value)} />;
+    t9 = <Select options={t8} onChange={value => onDone(value as IdleReturnAction)} />;
     $[10] = onDone;
     $[11] = t9;
   } else {

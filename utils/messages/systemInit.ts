@@ -91,6 +91,6 @@ export function buildSystemInitMessage(inputs: SystemInitInputs): SDKMessage {
       require('../udsMessaging.js').getUdsMessagingSocketPath()
     /* eslint-enable @typescript-eslint/no-require-imports */
   }
-  initMessage.fast_mode_state = getFastModeState(inputs.model, inputs.fastMode)
+  ;(initMessage as Record<string, unknown>).fast_mode_state = getFastModeState(inputs.model, inputs.fastMode)
   return initMessage
 }

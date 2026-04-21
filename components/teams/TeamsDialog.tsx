@@ -384,12 +384,12 @@ function TeammateDetailView(t0: TeammateDetailViewProps) {
   const [promptExpanded, setPromptExpanded] = useState(false);
   const cycleModeShortcut = useShortcutDisplay("confirm:cycleMode", "Confirmation", "shift+tab");
   const themeColor = teammate.color ? AGENT_COLOR_TO_THEME_COLOR[teammate.color as keyof typeof AGENT_COLOR_TO_THEME_COLOR] : undefined;
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as React.DependencyList;
   }
   const [teammateTasks, setTeammateTasks] = useState(t1);
   let t2;

@@ -343,12 +343,12 @@ function CrossProjectMessage(t0: { command: string }) {
   const {
     command
   } = t0;
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as React.DependencyList;
   }
   React.useEffect(_temp3, t1);
   let t2;

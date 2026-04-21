@@ -375,6 +375,7 @@ function toEmployeeDutyJob(duty: EmployeeDuty): JobSpec {
     title: duty.title,
     description: `Compiled recurring duty from .claude/employee.json (${duty.id}).`,
     kind: 'maintenance',
+    agentKind: 'claude',
     executionMode: 'lead-session',
     codeChangePolicy: duty.autoCommit ? 'may-edit' : 'review-only',
     promptTemplate: duty.prompt,

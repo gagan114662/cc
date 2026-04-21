@@ -44,7 +44,7 @@ export function RawAnsi(t0: Props) {
   }
   let t2;
   if ($[2] !== lines.length || $[3] !== t1 || $[4] !== width) {
-    t2 = <ink-raw-ansi rawText={t1} rawWidth={width} rawHeight={lines.length} />;
+    t2 = React.createElement('ink-raw-ansi' as any, { rawText: t1, rawWidth: width, rawHeight: lines.length });
     $[2] = lines.length;
     $[3] = t1;
     $[4] = width;

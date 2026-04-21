@@ -1462,7 +1462,7 @@ export function ManagePlugins({
           // is a recovery path for a plugin that failed to load — it may
           // be reinstallable, so don't nuke ${CLAUDE_PLUGIN_DATA} silently.
           // The normal uninstall path prompts; this one preserves.
-          const result_2 = isInstallableScope(pluginScope_1 as PluginScope) ? await uninstallPluginOp(pluginId_7, pluginScope_1 as PluginScope, false) : await uninstallPluginOp(pluginId_7, 'user', false);
+          const result_2 = isInstallableScope(pluginScope_1 as PluginScope) ? await uninstallPluginOp(pluginId_7, pluginScope_1 as Exclude<PluginScope, 'managed'>, false) : await uninstallPluginOp(pluginId_7, 'user', false);
           let success = result_2.success;
           if (!success) {
             // Plugin was never installed (only in enabledPlugins settings).

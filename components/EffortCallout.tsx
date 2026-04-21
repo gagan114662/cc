@@ -53,12 +53,12 @@ export function EffortCallout(t0: Props) {
     t3 = $[3];
   }
   const handleCancel = t3;
-  let t4;
+  let t4: React.DependencyList;
   if ($[4] === Symbol.for("react.memo_cache_sentinel")) {
     t4 = [];
     $[4] = t4;
   } else {
-    t4 = $[4];
+    t4 = $[4] as React.DependencyList;
   }
   useEffect(_temp, t4);
   let t5;

@@ -58,12 +58,12 @@ export function HelpV2(t0: Props) {
   if ($[3] !== commands) {
     const builtinNames = builtInCommandNames();
     builtinCommands = commands.filter((cmd: any) => builtinNames.has(cmd.name) && !cmd.isHidden);
-    let t4;
+    let t4: React.DependencyList;
     if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
       t4 = [];
       $[7] = t4;
     } else {
-      t4 = $[7];
+      t4 = $[7] as React.DependencyList;
     }
     antOnlyCommands = t4;
     t3 = commands.filter((cmd_2: any) => !builtinNames.has(cmd_2.name) && !cmd_2.isHidden);
