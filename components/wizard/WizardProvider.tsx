@@ -19,7 +19,7 @@ export function WizardProvider(t0: any) {
   } = t0;
   let t3;
   if ($[0] !== t1) {
-    t3 = t1 === undefined ? {} as T : t1;
+    t3 = t1 === undefined ? {} as Record<string, unknown> : t1;
     $[0] = t1;
     $[1] = t3;
   } else {
@@ -30,12 +30,12 @@ export function WizardProvider(t0: any) {
   const [currentStepIndex, setCurrentStepIndex] = useState(0);
   const [wizardData, setWizardData] = useState(initialData);
   const [isCompleted, setIsCompleted] = useState(false);
-  let t4;
+  let t4: number[];
   if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
     t4 = [];
     $[2] = t4;
   } else {
-    t4 = $[2];
+    t4 = $[2] as number[];
   }
   const [navigationHistory, setNavigationHistory] = useState(t4);
   useExitOnCtrlCDWithKeybindings();
@@ -64,7 +64,7 @@ export function WizardProvider(t0: any) {
     t7 = () => {
       if (currentStepIndex < steps.length - 1) {
         if (navigationHistory.length > 0) {
-          setNavigationHistory((prev: unknown) => [...prev, currentStepIndex]);
+          setNavigationHistory((prev: number[]) => [...prev, currentStepIndex]);
         }
         setCurrentStepIndex(_temp);
       } else {
@@ -110,7 +110,7 @@ export function WizardProvider(t0: any) {
   if ($[16] !== currentStepIndex || $[17] !== steps.length) {
     t9 = (index: number) => {
       if (index >= 0 && index < steps.length) {
-        setNavigationHistory((prev_3: unknown) => [...prev_3, currentStepIndex]);
+        setNavigationHistory((prev_3: number[]) => [...prev_3, currentStepIndex]);
         setCurrentStepIndex(index);
       }
     };
@@ -138,7 +138,7 @@ export function WizardProvider(t0: any) {
   let t11;
   if ($[21] === Symbol.for("react.memo_cache_sentinel")) {
     t11 = (updates: any) => {
-      setWizardData((prev_4: unknown) => ({
+      setWizardData((prev_4: Record<string, unknown>) => ({
         ...prev_4,
         ...updates
       }));
