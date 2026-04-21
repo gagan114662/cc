@@ -48,23 +48,23 @@ export function GlobalSearchDialog(t0: Props) {
   } = useTerminalSize();
   const previewOnRight = columns >= 140;
   const visibleResults = Math.min(VISIBLE_RESULTS, Math.max(4, rows - 14));
-  let t1;
+  let t1: Match[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
     t1 = $[0];
   }
-  const [matches, setMatches] = useState(t1);
+  const [matches, setMatches] = useState<Match[]>(t1);
   const [truncated, setTruncated] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
   const [query, setQuery] = useState("");
-  const [focused, setFocused] = useState(undefined);
+  const [focused, setFocused] = useState<Match | undefined>(undefined);
   const [preview, setPreview] = useState<any>(null);
-  const abortRef = useRef(null);
-  const timeoutRef = useRef(null);
+  const abortRef = useRef<AbortController | null>(null);
+  const timeoutRef = useRef<NodeJS.Timeout | number | null>(null);
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => () => {
       if (timeoutRef.current) {
@@ -140,8 +140,8 @@ export function GlobalSearchDialog(t0: Props) {
       setIsSearching(true);
       setTruncated(false);
       const queryLower = q.toLowerCase();
-      setMatches((m_0: unknown) => {
-        const filtered = m_0.filter((match: any) => match.text.toLowerCase().includes(queryLower));
+      setMatches((m_0: Match[]) => {
+        const filtered = m_0.filter((match: Match) => match.text.toLowerCase().includes(queryLower));
         return filtered.length === m_0.length ? m_0 : filtered;
       });
       timeoutRef.current = setTimeout(_temp4, DEBOUNCE_MS, q, controller_0, setMatches, setTruncated, setIsSearching);
@@ -174,7 +174,7 @@ export function GlobalSearchDialog(t0: Props) {
   const handleOpen = t7;
   let t8;
   if ($[10] !== matches.length || $[11] !== onDone || $[12] !== onInsert) {
-    t8 = (m_4: any, mention: unknown) => {
+    t8 = (m_4: any, mention: boolean) => {
       onInsert(mention ? `@${m_4.file}#L${m_4.line} ` : `${m_4.file}:${m_4.line} `);
       logEvent("tengu_global_search_insert", {
         result_count: matches.length,
@@ -262,14 +262,20 @@ export function GlobalSearchDialog(t0: Props) {
   }
   return t15;
 }
-function _temp4(query_0: any, controller_1: unknown, setMatches_0: unknown, setTruncated_0: unknown, setIsSearching_0: unknown) {
+function _temp4(
+  query_0: string,
+  controller_1: AbortController,
+  setMatches_0: React.Dispatch<React.SetStateAction<Match[]>>,
+  setTruncated_0: React.Dispatch<React.SetStateAction<boolean>>,
+  setIsSearching_0: React.Dispatch<React.SetStateAction<boolean>>,
+) {
   const cwd = getCwd();
   let collected = 0;
-  ripGrepStream(["-n", "--no-heading", "-i", "-m", String(MAX_MATCHES_PER_FILE), "-F", "-e", query_0], cwd, controller_1.signal, lines => {
+  ripGrepStream(["-n", "--no-heading", "-i", "-m", String(MAX_MATCHES_PER_FILE), "-F", "-e", query_0], cwd, controller_1.signal, (lines: string[]) => {
     if (controller_1.signal.aborted) {
       return;
     }
-    const parsed = [];
+    const parsed: Match[] = [];
     for (const line of lines) {
       const m_1 = parseRipgrepLine(line);
       if (!m_1) {
@@ -285,8 +291,7 @@ function _temp4(query_0: any, controller_1: unknown, setMatches_0: unknown, setT
       return;
     }
     collected = collected + parsed.length;
-    collected;
-    setMatches_0((prev: unknown) => {
+    setMatches_0((prev: Match[]) => {
       const seen = new Set(prev.map(matchKey));
       const fresh = parsed.filter(p => !seen.has(matchKey(p)));
       if (!fresh.length) {
