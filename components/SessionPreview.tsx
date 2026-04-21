@@ -112,30 +112,30 @@ export function SessionPreview(t0: Props) {
     }
     return t9;
   }
-  let t8;
+  let t8: never[];
   if ($[14] === Symbol.for("react.memo_cache_sentinel")) {
     t8 = [];
     $[14] = t8;
   } else {
-    t8 = $[14];
+    t8 = $[14] as never[];
   }
-  let t10;
-  let t9;
+  let t10: Set<never>;
+  let t9: never[];
   if ($[15] === Symbol.for("react.memo_cache_sentinel")) {
     t9 = [];
     t10 = new Set();
     $[15] = t10;
     $[16] = t9;
   } else {
-    t10 = $[15];
-    t9 = $[16];
+    t10 = $[15] as Set<never>;
+    t9 = $[16] as never[];
   }
-  let t11;
+  let t11: never[];
   if ($[17] === Symbol.for("react.memo_cache_sentinel")) {
     t11 = [];
     $[17] = t11;
   } else {
-    t11 = $[17];
+    t11 = $[17] as never[];
   }
   let t12;
   if ($[18] !== conversationId || $[19] !== displayLog.messages) {
