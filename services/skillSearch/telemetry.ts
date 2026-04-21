@@ -14,3 +14,19 @@ export function logSkillDiscoveryShape(..._args: unknown[]): void {
     'logSkillDiscoveryShape: not implemented in external build',
   )
 }
+
+// Logged on every loadRemoteSkill() outcome (success or failure). Phantom
+// stub — real impl forwards a structured event to the telemetry pipeline.
+export function logRemoteSkillLoaded(_payload: {
+  slug: string
+  cacheHit: boolean
+  latencyMs: number
+  urlScheme?: string
+  fileCount?: number
+  totalBytes?: number
+  fetchMethod?: string
+  error?: string
+  [key: string]: unknown
+}): void {
+  // no-op in external build
+}

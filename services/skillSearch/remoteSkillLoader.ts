@@ -1,7 +1,16 @@
 // Phantom stub — remote skill loader. Not reconstructed in this external
 // build. Gated at call sites via feature('EXPERIMENTAL_SKILL_SEARCH').
 
-export async function loadRemoteSkill(..._args: unknown[]): Promise<unknown> {
+export async function loadRemoteSkill(..._args: unknown[]): Promise<{
+  cacheHit: boolean
+  latencyMs: number
+  skillPath: string
+  content: string
+  fileCount: number
+  totalBytes: number
+  fetchMethod: string
+  [key: string]: unknown
+}> {
   throw new Error('loadRemoteSkill: not implemented in external build')
 }
 
