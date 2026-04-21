@@ -55,12 +55,19 @@ declare module '@ant/claude-for-chrome-mcp' {
 }
 
 declare module '@ant/computer-use-swift' {
-  export type ComputerUseAPI = Record<string, unknown>
+  // Native module: key surface used by the CLI executor is typed loosely so
+  // property access through swiftLoader doesn't fall back to `unknown`.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export type ComputerUseAPI = { [key: string]: any }
 }
 
 declare module '@ant/computer-use-input' {
-  export type ComputerUseInput = Record<string, unknown>
-  export type ComputerUseInputAPI = Record<string, unknown>
+  // Native module: mouse/keyboard entry points are typed loosely so
+  // consumers don't have to re-cast on every call.
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export type ComputerUseInput = { isSupported: boolean; [key: string]: any }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  export type ComputerUseInputAPI = { [key: string]: any }
 }
 
 declare module '@anthropic-ai/mcpb' {
