@@ -9,18 +9,20 @@
 
 import type { ChildProcess } from 'node:child_process'
 import type { PermissionMode } from '../types/permissions.js'
+import type { SDKMessage } from '../entrypoints/agentSdkTypes.js'
+import type { SDKControlPermissionRequest } from '../entrypoints/sdk/controlTypes.js'
 import type { SSHSessionManager } from './SSHSessionManager.js'
 
 type CreateManagerOptions = {
-  // FIXME: callback payloads are loosely typed here — real source threads
-  // concrete SDKMessage / permission-request / error shapes. `unknown` is the
-  // safe floor; refine when the real module is restored.
-  onMessage: (sdkMessage: unknown) => void
+  onMessage: (sdkMessage: SDKMessage) => void
   onConnected?: () => void
   onReconnecting?: (attempt: number, max: number) => void
   onDisconnected?: () => void
   onError?: (err: Error) => void
-  onPermissionRequest?: (request: unknown) => void
+  onPermissionRequest?: (
+    request: SDKControlPermissionRequest,
+    requestId: string,
+  ) => void
 }
 
 export type SSHSession = {

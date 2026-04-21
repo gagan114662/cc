@@ -14,4 +14,16 @@ export class SSHSessionManager {
   disconnect(..._args: unknown[]): void {
     throw new Error('SSHSessionManager: not implemented in external build')
   }
+  // Used by useSSHSession to reply to forwarded permission prompts.
+  respondToPermissionRequest(..._args: unknown[]): void {
+    throw new Error('SSHSessionManager: not implemented in external build')
+  }
+  // Starts the SSH session lifecycle (spawn child + handshake).
+  connect(..._args: unknown[]): void {
+    throw new Error('SSHSessionManager: not implemented in external build')
+  }
+  // Sends an interrupt (Ctrl-C equivalent) to the remote session.
+  sendInterrupt(..._args: unknown[]): void {
+    throw new Error('SSHSessionManager: not implemented in external build')
+  }
 }

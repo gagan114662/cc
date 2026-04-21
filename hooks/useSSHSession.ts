@@ -90,13 +90,17 @@ export function useSSHSession({
         }
       },
       onPermissionRequest: (request: SDKControlPermissionRequest, requestId: string) => {
+        const req = request as SDKControlPermissionRequest & {
+          description?: string
+          permission_suggestions?: PermissionAskDecision['suggestions']
+        }
         logForDebugging(
-          `[useSSHSession] permission request: ${request.tool_name}`,
+          `[useSSHSession] permission request: ${req.tool_name}`,
         )
 
         const tool =
-          findToolByName(toolsRef.current, request.tool_name) ??
-          createToolStub(request.tool_name)
+          findToolByName(toolsRef.current, req.tool_name) ??
+          createToolStub(req.tool_name)
 
         const syntheticMessage = createSyntheticAssistantMessage(
           request,
@@ -106,19 +110,19 @@ export function useSSHSession({
         const permissionResult: PermissionAskDecision = {
           behavior: 'ask',
           message:
-            request.description ?? `${request.tool_name} requires permission`,
-          suggestions: request.permission_suggestions,
-          blockedPath: request.blocked_path,
+            req.description ?? `${req.tool_name} requires permission`,
+          suggestions: req.permission_suggestions,
+          blockedPath: req.blocked_path,
         }
 
         const toolUseConfirm: ToolUseConfirm = {
           assistantMessage: syntheticMessage,
           tool,
           description:
-            request.description ?? `${request.tool_name} requires permission`,
-          input: request.input,
+            req.description ?? `${req.tool_name} requires permission`,
+          input: req.input,
           toolUseContext: {} as ToolUseConfirm['toolUseContext'],
-          toolUseID: request.tool_use_id,
+          toolUseID: req.tool_use_id,
           permissionResult,
           permissionPromptStartTimeMs: Date.now(),
           onUserInteraction() {},
@@ -128,7 +132,7 @@ export function useSSHSession({
               message: 'User aborted',
             })
             setToolUseConfirmQueue(q =>
-              q.filter(i => i.toolUseID !== request.tool_use_id),
+              q.filter(i => i.toolUseID !== req.tool_use_id),
             )
           },
           onAllow(updatedInput) {
@@ -137,7 +141,7 @@ export function useSSHSession({
               updatedInput,
             })
             setToolUseConfirmQueue(q =>
-              q.filter(i => i.toolUseID !== request.tool_use_id),
+              q.filter(i => i.toolUseID !== req.tool_use_id),
             )
             setIsLoading(true)
           },
@@ -147,7 +151,7 @@ export function useSSHSession({
               message: feedback ?? 'User denied permission',
             })
             setToolUseConfirmQueue(q =>
-              q.filter(i => i.toolUseID !== request.tool_use_id),
+              q.filter(i => i.toolUseID !== req.tool_use_id),
             )
           },
           async recheckPermission() {},
