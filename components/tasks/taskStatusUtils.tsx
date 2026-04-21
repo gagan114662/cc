@@ -9,6 +9,7 @@ import { isPanelAgentTask } from 'src/tasks/LocalAgentTask/LocalAgentTask.js';
 import { isBackgroundTask, type TaskState } from 'src/tasks/types.js';
 import type { DeepImmutable } from 'src/types/utils.js';
 import { summarizeRecentActivities } from 'src/utils/collapseReadSearch.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 
 /**
  * Returns true if the given task status represents a terminal (finished) state.
@@ -96,7 +97,7 @@ export function shouldHideTasksFooter(tasks: {
   if (!showSpinnerTree) return false;
   let hasVisibleTask = false;
   for (const t of Object.values(tasks)) {
-    if (!isBackgroundTask(t) || ("external" as string) === 'ant' && isPanelAgentTask(t)) {
+    if (!isBackgroundTask(t) || USER_TYPE === 'ant' && isPanelAgentTask(t)) {
       continue;
     }
     hasVisibleTask = true;

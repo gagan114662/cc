@@ -30,6 +30,7 @@ import type { outputSchema, Progress, RemoteLaunchedOutput } from './AgentTool.j
 import { inputSchema } from './AgentTool.js';
 import { getAgentColor } from './agentColorManager.js';
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 const MAX_PROGRESS_MESSAGES_TO_SHOW = 3;
 
 /**
@@ -99,7 +100,7 @@ type ProcessedMessage = {
  */
 function processProgressMessages(messages: ProgressMessage<Progress>[], tools: Tools, isAgentRunning: boolean): ProcessedMessage[] {
   // Only process for ants
-  if (("external" as string) !== 'ant') {
+  if (USER_TYPE !== 'ant') {
     return messages.filter((m): m is ProgressMessage<AgentToolProgress> => hasProgressMessage(m.data) && m.data.message.type !== 'user').map(m => ({
       type: 'original',
       message: m
@@ -385,7 +386,7 @@ export function renderToolResultMessage(data: Output, progressMessagesForMessage
     } as never
   });
   return <Box flexDirection="column">
-      {("external" as string) === 'ant' && <MessageResponse>
+      {USER_TYPE === 'ant' && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>
@@ -591,7 +592,7 @@ export function renderToolUseRejectedMessage(_input: {
   const firstData = progressMessagesForMessage[0]?.data;
   const agentId = firstData && hasProgressMessage(firstData) ? firstData.agentId : undefined;
   return <>
-      {("external" as string) === 'ant' && agentId && <MessageResponse>
+      {USER_TYPE === 'ant' && agentId && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>

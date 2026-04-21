@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import { USER_TYPE } from '../utils/buildConstants.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { Box, Text } from '../ink.js';
 import * as React from 'react';
@@ -222,7 +223,7 @@ function SpinnerWithVerbInner({
   let ttftText: string | null = null;
   const apiMetricsRef: { current: unknown[] } | undefined = undefined;
   const computeTtftText = (_arr: unknown[]): string | null => null;
-  if (("external" as string) === 'ant' && apiMetricsRef && (apiMetricsRef as { current: unknown[] }).current && (apiMetricsRef as { current: unknown[] }).current.length > 0) {
+  if (USER_TYPE === 'ant' && apiMetricsRef && (apiMetricsRef as { current: unknown[] }).current && (apiMetricsRef as { current: unknown[] }).current.length > 0) {
     ttftText = computeTtftText((apiMetricsRef as { current: unknown[] }).current);
   }
 

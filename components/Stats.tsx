@@ -1,5 +1,6 @@
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
+import { USER_TYPE } from '../utils/buildConstants.js'
 // @ts-expect-error -- asciichart ships no types in this build
 import { plot as asciichart } from 'asciichart';
 import chalk from 'chalk';
@@ -513,7 +514,7 @@ function OverviewTab({
       </Box>
 
       {/* Speculation time saved (ant-only) */}
-      {("external" as string) === 'ant' && stats.totalSpeculationTimeSavedMs > 0 && <Box flexDirection="row" gap={4}>
+      {USER_TYPE === 'ant' && stats.totalSpeculationTimeSavedMs > 0 && <Box flexDirection="row" gap={4}>
             <Box flexDirection="column" width={28}>
               <Text wrap="truncate">
                 Speculation saved:{' '}
@@ -1153,7 +1154,7 @@ function renderOverviewToAnsi(stats: ClaudeCodeStats): string[] {
   lines.push(row('Active days', activeDaysVal, 'Peak hour', peakHourVal));
 
   // Speculation time saved (ant-only)
-  if (("external" as string) === 'ant' && stats.totalSpeculationTimeSavedMs > 0) {
+  if (USER_TYPE === 'ant' && stats.totalSpeculationTimeSavedMs > 0) {
     const label = 'Speculation saved:'.padEnd(COL1_LABEL_WIDTH);
     lines.push(label + h(formatDuration(stats.totalSpeculationTimeSavedMs)));
   }

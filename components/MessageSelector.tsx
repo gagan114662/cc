@@ -17,6 +17,7 @@ import { stripDisplayTags } from '../utils/displayTags.js';
 import { createUserMessage, extractTag, isEmptyMessageText, isSyntheticMessage, isToolUseResultMessage } from '../utils/messages.js';
 import { type OptionWithDescription, Select } from './CustomSelect/select.js';
 import { Spinner } from './Spinner.js';
+import { USER_TYPE } from '../utils/buildConstants.js'
 function isTextBlock(block: ContentBlockParam): block is TextBlockParam {
   return block.type === 'text';
 }
@@ -119,7 +120,7 @@ export function MessageSelector({
       ...summarizeInputProps,
       onChange: setSummarizeFromFeedback
     });
-    if (("external" as string) === 'ant') {
+    if (USER_TYPE === 'ant') {
       baseOptions.push({
         value: 'summarize_up_to',
         label: 'Summarize up to here',

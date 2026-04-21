@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import { USER_TYPE } from '../../utils/buildConstants.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle';
 import { Box, Text, useTheme, useThemeSetting, useTerminalFocus } from '../../ink.js';
@@ -395,7 +396,7 @@ export function Config({
     }
   }] : []),
   // Speculation toggle (ant-only)
-  ...(("external" as string) === 'ant' ? [{
+  ...(USER_TYPE === 'ant' ? [{
     id: 'speculationEnabled',
     label: 'Speculative execution',
     value: globalConfig.speculationEnabled ?? true,

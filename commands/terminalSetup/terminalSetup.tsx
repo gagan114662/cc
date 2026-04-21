@@ -20,6 +20,7 @@ import { addItemToJSONCArray, safeParseJSONC } from '../../utils/json.js';
 import { logError } from '../../utils/log.js';
 import { getPlatform } from '../../utils/platform.js';
 import { jsonParse, jsonStringify } from '../../utils/slowOperations.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 const EOL = '\n';
 
 // Terminals that natively support CSI u / Kitty keyboard protocol
@@ -119,7 +120,7 @@ export async function setupTerminal(theme: ThemeName): Promise<string> {
   maybeMarkProjectOnboardingComplete();
 
   // Install shell completions (ant-only, since the completion command is ant-only)
-  if (("external" as string) === 'ant') {
+  if (USER_TYPE === 'ant') {
     result += await setupShellCompletion(theme);
   }
   return result;

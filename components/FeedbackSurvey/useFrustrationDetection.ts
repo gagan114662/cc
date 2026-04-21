@@ -1,5 +1,7 @@
 // Phantom stub — frustration-detection hook. Not reconstructed in this
-// external build. Gated at call site via `("external" as string) === 'ant'`.
+// external build. Gated at call site via `USER_TYPE === 'ant'`.
+
+import { USER_TYPE } from '../../utils/buildConstants.js'
 
 export type FrustrationDetectionState = {
   state: 'closed' | 'open' | 'submitting' | 'thanks' | 'transcript_prompt' | 'submitted'

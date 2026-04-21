@@ -12,6 +12,7 @@ import { isAutoUpdaterDisabled } from '../utils/config.js';
 import { installLatest } from '../utils/nativeInstaller/index.js';
 import { gt } from '../utils/semver.js';
 import { getInitialSettings } from '../utils/settings/settings.js';
+import { USER_TYPE, NODE_ENV } from '../utils/buildConstants.js'
 
 /**
  * Categorize error messages for analytics
@@ -74,7 +75,7 @@ export function NativeAutoUpdater({
     if (isUpdatingRef.current) {
       return;
     }
-    if (("production" as string) === 'test' || ("production" as string) === 'development') {
+    if (NODE_ENV === 'test' || NODE_ENV === 'development') {
       logForDebugging('NativeAutoUpdater: Skipping update check in test/dev environment');
       return;
     }
@@ -184,7 +185,7 @@ export function NativeAutoUpdater({
       {autoUpdaterResult?.status === 'install_failed' && <Text color="error" wrap="truncate">
           ✗ Auto-update failed &middot; Try <Text bold>/status</Text>
         </Text>}
-      {maxVersionIssue && ("external" as string) === 'ant' && <Text color="warning">
+      {maxVersionIssue && USER_TYPE === 'ant' && <Text color="warning">
           ⚠ Known issue: {maxVersionIssue} &middot; Run{' '}
           <Text bold>claude rollback --safe</Text> to downgrade
         </Text>}

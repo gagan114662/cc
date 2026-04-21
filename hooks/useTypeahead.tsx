@@ -9,6 +9,7 @@ import { getModeFromInput, getValueFromInput } from '../components/PromptInput/i
 import type { SuggestionItem, SuggestionType } from '../components/PromptInput/PromptInputFooterSuggestions.js';
 import { useIsModalOverlayActive, useRegisterOverlay } from '../context/overlayContext.js';
 import { KeyboardEvent } from '../ink/events/keyboard-event.js';
+import { NODE_ENV } from '../utils/buildConstants.js'
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- backward-compat bridge until consumers wire handleKeyDown to <Box onKeyDown>
 import { useInput } from '../ink.js';
 import { useOptionalKeybindingContext, useRegisterKeybindingContext } from '../keybindings/KeybindingContext.js';
@@ -493,7 +494,7 @@ export function useTypeahead({
   // subsequent tests in the shard. The subscriber still registers so
   // fileSuggestions tests that trigger a refresh directly work correctly.
   useEffect(() => {
-    if (("production" as string) !== 'test') {
+    if (NODE_ENV !== 'test') {
       startBackgroundCacheRefresh();
     }
     return onIndexBuildComplete(() => {

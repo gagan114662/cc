@@ -23,16 +23,17 @@ import { addMarketplaceSource, clearMarketplacesCache, loadKnownMarketplacesConf
 import { OFFICIAL_MARKETPLACE_NAME } from '../../utils/plugins/officialMarketplace.js';
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js';
 import { installSelectedPlugins } from '../../utils/plugins/pluginStartupCheck.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 
 // Marketplace and plugin identifiers - varies by user type
 const INTERNAL_MARKETPLACE_NAME = 'claude-code-marketplace';
 const INTERNAL_MARKETPLACE_REPO = 'anthropics/claude-code-marketplace';
 const OFFICIAL_MARKETPLACE_REPO = 'anthropics/claude-plugins-official';
 function getMarketplaceName(): string {
-  return ("external" as string) === 'ant' ? INTERNAL_MARKETPLACE_NAME : OFFICIAL_MARKETPLACE_NAME;
+  return USER_TYPE === 'ant' ? INTERNAL_MARKETPLACE_NAME : OFFICIAL_MARKETPLACE_NAME;
 }
 function getMarketplaceRepo(): string {
-  return ("external" as string) === 'ant' ? INTERNAL_MARKETPLACE_REPO : OFFICIAL_MARKETPLACE_REPO;
+  return USER_TYPE === 'ant' ? INTERNAL_MARKETPLACE_REPO : OFFICIAL_MARKETPLACE_REPO;
 }
 function getPluginId(): string {
   return `thinkback@${getMarketplaceName()}`;

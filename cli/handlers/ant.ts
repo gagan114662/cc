@@ -2,7 +2,7 @@
  * Ant-only subcommand handlers — reconstructed stub.
  *
  * These handlers are only invoked under `USER_TYPE === 'ant'` / the
- * `("external" as string) === 'ant'` constant-false gate in main.tsx. In the external
+ * `USER_TYPE === 'ant'` constant-false gate in main.tsx. In the external
  * build the gate folds to false and the dynamic import is never reached at
  * runtime, so the runtime bodies below are deliberately minimal stubs
  * sufficient to satisfy `tsc --strict` for the static imports in main.tsx.
@@ -13,6 +13,7 @@
 /* eslint-disable custom-rules/no-process-exit -- CLI subcommand handlers intentionally exit */
 
 import type { Command as CommanderCommand } from '@commander-js/extra-typings'
+import { USER_TYPE } from '../../utils/buildConstants.js'
 
 // --- `claude log` ----------------------------------------------------------
 
@@ -26,7 +27,7 @@ export async function logHandler(
 ): Promise<void> {
   // FIXME: Real implementation lives in the internal (ant) build. The
   // external bundle strips it, so we stub here. The surrounding gate in
-  // main.tsx (`("external" as string) === 'ant'`) prevents this from being reached.
+  // main.tsx (`USER_TYPE === 'ant'`) prevents this from being reached.
   void logId
   throw new Error('logHandler: not implemented in external build')
 }

@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import { USER_TYPE } from '../../utils/buildConstants.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle';
 // Dead code elimination: conditional import for COORDINATOR_MODE
@@ -260,7 +261,7 @@ function ModeIndicator({
   const expandedView = useAppState((s_3: AppState) => s_3.expandedView);
   const showSpinnerTree = expandedView === 'teammates';
   const prStatus = usePrStatus(isLoading, isPrStatusEnabled());
-  const hasTmuxSession = useAppState((s_4: AppState) => ("external" as string) === 'ant' && s_4.tungstenActiveSession !== undefined);
+  const hasTmuxSession = useAppState((s_4: AppState) => USER_TYPE === 'ant' && s_4.tungstenActiveSession !== undefined);
   const nextTickAt = useSyncExternalStore(proactiveModule?.subscribeToProactiveChanges ?? NO_OP_SUBSCRIBE, proactiveModule?.getNextTickAt ?? NULL, NULL);
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
@@ -274,7 +275,7 @@ function ModeIndicator({
   const selGetState = useSelection().getState;
   const hasNextTick = nextTickAt !== null;
   const isCoordinator = feature('COORDINATOR_MODE') ? coordinatorModule?.isCoordinatorMode() === true : false;
-  const runningTaskCount = useMemo(() => count(Object.values(tasks), t => isBackgroundTask(t) && !(("external" as string) === 'ant' && isPanelAgentTask(t))), [tasks]);
+  const runningTaskCount = useMemo(() => count(Object.values(tasks), t => isBackgroundTask(t) && !(USER_TYPE === 'ant' && isPanelAgentTask(t))), [tasks]);
   const tasksV2 = useTasksV2();
   const hasTaskItems = tasksV2 !== undefined && tasksV2.length > 0;
   const escShortcut = useShortcutDisplay('chat:cancel', 'Chat', 'esc').toLowerCase();
@@ -399,7 +400,7 @@ function ModeIndicator({
   }
 
   // Add "↓ to manage tasks" hint when panel has visible rows
-  const hasCoordinatorTasks = ("external" as string) === 'ant' && getVisibleAgentTasks(tasks).length > 0;
+  const hasCoordinatorTasks = USER_TYPE === 'ant' && getVisibleAgentTasks(tasks).length > 0;
 
   // Tasks pill renders as a Box sibling (not a parts entry) so its
   // click-target Box isn't nested inside <Text wrap="truncate"> — the

@@ -3,10 +3,11 @@ import * as React from 'react';
 import { useState } from 'react';
 import { getSlowOperations } from '../bootstrap/state.js';
 import { Text, useInterval } from '../ink.js';
+import { USER_TYPE, NODE_ENV } from '../utils/buildConstants.js'
 
 // Show DevBar for dev builds or all ants
 function shouldShowDevBar(): boolean {
-  return ("production" as string) === 'development' || ("external" as string) === 'ant';
+  return NODE_ENV === 'development' || USER_TYPE === 'ant';
 }
 export function DevBar() {
   const $ = _c(5);

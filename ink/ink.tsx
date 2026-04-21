@@ -3,6 +3,7 @@ import { closeSync, constants as fsConstants, openSync, readSync, writeSync } fr
 import noop from 'lodash-es/noop.js';
 import throttle from 'lodash-es/throttle.js';
 import React, { type ReactNode } from 'react';
+import { NODE_ENV } from '../utils/buildConstants.js'
 // @ts-expect-error -- react-reconciler ships no types in this build
 import type { FiberRoot } from 'react-reconciler';
 // @ts-expect-error -- react-reconciler ships no types in this build
@@ -267,7 +268,7 @@ export default class Ink {
     // onRecoverableError
     noop // onDefaultTransitionIndicator
     );
-    if (("production" as string) === 'development') {
+    if (NODE_ENV === 'development') {
       reconciler.injectIntoDevTools({
         bundleType: 0,
         // Reporting React DOM's version, not Ink's

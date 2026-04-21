@@ -8,6 +8,7 @@ import type { LogOption } from '../../types/logs.js';
 import { getCwd } from '../../utils/cwd.js';
 import { formatRelativeTimeAgo } from '../../utils/format.js';
 import type { FeedConfig, FeedLine } from './Feed.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 export function createRecentActivityFeed(activities: LogOption[]): FeedConfig {
   const lines: FeedLine[] = activities.map(log => {
     const time = formatRelativeTimeAgo(log.modified);
@@ -26,7 +27,7 @@ export function createRecentActivityFeed(activities: LogOption[]): FeedConfig {
 }
 export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
   const lines: FeedLine[] = releaseNotes.map(note => {
-    if (("external" as string) === 'ant') {
+    if (USER_TYPE === 'ant') {
       const match = note.match(/^(\d+\s+\w+\s+ago)\s+(.+)$/);
       if (match) {
         return {
@@ -39,9 +40,9 @@ export function createWhatsNewFeed(releaseNotes: string[]): FeedConfig {
       text: note
     };
   });
-  const emptyMessage = ("external" as string) === 'ant' ? 'Unable to fetch latest claude-cli-internal commits' : 'Check the Claude Code changelog for updates';
+  const emptyMessage = USER_TYPE === 'ant' ? 'Unable to fetch latest claude-cli-internal commits' : 'Check the Claude Code changelog for updates';
   return {
-    title: ("external" as string) === 'ant' ? "What's new [ANT-ONLY: Latest CC commits]" : "What's new",
+    title: USER_TYPE === 'ant' ? "What's new [ANT-ONLY: Latest CC commits]" : "What's new",
     lines,
     footer: lines.length > 0 ? '/release-notes for more' : undefined,
     emptyMessage
