@@ -367,16 +367,17 @@ function ErrorsTabContent(t0: { setViewState: (v: ViewState) => void; setActiveT
   const setAppState = useSetAppState();
   const [selectedIndex, setSelectedIndex] = useState(0);
   const [actionMessage, setActionMessage] = useState<any>(null);
-  let t1;
+  type MarketplaceFailure = { name: string; error: string };
+  let t1: MarketplaceFailure[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
     t1 = $[0];
   }
-  const [marketplaceLoadFailures, setMarketplaceLoadFailures] = useState(t1);
+  const [marketplaceLoadFailures, setMarketplaceLoadFailures] = useState<MarketplaceFailure[]>(t1);
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => {
       (async () => {
@@ -643,7 +644,7 @@ function getInitialViewState(parsedCommand: ParsedCommand): ViewState {
     case 'validate':
       return {
         type: 'validate',
-        path: parsedCommand.path
+        path: parsedCommand.path ?? ''
       };
     case 'install':
       if (parsedCommand.marketplace) {
@@ -736,7 +737,7 @@ export function PluginSettings(t0: PluginSettingsProps) {
   let parsedCommand;
   let t1;
   if ($[0] !== args) {
-    parsedCommand = parsePluginArgs(args);
+    parsedCommand = parsePluginArgs(Array.isArray(args) ? args.join(' ') : args);
     t1 = getInitialViewState(parsedCommand);
     $[0] = args;
     $[1] = parsedCommand;
@@ -883,7 +884,7 @@ export function PluginSettings(t0: PluginSettingsProps) {
   if ($[20] !== onComplete || $[21] !== result) {
     t12 = () => {
       if (result) {
-        onComplete(result);
+        (onComplete as (r?: unknown) => void)(result);
       }
     };
     t13 = [result, onComplete];
