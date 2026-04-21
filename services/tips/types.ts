@@ -1,12 +1,14 @@
+import type { FileStateCache } from '../../utils/fileStateCache.js'
+
 export type TipContext = {
   bashTools?: Set<string>
-  readFileState?: Map<string, unknown>
+  readFileState?: FileStateCache
   [key: string]: unknown
 }
 
 export type Tip = {
   id: string
-  content: () => Promise<string>
+  content: (ctx?: { theme?: unknown }) => Promise<string>
   cooldownSessions: number
   isRelevant: (ctx?: TipContext) => Promise<boolean>
 }

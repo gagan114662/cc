@@ -121,6 +121,7 @@ const getCoordinatorUserContext: (mcpClients: ReadonlyArray<{
 import useCanUseTool from '../hooks/useCanUseTool.js';
 import type { ToolPermissionContext, Tool } from '../Tool.js';
 import { applyPermissionUpdate, applyPermissionUpdates, persistPermissionUpdate } from '../utils/permissions/PermissionUpdate.js';
+import type { PermissionBehavior } from '../types/permissions.js';
 import { buildPermissionUpdates } from '../components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.js';
 import { stripDangerousPermissionsForAutoMode } from '../utils/permissions/permissionSetup.js';
 import { getScratchpadDir, isScratchpadEnabled } from '../utils/permissions/filesystem.js';
@@ -290,6 +291,13 @@ import { setClipboard } from '../ink/termio/osc.js';
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js';
 import { createAttachmentMessage, getQueuedCommandAttachments } from '../utils/attachments.js';
 
+// Decompiled-source stubs: these symbols are referenced but not yet ported.
+// Declare as `any` to silence TS until the corresponding modules land.
+declare const fireCompanionObserver: (...args: unknown[]) => unknown;
+declare const launchUltraplan: (...args: unknown[]) => Promise<string>;
+declare const UltraplanChoiceDialog: React.ComponentType<any>;
+declare const UltraplanLaunchDialog: React.ComponentType<any>;
+
 // Stable empty array for hooks that accept MCPServerConnection[] — avoids
 // creating a new [] literal on every render in remote mode, which would
 // cause useEffect dependency changes and infinite re-render loops.
@@ -323,7 +331,7 @@ function median(values: number[]): number {
 function TranscriptModeFooter(t0: {
   showAllInTranscript: boolean;
   virtualScroll: boolean;
-  searchBadge?: { text: string; color?: string } | null | undefined | false | '';
+  searchBadge?: { current: number; count: number } | null | undefined | false | '';
   suppressShowAll?: boolean;
   status?: string | undefined;
 }) {
@@ -2658,7 +2666,7 @@ export function REPL({
       setResponseLength(length => length + newContent.length);
     }, setStreamMode, setStreamingToolUses, tombstonedMessage => {
       setMessages(oldMessages => oldMessages.filter(m => m !== tombstonedMessage));
-      void removeTranscriptMessage(tombstonedMessage.uuid);
+      if (tombstonedMessage.uuid) void removeTranscriptMessage(tombstonedMessage.uuid);
     }, setStreamingThinking, metrics => {
       const now = Date.now();
       const baseline = responseLengthRef.current;
@@ -3433,7 +3441,7 @@ export function REPL({
       // Build content blocks when there are pasted attachments (images)
       const pastedValues = Object.values(pastedContents);
       const imageContents = pastedValues.filter(c => c.type === 'image');
-      const imagePasteIds = imageContents.length > 0 ? imageContents.map(c => c.id) : undefined;
+      const imagePasteIds = imageContents.length > 0 ? imageContents.map(c => String(c.id)) : undefined;
       let messageContent: string | ContentBlockParam[] = input.trim();
       let remoteContent: RemoteMessageContent = input.trim();
       if (pastedValues.length > 0) {
@@ -3737,7 +3745,8 @@ export function REPL({
         const newPastedContents: Record<number, PastedContent> = {};
         imageBlocks.forEach((block, index) => {
           if (block.source.type === 'base64') {
-            const id = message.imagePasteIds?.[index] ?? index + 1;
+            const rawId = message.imagePasteIds?.[index];
+            const id = typeof rawId === 'string' ? Number(rawId) : (rawId as number | undefined) ?? index + 1;
             newPastedContents[id] = {
               id,
               type: 'image',
@@ -3763,7 +3772,7 @@ export function REPL({
   // 24-char prefix: deriveUUID preserves first 24, renderable uuid prefix-matches raw source.
   const findRawIndex = (uuid: string) => {
     const prefix = uuid.slice(0, 24);
-    return messages.findIndex(m => m.uuid.slice(0, 24) === prefix);
+    return messages.findIndex(m => m.uuid?.slice(0, 24) === prefix);
   };
   const messageActionCaps: MessageActionCaps = {
     copy: text =>
@@ -4637,7 +4646,7 @@ export function REPL({
                   toolName: WEB_FETCH_TOOL_NAME,
                   ruleContent: `domain:${approvedHost}`
                 }],
-                behavior: (allow ? 'allow' : 'deny'),
+                behavior: (allow ? 'allow' : 'deny') as PermissionBehavior,
                 destination: 'localSettings' as const
               };
               setAppState(prev => ({
@@ -4862,7 +4871,7 @@ export function REPL({
 
                 {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-choice' && ultraplanPendingChoice && <UltraplanChoiceDialog plan={ultraplanPendingChoice.plan} sessionId={ultraplanPendingChoice.sessionId} taskId={ultraplanPendingChoice.taskId} setMessages={setMessages} readFileState={readFileState.current} getAppState={() => store.getState()} setConversationId={setConversationId} /> : null}
 
-                {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-launch' && ultraplanLaunchPending && <UltraplanLaunchDialog onChoice={(choice: 'cancel' | 'foreground' | 'background', opts: unknown) => {
+                {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-launch' && ultraplanLaunchPending && <UltraplanLaunchDialog onChoice={(choice: 'cancel' | 'foreground' | 'background', opts: { disconnectedBridge?: unknown }) => {
             const blurb = ultraplanLaunchPending.blurb;
             setAppState(prev => prev.ultraplanLaunchPending ? {
               ...prev,

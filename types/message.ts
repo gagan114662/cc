@@ -43,6 +43,7 @@ export type UserMessage = {
   sourceToolUseID?: string
   permissionMode?: PermissionMode
   origin?: MessageOrigin
+  planContent?: string
 }
 
 export type AssistantMessage = {
@@ -398,4 +399,4 @@ export type CollapsibleMessage = RenderableMessage
 // Compact direction (literal union)
 // ---------------------------------------------------------------------------
 
-export type PartialCompactDirection = 'from' | 'to'
+export type PartialCompactDirection = 'from' | 'to' | 'up_to'
