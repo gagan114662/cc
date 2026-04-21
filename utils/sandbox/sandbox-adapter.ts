@@ -681,7 +681,7 @@ function isSandboxingEnabled(): boolean {
     return false
   }
 
-  if (checkDependencies().errors.length > 0) {
+  if ((checkDependencies() as SandboxDependencyCheck).errors.length > 0) {
     return false
   }
 
@@ -724,7 +724,7 @@ function getSandboxUnavailableReason(): string | undefined {
     return `sandbox.enabled is set but ${getPlatform()} is not in sandbox.enabledPlatforms`
   }
 
-  const deps = checkDependencies()
+  const deps = checkDependencies() as SandboxDependencyCheck
   if (deps.errors.length > 0) {
     const platform = getPlatform()
     const hint =
@@ -787,7 +787,7 @@ function getLinuxGlobPatternWarnings(): string[] {
   }
 }
 
-function getSandboxViolationStore(): SandboxViolationStore {
+function getSandboxViolationStore(): SandboxViolationStoreLike {
   if (typeof BaseSandboxManager.getSandboxViolationStore !== 'function') {
     return new SandboxViolationStore()
   }
@@ -891,7 +891,7 @@ async function wrapWithSandbox(
     }
   }
 
-  return BaseSandboxManager.wrapWithSandbox(
+  return BaseSandboxManager.wrapWithSandbox!(
     command,
     binShell,
     customConfig,
@@ -954,7 +954,7 @@ async function initialize(
       settingsSubscriptionCleanup = settingsChangeDetector.subscribe(() => {
         const settings = getSettings_DEPRECATED()
         const newConfig = convertToSandboxRuntimeConfig(settings)
-        BaseSandboxManager.updateConfig(newConfig)
+        BaseSandboxManager.updateConfig!(newConfig)
         logForDebugging('Sandbox configuration updated from settings change')
       })
     } catch (error) {
@@ -1101,7 +1101,7 @@ export interface ISandboxManager {
     abortSignal?: AbortSignal,
   ): Promise<string>
   cleanupAfterCommand(): void
-  getSandboxViolationStore(): SandboxViolationStore
+  getSandboxViolationStore(): SandboxViolationStoreLike
   annotateStderrWithSandboxFailures(command: string, stderr: string): string
   getLinuxGlobPatternWarnings(): string[]
   refreshConfig(): void
@@ -1130,20 +1130,20 @@ export const SandboxManager: ISandboxManager = {
   checkDependencies,
 
   // Forward to base sandbox manager
-  getFsReadConfig: BaseSandboxManager.getFsReadConfig,
-  getFsWriteConfig: BaseSandboxManager.getFsWriteConfig,
-  getNetworkRestrictionConfig: BaseSandboxManager.getNetworkRestrictionConfig,
-  getIgnoreViolations: BaseSandboxManager.getIgnoreViolations,
+  getFsReadConfig: BaseSandboxManager.getFsReadConfig!,
+  getFsWriteConfig: BaseSandboxManager.getFsWriteConfig!,
+  getNetworkRestrictionConfig: BaseSandboxManager.getNetworkRestrictionConfig!,
+  getIgnoreViolations: BaseSandboxManager.getIgnoreViolations!,
   getLinuxGlobPatternWarnings,
   isSupportedPlatform,
-  getAllowUnixSockets: BaseSandboxManager.getAllowUnixSockets,
-  getAllowLocalBinding: BaseSandboxManager.getAllowLocalBinding,
-  getEnableWeakerNestedSandbox: BaseSandboxManager.getEnableWeakerNestedSandbox,
-  getProxyPort: BaseSandboxManager.getProxyPort,
-  getSocksProxyPort: BaseSandboxManager.getSocksProxyPort,
-  getLinuxHttpSocketPath: BaseSandboxManager.getLinuxHttpSocketPath,
-  getLinuxSocksSocketPath: BaseSandboxManager.getLinuxSocksSocketPath,
-  waitForNetworkInitialization: BaseSandboxManager.waitForNetworkInitialization,
+  getAllowUnixSockets: BaseSandboxManager.getAllowUnixSockets!,
+  getAllowLocalBinding: BaseSandboxManager.getAllowLocalBinding!,
+  getEnableWeakerNestedSandbox: BaseSandboxManager.getEnableWeakerNestedSandbox!,
+  getProxyPort: BaseSandboxManager.getProxyPort!,
+  getSocksProxyPort: BaseSandboxManager.getSocksProxyPort!,
+  getLinuxHttpSocketPath: BaseSandboxManager.getLinuxHttpSocketPath!,
+  getLinuxSocksSocketPath: BaseSandboxManager.getLinuxSocksSocketPath!,
+  waitForNetworkInitialization: BaseSandboxManager.waitForNetworkInitialization!,
   getSandboxViolationStore,
   annotateStderrWithSandboxFailures,
   cleanupAfterCommand,

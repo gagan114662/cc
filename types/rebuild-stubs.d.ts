@@ -128,7 +128,11 @@ declare module '@anthropic-ai/sandbox-runtime' {
   export type SandboxAskCallback = (
     hostPattern: NetworkHostPattern,
   ) => Promise<unknown>
-  export type SandboxDependencyCheck = Record<string, unknown>
+  export type SandboxDependencyCheck = {
+    errors: string[]
+    warnings: string[]
+    [key: string]: unknown
+  }
   export type SandboxRuntimeConfig = Record<string, unknown>
   export type SandboxViolationEvent = Record<string, unknown>
 }
