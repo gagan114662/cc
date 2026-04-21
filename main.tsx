@@ -118,6 +118,7 @@ import { getModelDeprecationWarning } from './utils/model/deprecation.js';
 import { getDefaultMainLoopModel, getUserSpecifiedModelSetting, normalizeModelStringForAPI, parseUserSpecifiedModel } from './utils/model/model.js';
 import { ensureModelStringsInitialized } from './utils/model/modelStrings.js';
 import { PERMISSION_MODES } from './utils/permissions/PermissionMode.js';
+import type { InternalPermissionMode } from './types/permissions.js';
 import { checkAndDisableBypassPermissions, getAutoModeEnabledStateIfCached, initializeToolPermissionContext, initialPermissionModeFromCLI, isDefaultPermissionModeAuto, parseToolListFromCLI, removeDangerousPermissions, stripDangerousPermissionsForAutoMode, verifyAutoModeGateAccess } from './utils/permissions/permissionSetup.js';
 import { cleanupOrphanedPluginVersionsInBackground } from './utils/plugins/cacheUtils.js';
 import { initializeVersionedPlugins } from './utils/plugins/installedPluginsManager.js';
@@ -264,7 +265,7 @@ function isBeingDebugged() {
 }
 
 // Exit if we detect node debugging or inspection
-if ("external" !== 'ant' && isBeingDebugged()) {
+if (("external" as string) !== 'ant' && isBeingDebugged()) {
   // Use process.exit directly here since we're in the top-level code before imports
   // and gracefulShutdown is not yet available
   // eslint-disable-next-line custom-rules/no-top-level-side-effects
@@ -3044,7 +3045,7 @@ async function run(): Promise<CommanderCommand> {
       // KAIROS block so Agent(name: "foo") can spawn in-process teammates
       // without TeamCreate. computeInitialTeamContext() is for tmux-spawned
       // teammates reading their own identity, not the assistant-mode leader.
-      teamContext: feature('KAIROS') ? assistantTeamContext ?? computeInitialTeamContext?.() : computeInitialTeamContext?.()
+      teamContext: (feature('KAIROS') ? assistantTeamContext ?? computeInitialTeamContext?.() : computeInitialTeamContext?.()) as never
     };
 
     // Add CLI initial prompt to history
@@ -3096,7 +3097,7 @@ async function run(): Promise<CommanderCommand> {
       thinkingConfig,
       ...(uploaderReady && {
         onTurnComplete: (messages: MessageType[]) => {
-          void uploaderReady.then(uploader => uploader?.(messages));
+          void (uploaderReady as Promise<((m: MessageType[]) => void) | null>).then(uploader => uploader?.(messages));
         }
       })
     };
@@ -3219,7 +3220,7 @@ async function run(): Promise<CommanderCommand> {
           process.stderr.write('Starting local ssh-proxy test session...\n');
           sshSession = createLocalSSHSession({
             cwd: _pendingSSH.cwd,
-            permissionMode: _pendingSSH.permissionMode,
+            permissionMode: _pendingSSH.permissionMode as InternalPermissionMode | undefined,
             dangerouslySkipPermissions: _pendingSSH.dangerouslySkipPermissions
           });
         } else {
@@ -3233,7 +3234,7 @@ async function run(): Promise<CommanderCommand> {
             host: _pendingSSH.host,
             cwd: _pendingSSH.cwd,
             localVersion: MACRO.VERSION,
-            permissionMode: _pendingSSH.permissionMode,
+            permissionMode: _pendingSSH.permissionMode as InternalPermissionMode | undefined,
             dangerouslySkipPermissions: _pendingSSH.dangerouslySkipPermissions,
             extraCliArgs: _pendingSSH.extraCliArgs
           }, isTTY ? {
@@ -3606,7 +3607,7 @@ async function run(): Promise<CommanderCommand> {
             try {
               const resumeStart = performance.now();
               const logOption = await loadCcshare(ccshareId);
-              const result = await loadConversationForResume(logOption, undefined);
+              const result = await loadConversationForResume(logOption as Parameters<typeof loadConversationForResume>[0], undefined);
               if (result) {
                 processedResume = await processResumedConversation(result, {
                   forkSession: true,
@@ -4028,7 +4029,7 @@ async function run(): Promise<CommanderCommand> {
         maxSessions: config.maxSessions
       });
       const logger = createServerLogger();
-      const server = startServer(config, sessionManager, logger);
+      const server = startServer(config, sessionManager, logger) as unknown as { port?: number; stop: (graceful?: boolean) => void };
       const actualPort = server.port ?? config.port;
       printBanner(config, authToken, actualPort);
       await writeServerLock({
@@ -4044,7 +4045,7 @@ async function run(): Promise<CommanderCommand> {
         shuttingDown = true;
         // Stop accepting new connections before tearing down sessions.
         server.stop(true);
-        await sessionManager.destroyAll();
+        await (sessionManager as unknown as { destroyAll: () => Promise<void> }).destroyAll();
         await removeServerLock();
         process.exit(0);
       };
