@@ -86,7 +86,7 @@ export function Tabs(t0: TabsProps) {
   const {
     columns: terminalWidth
   } = useTerminalSize();
-  const tabs = children.map(_temp);
+  const tabs = children.map(_temp as never) as unknown as TabTuple[];
   const defaultTabIndex = defaultTab ? tabs.findIndex((tab: TabTuple) => defaultTab === tab[0]) : 0;
   const isControlled = controlledSelectedTab !== undefined;
   const [internalSelectedTab, setInternalSelectedTab] = useState(defaultTabIndex !== -1 ? defaultTabIndex : 0);
@@ -191,7 +191,7 @@ export function Tabs(t0: TabsProps) {
     }
   }, t10);
   const titleWidth = title ? stringWidth(title) + 1 : 0;
-  const tabsWidth = tabs.reduce(_temp4, 0);
+  const tabsWidth = (tabs as unknown[]).reduce(_temp4 as never, 0) as number;
   const usedWidth = titleWidth + tabsWidth;
   const spacerWidth = useFullWidth ? Math.max(0, terminalWidth - usedWidth) : 0;
   const contentWidth = useFullWidth ? terminalWidth : undefined;

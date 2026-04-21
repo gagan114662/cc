@@ -18,7 +18,7 @@ export function HighlightedInput(t0: Props) {
     text,
     highlights
   } = t0;
-  let lines;
+  let lines: LinePart[][];
   if ($[0] !== highlights || $[1] !== text) {
     const segments = segmentTextByHighlights(text, highlights);
     lines = [[]];
@@ -45,7 +45,7 @@ export function HighlightedInput(t0: Props) {
     $[1] = text;
     $[2] = lines;
   } else {
-    lines = $[2];
+    lines = $[2] as LinePart[][];
   }
   let t1;
   if ($[3] !== highlights) {
@@ -110,7 +110,7 @@ export function HighlightedInput(t0: Props) {
     if ($[18] !== glimmerIndex) {
       t4 = (lineParts: LinePart[], lineIndex: number) => <Box key={lineIndex}>{lineParts.length === 0 ? <Text> </Text> : lineParts.map((part_0: LinePart, partIndex: number) => {
           if (part_0.highlight?.shimmerColor && part_0.highlight.color) {
-            return <Text key={partIndex}>{part_0.text.split("").map((char: string, charIndex: number) => <ShimmerChar key={charIndex} char={char} index={part_0.start + charIndex} glimmerIndex={glimmerIndex} messageColor={part_0.highlight.color} shimmerColor={part_0.highlight.shimmerColor} />)}</Text>;
+            return <Text key={partIndex}>{part_0.text.split("").map((char: string, charIndex: number) => <ShimmerChar key={charIndex} char={char} index={part_0.start + charIndex} glimmerIndex={glimmerIndex} messageColor={part_0.highlight!.color!} shimmerColor={part_0.highlight!.shimmerColor!} />)}</Text>;
           }
           return <Text key={partIndex} color={part_0.highlight?.color} dimColor={part_0.highlight?.dimColor} inverse={part_0.highlight?.inverse}><Ansi>{part_0.text}</Ansi></Text>;
         })}</Box>;

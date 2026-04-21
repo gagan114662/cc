@@ -19,23 +19,23 @@ function formatTime(date: Date): string {
 import { getPlatform } from 'src/utils/platform.js';
 export function SandboxViolationExpandedView() {
   const $ = _c(15);
-  let t0;
+  let t0: unknown[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t0 = [];
     $[0] = t0;
   } else {
-    t0 = $[0];
+    t0 = $[0] as unknown[];
   }
   const [violations, setViolations] = useState(t0);
   const [totalCount, setTotalCount] = useState(0);
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       const store = SandboxManager.getSandboxViolationStore();
-      const unsubscribe = store.subscribe((allViolations: unknown) => {
+      const unsubscribe = (store as { subscribe: (cb: (v: unknown[]) => void) => () => void }).subscribe((allViolations: unknown[]) => {
         setViolations(allViolations.slice(-10));
-        setTotalCount(store.getTotalCount());
+        setTotalCount((store as { getTotalCount: () => number }).getTotalCount());
       });
       return unsubscribe;
     };
@@ -44,7 +44,7 @@ export function SandboxViolationExpandedView() {
     $[2] = t2;
   } else {
     t1 = $[1];
-    t2 = $[2];
+    t2 = $[2] as React.DependencyList;
   }
   useEffect(t1, t2);
   if (!SandboxManager.isSandboxingEnabled() || getPlatform() === "linux") {
