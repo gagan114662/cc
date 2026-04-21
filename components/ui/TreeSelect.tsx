@@ -3,7 +3,7 @@ import React from 'react';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js';
 import { Box } from '../../ink.js';
 import { type OptionWithDescription, Select } from '../CustomSelect/select.js';
-export type TreeNode<T> = {
+export type TreeNode<T = unknown> = {
   id: string | number;
   value: T;
   label: string;
@@ -12,14 +12,14 @@ export type TreeNode<T> = {
   children?: TreeNode<T>[];
   metadata?: Record<string, unknown>;
 };
-type FlattenedNode<T> = {
+type FlattenedNode<T = unknown> = {
   node: TreeNode<T>;
   depth: number;
   isExpanded: boolean;
   hasChildren: boolean;
   parentId?: string | number;
 };
-export type TreeSelectProps<T> = {
+export type TreeSelectProps<T = unknown> = {
   /**
    * Tree nodes to display.
    */
@@ -154,10 +154,10 @@ export function TreeSelect(t0: TreeSelectProps) {
     t5 = $[3];
   }
   const isExpanded = t5;
-  let result;
+  let result: FlattenedNode[];
   if ($[4] !== isExpanded || $[5] !== nodes) {
     result = [];
-    function traverse(node: unknown, depth: unknown, parentId: unknown) {
+    function traverse(node: TreeNode, depth: number, parentId?: string | number) {
       const hasChildren = !!node.children && node.children.length > 0;
       const nodeIsExpanded = isExpanded(node.id);
       result.push({
@@ -222,10 +222,10 @@ export function TreeSelect(t0: TreeSelectProps) {
     t7 = $[12];
   }
   const options = t7;
-  let map;
+  let map: Map<string | number, TreeNode>;
   if ($[13] !== flattenedNodes) {
     map = new Map();
-    flattenedNodes.forEach((fn: any) => map.set(fn.node.id, fn.node));
+    flattenedNodes.forEach((fn: FlattenedNode) => map.set(fn.node.id, fn.node));
     $[13] = flattenedNodes;
     $[14] = map;
   } else {
@@ -252,13 +252,13 @@ export function TreeSelect(t0: TreeSelectProps) {
         if (onExpand) {
           onExpand(nodeId_1);
         } else {
-          setInternalExpandedIds((prev: unknown) => new Set(prev).add(nodeId_1));
+          setInternalExpandedIds((prev: Set<string | number>) => new Set(prev).add(nodeId_1));
         }
       } else {
         if (onCollapse) {
           onCollapse(nodeId_1);
         } else {
-          setInternalExpandedIds((prev_0: unknown) => {
+          setInternalExpandedIds((prev_0: Set<string | number>) => {
             const newSet = new Set(prev_0);
             newSet.delete(nodeId_1);
             return newSet;
