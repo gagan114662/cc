@@ -33,17 +33,17 @@ export function OutputStylePicker(t0: OutputStylePickerProps) {
     onCancel,
     isStandaloneCommand
   } = t0;
-  let t1;
+  let t1: unknown[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as unknown[];
   }
   const [styleOptions, setStyleOptions] = useState(t1);
   const [isLoading, setIsLoading] = useState(true);
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => {
       getAllOutputStyles(getCwd()).then(allStyles => {
@@ -61,7 +61,7 @@ export function OutputStylePicker(t0: OutputStylePickerProps) {
     $[2] = t3;
   } else {
     t2 = $[1];
-    t3 = $[2];
+    t3 = $[2] as React.DependencyList;
   }
   useEffect(t2, t3);
   let t4;
@@ -87,7 +87,7 @@ export function OutputStylePicker(t0: OutputStylePickerProps) {
   }
   let t8;
   if ($[6] !== handleStyleSelect || $[7] !== initialStyle || $[8] !== isLoading || $[9] !== styleOptions) {
-    t8 = <Box flexDirection="column" gap={1}>{t7}{isLoading ? <Text dimColor={true}>Loading output styles…</Text> : <Select options={styleOptions} onChange={handleStyleSelect} visibleOptionCount={10} defaultValue={initialStyle} />}</Box>;
+    t8 = <Box flexDirection="column" gap={1}>{t7}{isLoading ? <Text dimColor={true}>Loading output styles…</Text> : <Select options={styleOptions as OptionWithDescription<string>[]} onChange={handleStyleSelect} visibleOptionCount={10} defaultValue={initialStyle} />}</Box>;
     $[6] = handleStyleSelect;
     $[7] = initialStyle;
     $[8] = isLoading;

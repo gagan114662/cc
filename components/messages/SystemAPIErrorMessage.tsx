@@ -24,9 +24,9 @@ export function SystemAPIErrorMessage(t0: Props) {
     retryInMs,
     maxRetries
   } = t1;
-  const hidden = true && retryAttempt < 4;
+  const hidden = true && (retryAttempt ?? 0) < 4;
   const [countdownMs, setCountdownMs] = useState(0);
-  const done = countdownMs >= retryInMs;
+  const done = countdownMs >= (retryInMs ?? 0);
   let t2;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => setCountdownMs(_temp);
@@ -40,7 +40,7 @@ export function SystemAPIErrorMessage(t0: Props) {
   }
   let t3;
   if ($[1] !== countdownMs || $[2] !== retryInMs) {
-    t3 = Math.round((retryInMs - countdownMs) / 1000);
+    t3 = Math.round(((retryInMs ?? 0) - countdownMs) / 1000);
     $[1] = countdownMs;
     $[2] = retryInMs;
     $[3] = t3;
@@ -56,7 +56,7 @@ export function SystemAPIErrorMessage(t0: Props) {
   let t6;
   let truncated;
   if ($[4] !== error || $[5] !== verbose) {
-    const formatted = formatAPIError(error);
+    const formatted = formatAPIError(error as never);
     truncated = !verbose && formatted.length > MAX_API_ERROR_CHARS;
     T2 = MessageResponse;
     T1 = Box;

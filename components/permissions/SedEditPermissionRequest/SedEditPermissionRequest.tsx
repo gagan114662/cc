@@ -102,7 +102,7 @@ function SedEditPermissionRequestInner(t0: SedEditPermissionRequestProps & { con
   const {
     oldContent,
     fileExists
-  } = use(contentPromise);
+  } = use(contentPromise) as { oldContent: string; fileExists: boolean };
   let t1;
   if ($[4] !== oldContent || $[5] !== sedInfo) {
     t1 = applySedSubstitution(oldContent, sedInfo);
@@ -116,12 +116,12 @@ function SedEditPermissionRequestInner(t0: SedEditPermissionRequestProps & { con
   let t2;
   bb0: {
     if (oldContent === newContent) {
-      let t3;
+      let t3: unknown[];
       if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
         t3 = [];
         $[7] = t3;
       } else {
-        t3 = $[7];
+        t3 = $[7] as unknown[];
       }
       t2 = t3;
       break bb0;
