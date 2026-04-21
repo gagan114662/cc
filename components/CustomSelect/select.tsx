@@ -390,13 +390,13 @@ export function Select<T>(t0: SelectProps<T>) {
               return <SelectInputOption key={String(option_1.value)} option={option_1} isFocused={isFocused} isSelected={isSelected} shouldShowDownArrow={areMoreOptionsBelow && isLastVisibleOption} shouldShowUpArrow={areMoreOptionsAbove && isFirstVisibleOption} maxIndexWidth={maxIndexWidth} index={i} inputValue={inputValue} onInputChange={(value: string) => {
                 setInputValues((prev_0: Map<T, string>) => {
                   const next_0 = new Map(prev_0);
-                  next_0.set(option_1.value, value);
+                  next_0.set(option_1.value as T, value);
                   return next_0;
                 });
               }} onSubmit={(value_0: string) => {
                 const hasImageAttachments = pastedContents && Object.values(pastedContents).some(_temp5);
                 if (value_0.trim() || hasImageAttachments || option_1.allowEmptySubmitToCancel) {
-                  onChange?.(option_1.value);
+                  onChange?.(option_1.value as T);
                 } else {
                   onCancel?.();
                 }
@@ -438,13 +438,13 @@ export function Select<T>(t0: SelectProps<T>) {
               return <SelectInputOption key={String(option_2.value)} option={option_2} isFocused={isFocused_0} isSelected={isSelected_0} shouldShowDownArrow={areMoreOptionsBelow_0 && isLastVisibleOption_0} shouldShowUpArrow={areMoreOptionsAbove_0 && isFirstVisibleOption_0} maxIndexWidth={maxIndexWidth_0} index={i_0} inputValue={inputValue_0} onInputChange={(value_1: string) => {
                 setInputValues((prev_1: Map<T, string>) => {
                   const next_1 = new Map(prev_1);
-                  next_1.set(option_2.value, value_1);
+                  next_1.set(option_2.value as T, value_1);
                   return next_1;
                 });
               }} onSubmit={(value_2: string) => {
                 const hasImageAttachments_0 = pastedContents && Object.values(pastedContents).some(_temp6);
                 if (value_2.trim() || hasImageAttachments_0 || option_2.allowEmptySubmitToCancel) {
-                  onChange?.(option_2.value);
+                  onChange?.(option_2.value as T);
                 } else {
                   onCancel?.();
                 }
@@ -517,7 +517,7 @@ export function Select<T>(t0: SelectProps<T>) {
         } else {
           t19 = $[63];
         }
-        const maxLabelWidth = Math.max(...optionData.map(t19));
+        const maxLabelWidth = Math.max(...(optionData.map(t19 as never) as number[]));
         let t20;
         if ($[64] !== hideIndexes || $[65] !== maxIndexWidth_1 || $[66] !== maxLabelWidth) {
           t20 = (data_0: OptionDataRow<T>) => {
@@ -556,13 +556,13 @@ export function Select<T>(t0: SelectProps<T>) {
           return <SelectInputOption key={String(option_4.value)} option={option_4} isFocused={isFocused_2} isSelected={isSelected_2} shouldShowDownArrow={areMoreOptionsBelow_2 && isLastVisibleOption_2} shouldShowUpArrow={areMoreOptionsAbove_2 && isFirstVisibleOption_2} maxIndexWidth={maxIndexWidth_1} index={i_2} inputValue={inputValue_1} onInputChange={(value_3: string) => {
             setInputValues((prev_2: Map<T, string>) => {
               const next_2 = new Map(prev_2);
-              next_2.set(option_4.value, value_3);
+              next_2.set(option_4.value as T, value_3);
               return next_2;
             });
           }} onSubmit={(value_4: string) => {
             const hasImageAttachments_1 = pastedContents && Object.values(pastedContents).some(_temp9);
             if (value_4.trim() || hasImageAttachments_1 || option_4.allowEmptySubmitToCancel) {
-              onChange?.(option_4.value);
+              onChange?.(option_4.value as T);
             } else {
               onCancel?.();
             }
