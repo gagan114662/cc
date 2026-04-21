@@ -99,8 +99,26 @@ declare module '@ant/computer-use-input' {
 }
 
 declare module '@anthropic-ai/mcpb' {
-  export type McpbManifest = Record<string, unknown>
-  export type McpbUserConfigurationOption = Record<string, unknown>
+  export type McpbManifest = {
+    name?: string
+    version?: string
+    author?: { name?: string; [key: string]: unknown }
+    server?: { type?: string; entry_point?: string; [key: string]: unknown }
+    user_config?: Record<string, McpbUserConfigurationOption>
+    [key: string]: unknown
+  }
+  export type McpbUserConfigurationOption = {
+    type: 'string' | 'number' | 'boolean' | 'directory' | 'file'
+    title: string
+    description: string
+    required?: boolean
+    default?: string | number | boolean | string[]
+    multiple?: boolean
+    sensitive?: boolean
+    min?: number
+    max?: number
+    [key: string]: unknown
+  }
   export const McpbManifestSchema: {
     parse: (value: unknown) => unknown
   }

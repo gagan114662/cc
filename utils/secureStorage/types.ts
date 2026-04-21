@@ -33,6 +33,7 @@ export type McpOAuthClientConfig = {
 export type SecureStorageData = {
   mcpOAuth?: Record<string, McpOAuthTokenData | undefined>
   mcpOAuthClientConfig?: Record<string, McpOAuthClientConfig | undefined>
+  pluginSecrets?: Record<string, Record<string, unknown> | undefined>
   [key: string]: unknown
 }
 

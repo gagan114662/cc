@@ -1,5 +1,6 @@
 import { c as _c } from "react/compiler-runtime";
 import { feature } from 'bun:bundle';
+// @ts-expect-error -- asciichart ships no types in this build
 import { plot as asciichart } from 'asciichart';
 import chalk from 'chalk';
 import figures from 'figures';
@@ -125,17 +126,17 @@ function StatsContent(t0: StatsContentProps) {
     onClose
   } = t0;
   const allTimeResult = use(allTimePromise);
-  const [dateRange, setDateRange] = useState("all");
-  let t1;
+  const [dateRange, setDateRange] = useState<StatsDateRange>("all");
+  let t1: Partial<Record<StatsDateRange, ClaudeCodeStats>>;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = {};
     $[0] = t1;
   } else {
     t1 = $[0];
   }
-  const [statsCache, setStatsCache] = useState(t1);
+  const [statsCache, setStatsCache] = useState<Partial<Record<StatsDateRange, ClaudeCodeStats>>>(t1);
   const [isLoadingFiltered, setIsLoadingFiltered] = useState(false);
-  const [activeTab, setActiveTab] = useState("Overview");
+  const [activeTab, setActiveTab] = useState<'Overview' | 'Models'>("Overview");
   const [copyStatus, setCopyStatus] = useState<any>(null);
   let t2;
   let t3;
@@ -151,7 +152,7 @@ function StatsContent(t0: StatsContentProps) {
       setIsLoadingFiltered(true);
       aggregateClaudeCodeStatsForRange(dateRange).then(data => {
         if (!cancelled) {
-          setStatsCache((prev: unknown) => ({
+          setStatsCache((prev) => ({
             ...prev,
             [dateRange]: data
           }));
@@ -203,7 +204,7 @@ function StatsContent(t0: StatsContentProps) {
   useKeybinding("confirm:no", handleClose, t5);
   let t6;
   if ($[8] !== activeTab || $[9] !== dateRange || $[10] !== displayStats || $[11] !== onClose) {
-    t6 = (input: any, key: unknown) => {
+    t6 = (input: any, key: { ctrl?: boolean; meta?: boolean; tab?: boolean }) => {
       if (key.ctrl && (input === "c" || input === "d")) {
         onClose("Stats dialog dismissed", {
           display: "system"
@@ -728,7 +729,7 @@ function ModelsTab(t0: any) {
   const {
     columns: terminalWidth
   } = useTerminalSize();
-  const modelEntries = Object.entries(stats.modelUsage).sort(_temp7);
+  const modelEntries = (Object.entries(stats.modelUsage) as ModelUsageEntry[]).sort(_temp7);
   const t1 = !headerFocused;
   let t2;
   if ($[0] !== t1) {
@@ -816,18 +817,19 @@ function ModelsTab(t0: any) {
 function _temp1(item: any, i: number) {
   return <Text key={item.model}>{i > 0 ? " \xB7 " : ""}<Ansi>{item.coloredBullet}</Ansi> {item.model}</Text>;
 }
-function _temp0(t0: ModelEntryProps) {
+type ModelUsageEntry = [string, ModelEntryProps['usage']];
+function _temp0(t0: ModelUsageEntry) {
   const [model] = t0;
   return model;
 }
-function _temp9(sum: any, t0: ModelEntryProps) {
+function _temp9(sum: number, t0: ModelUsageEntry) {
   const [, usage] = t0;
   return sum + usage.inputTokens + usage.outputTokens;
 }
-function _temp8(prev_0: any) {
+function _temp8(prev_0: number) {
   return Math.max(prev_0 - 2, 0);
 }
-function _temp7(t0: ModelEntryProps, t1: unknown) {
+function _temp7(t0: ModelUsageEntry, t1: ModelUsageEntry) {
   const [, a] = t0;
   const [, b] = t1;
   return b.inputTokens + b.outputTokens - (a.inputTokens + a.outputTokens);
