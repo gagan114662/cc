@@ -38,6 +38,10 @@ export function activateProactive(_source: string): void {
   throw new Error('not implemented')
 }
 
+export function deactivateProactive(): void {
+  throw new Error('not implemented')
+}
+
 export function pauseProactive(): void {
   throw new Error('not implemented')
 }

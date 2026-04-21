@@ -2,6 +2,7 @@
 import { feature } from 'bun:bundle'
 import { readFile, stat } from 'fs/promises'
 import { dirname } from 'path'
+import type { QueuePriority } from '../types/textInputTypes.js'
 import {
   downloadUserSettings,
   redownloadUserSettings,
@@ -938,9 +939,9 @@ export async function runHeadless(
       message.type !== 'prompt_suggestion'
     ) {
       if (needsFullArray) {
-        messages.push(message)
+        messages.push(message as unknown as SDKMessage)
       }
-      lastMessage = message
+      lastMessage = message as unknown as SDKMessage
     }
   }
 
@@ -1104,7 +1105,7 @@ function runHeadlessStreaming(
         permissionMode: newMode as PermissionMode,
         uuid: randomUUID(),
         session_id: getSessionId(),
-      })
+      } as SDKMessage)
     }
   })
 
@@ -1726,7 +1727,7 @@ function runHeadlessStreaming(
         scope: connection.config.scope,
         tools: serverTools,
         capabilities,
-      }
+      } as unknown as McpServerStatus
     })
   }
 
@@ -2474,7 +2475,6 @@ function runHeadlessStreaming(
           duration_api_ms: 0,
           is_error: true,
           num_turns: 0,
-          stop_reason: null,
           session_id: getSessionId(),
           total_cost_usd: 0,
           usage: EMPTY_USAGE,
@@ -2967,7 +2967,7 @@ function runHeadlessStreaming(
               prev.toolPermissionContext,
               output,
             ),
-            isUltraplanMode: m.ultraplan ?? prev.isUltraplanMode,
+            isUltraplanMode: (m as { ultraplan?: boolean }).ultraplan ?? prev.isUltraplanMode,
           }))
           // handleSetPermissionMode sends the control_response; the
           // notifySessionMetadataChanged that used to follow here is
@@ -3559,7 +3559,7 @@ function runHeadlessStreaming(
           // both URLs and wait. Automatic URL → localhost listener catches
           // the redirect if the browser is on this host; manual URL → the
           // success page shows "code#state" for claude_oauth_callback.
-          const { loginWithClaudeAi } = message.request
+          const { loginWithClaudeAi } = message.request as { loginWithClaudeAi?: boolean }
 
           // Clean up any prior flow. cleanup() closes the localhost listener
           // and nulls the manual resolver. The prior `flow` promise is left
@@ -4078,7 +4078,7 @@ function runHeadlessStreaming(
       } else if (message.type === 'keep_alive') {
         // Silently ignore keep-alive messages
         continue
-      } else if (message.type === 'update_environment_variables') {
+      } else if ((message.type as string) === 'update_environment_variables') {
         // Handled in structuredIO.ts, but TypeScript needs the type guard
         continue
       } else if (message.type === 'assistant' || message.type === 'system') {
@@ -4147,7 +4147,7 @@ function runHeadlessStreaming(
         // Same-ref no-op when absent (no 'file_attachments' key).
         value: await resolveAndPrepend(message, message.message.content),
         uuid: message.uuid,
-        priority: message.priority,
+        priority: message.priority as QueuePriority | undefined,
       })
       // Increment prompt count for attribution tracking and save snapshot
       // The snapshot persists promptCount so it survives compaction
@@ -4401,8 +4401,8 @@ async function handleInitializeRequest(
         subtype: 'error',
         error: 'Already initialized',
         request_id: requestId,
-        pending_permission_requests:
-          structuredIO.getPendingPermissionRequests(),
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        pending_permission_requests: structuredIO.getPendingPermissionRequests() as any,
       },
     })
     return
@@ -4492,7 +4492,7 @@ async function handleInitializeRequest(
   if (request.jsonSchema) {
     setInitJsonSchema(request.jsonSchema)
   }
-  const initResponse: SDKControlInitializeResponse = {
+  const initResponse = {
     commands: commands
       .filter(cmd => cmd.userInvocable !== false)
       .map(cmd => ({
@@ -4525,10 +4525,8 @@ async function handleInitializeRequest(
 
   if (isFastModeEnabled() && isFastModeAvailable()) {
     const appState = getAppState()
-    initResponse.fast_mode_state = getFastModeState(
-      options.userSpecifiedModel ?? null,
-      appState.fastMode,
-    )
+    ;(initResponse as { fast_mode_state?: ReturnType<typeof getFastModeState> }).fast_mode_state =
+      getFastModeState(options.userSpecifiedModel ?? null, appState.fastMode)
   }
 
   output.enqueue({
@@ -4536,7 +4534,7 @@ async function handleInitializeRequest(
     response: {
       subtype: 'success',
       request_id: requestId,
-      response: initResponse,
+      response: initResponse as unknown as SDKControlInitializeResponse,
     },
   })
 
