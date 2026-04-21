@@ -158,13 +158,13 @@ export function CollapsedReadSearchContent({
 }: Props): React.ReactNode {
   const bg = useSelectedMessageBg();
   const {
-    searchCount: rawSearchCount,
-    readCount: rawReadCount,
-    listCount: rawListCount,
-    replCount,
-    memorySearchCount,
-    memoryReadCount,
-    memoryWriteCount,
+    searchCount: rawSearchCount = 0,
+    readCount: rawReadCount = 0,
+    listCount: rawListCount = 0,
+    replCount = 0,
+    memorySearchCount = 0,
+    memoryReadCount = 0,
+    memoryWriteCount = 0,
     messages: groupMessages
   } = message;
   const [theme] = useTheme();
@@ -232,7 +232,9 @@ export function CollapsedReadSearchContent({
       if (msg.type === 'assistant') {
         toolUses.push(msg);
       } else if (msg.type === 'grouped_tool_use') {
-        toolUses.push(...msg.messages);
+        for (const inner of msg.messages) {
+          if (inner.type === 'assistant') toolUses.push(inner);
+        }
       }
     }
     return <Box flexDirection="column">
@@ -288,9 +290,10 @@ export function CollapsedReadSearchContent({
       if (data?.type !== 'bash_progress' && data?.type !== 'powershell_progress') {
         continue;
       }
-      if (elapsed === undefined || data.elapsedTimeSeconds > elapsed) {
-        elapsed = data.elapsedTimeSeconds;
-        lines = data.totalLines;
+      const progress = data as { elapsedTimeSeconds: number; totalLines: number };
+      if (elapsed === undefined || progress.elapsedTimeSeconds > elapsed) {
+        elapsed = progress.elapsedTimeSeconds;
+        lines = progress.totalLines;
       }
     }
     if (elapsed !== undefined && elapsed >= 2) {
@@ -329,16 +332,16 @@ export function CollapsedReadSearchContent({
     pushPart('push', 'pushed to', <Text bold>{branches.join(', ')}</Text>);
   }
   if (isFullscreenEnvEnabled() && message.branches?.length) {
-    const byAction = {
+    const byAction: Record<string, string> = {
       merged: 'merged',
       rebased: 'rebased onto'
     };
     for (const b of message.branches) {
-      pushPart(`br-${b.action}-${b.ref}`, byAction[b.action], <Text bold>{b.ref}</Text>);
+      pushPart(`br-${b.action}-${b.ref}`, byAction[b.action] ?? b.action, <Text bold>{b.ref}</Text>);
     }
   }
   if (isFullscreenEnvEnabled() && message.prs?.length) {
-    const verbs = {
+    const verbs: Record<string, string> = {
       created: 'created',
       edited: 'edited',
       merged: 'merged',
@@ -347,7 +350,7 @@ export function CollapsedReadSearchContent({
       ready: 'marked ready'
     };
     for (const pr of message.prs) {
-      pushPart(`pr-${pr.action}-${pr.number}`, verbs[pr.action], pr.url ? <PrBadge number={pr.number} url={pr.url} bold /> : <Text bold>PR #{pr.number}</Text>);
+      pushPart(`pr-${pr.action}-${pr.number}`, verbs[pr.action] ?? pr.action, pr.url ? <PrBadge number={pr.number} url={pr.url} bold /> : <Text bold>PR #{pr.number}</Text>);
     }
   }
   if (searchCount > 0) {
@@ -467,7 +470,7 @@ export function CollapsedReadSearchContent({
           {isActiveGroup && <Text key="ellipsis">…</Text>} <CtrlOToExpand />
         </Text>
       </Box>
-      {isActiveGroup && displayedHint !== undefined &&
+      {isActiveGroup && displayedHint != null &&
     // Row layout: 5-wide gutter for ⎿, then a flex column for the text.
     // Ink's wrap stays inside the right column so continuation lines
     // indent under ⎿. MAX_HINT_CHARS in commandAsHint caps total at ~5 lines.

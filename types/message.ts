@@ -369,20 +369,20 @@ export type CollapsedReadSearchGroup = {
   teamMemoryReadCount?: number
   teamMemoryWriteCount?: number
   readFilePaths?: string[]
-  searchArgs?: unknown[]
-  latestDisplayHint?: unknown
+  searchArgs?: string[]
+  latestDisplayHint?: string
   displayMessage?: AssistantMessage | UserMessage | GroupedToolUseMessage
   mcpCallCount?: number
   mcpServerNames?: string[]
   bashCount?: number
   gitOpBashCount?: number
-  commits?: unknown[]
-  pushes?: unknown[]
-  branches?: unknown[]
-  prs?: unknown[]
+  commits?: Array<{ kind: string; sha: string }>
+  pushes?: Array<{ branch: string }>
+  branches?: Array<{ action: string; ref: string }>
+  prs?: Array<{ action: string; number: number; url?: string }>
   hookCount?: number
   hookTotalMs?: number
-  hookInfos?: unknown[]
+  hookInfos?: Array<{ command: string; durationMs?: number }>
 }
 
 export type RenderableMessage =
