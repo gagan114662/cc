@@ -84,7 +84,7 @@ export function PreflightStep(t0: PreflightStepProps) {
   const [isChecking, setIsChecking] = useState(true);
   const showSpinner = useTimeout(1000) && isChecking;
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       const run = async function run() {
@@ -99,7 +99,7 @@ export function PreflightStep(t0: PreflightStepProps) {
     $[1] = t2;
   } else {
     t1 = $[0];
-    t2 = $[1];
+    t2 = $[1] as React.DependencyList;
   }
   useEffect(t1, t2);
   let t3;

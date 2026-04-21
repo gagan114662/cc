@@ -24,7 +24,7 @@ export function It2SetupPrompt(t0: Props) {
   const [error, setError] = useState<any>(null);
   const exitState = useExitOnCtrlCDWithKeybindings();
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       detectPythonPackageManager().then(pm => {
@@ -36,7 +36,7 @@ export function It2SetupPrompt(t0: Props) {
     $[1] = t2;
   } else {
     t1 = $[0];
-    t2 = $[1];
+    t2 = $[1] as React.DependencyList;
   }
   useEffect(t1, t2);
   let t3;

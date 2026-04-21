@@ -107,7 +107,7 @@ function processBlock(
   const tokens = countTokens(jsonStringify(block))
   stats.total += tokens
 
-  switch (block.type) {
+  switch (block.type as string) {
     case 'text':
       // Check if this is a local command output
       if (

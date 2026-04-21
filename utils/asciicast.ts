@@ -204,9 +204,9 @@ export function installAsciicastRecorder(): void {
 
     // Pass through to the real stdout
     if (typeof encodingOrCb === 'function') {
-      return originalWrite(chunk, encodingOrCb)
+      return (originalWrite as (...args: unknown[]) => boolean)(chunk, encodingOrCb)
     }
-    return originalWrite(chunk, encodingOrCb, cb)
+    return (originalWrite as (...args: unknown[]) => boolean)(chunk, encodingOrCb, cb)
   } as typeof process.stdout.write
 
   // Handle terminal resize events
