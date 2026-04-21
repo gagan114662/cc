@@ -39,7 +39,11 @@ function hasResourcePrefix(
 }
 
 function isTextResourceContent(value: unknown): value is TextResourceContent {
-  return !!value && typeof value === 'object' && typeof value.text === 'string'
+  return (
+    !!value &&
+    typeof value === 'object' &&
+    typeof (value as { text?: unknown }).text === 'string'
+  )
 }
 
 function normalizeSkillSegments(parts: string[]): string[] {
@@ -77,7 +81,7 @@ function getResourceSlug(
 
 function getResourceContents(value: unknown): unknown[] {
   if (!value || typeof value !== 'object') return []
-  const contents = value.contents
+  const contents = (value as { contents?: unknown }).contents
   return Array.isArray(contents) ? contents : []
 }
 
@@ -136,9 +140,9 @@ function buildMcpResourceCommand(
     return decorateWorkflowPromptCommand({
       ...command,
       kind: 'workflow',
-      context: command.context ?? 'fork',
+      context: (command as { context?: string }).context ?? 'fork',
       progressMessage: 'running workflow',
-    })
+    } as never)
   }
 
   return command
