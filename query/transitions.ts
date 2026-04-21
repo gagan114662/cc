@@ -6,7 +6,7 @@
  * Shape kept generic so union narrowing at call sites stays permissive.
  */
 export type Continue = {
-  readonly kind: string
+  readonly kind?: string
   readonly reason?: string
   [key: string]: unknown
 }
@@ -16,7 +16,7 @@ export type Continue = {
  * treat it as an opaque return value.
  */
 export type Terminal = {
-  readonly kind: 'terminal' | string
+  readonly kind?: 'terminal' | string
   readonly reason?: string
   [key: string]: unknown
 }

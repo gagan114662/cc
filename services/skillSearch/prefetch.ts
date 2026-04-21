@@ -9,7 +9,7 @@ export function startSkillDiscoveryPrefetch(..._args: unknown[]): unknown {
 
 export async function collectSkillDiscoveryPrefetch(
   ..._args: unknown[]
-): Promise<unknown> {
+): Promise<unknown[]> {
   throw new Error(
     'collectSkillDiscoveryPrefetch: not implemented in external build',
   )

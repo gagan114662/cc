@@ -13,9 +13,11 @@ export function isWithheldMediaSizeError(..._args: unknown[]): boolean {
   return false
 }
 
+import type { CompactionResult } from './compact.js'
+
 export async function tryReactiveCompact(
   ..._args: unknown[]
-): Promise<unknown> {
+): Promise<CompactionResult> {
   throw new Error('tryReactiveCompact: not implemented in external build')
 }
 
