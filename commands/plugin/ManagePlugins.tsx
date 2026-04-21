@@ -39,6 +39,7 @@ import { isMcpbSource, loadMcpbFile, type McpbNeedsConfigResult, type UserConfig
 import { getPluginDataDirSize, pluginDataDirPath } from '../../utils/plugins/pluginDirectories.js';
 import { getFlaggedPlugins, markFlaggedPluginsSeen, removeFlaggedPlugin } from '../../utils/plugins/pluginFlagging.js';
 import { type PersistablePluginScope, parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js';
+import type { PluginScope } from '../../utils/plugins/schemas.js';
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js';
 import { loadPluginOptions, type PluginOptionSchema, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js';
 import { isPluginBlockedByPolicy } from '../../utils/plugins/pluginPolicy.js';
@@ -51,7 +52,7 @@ import { PluginOptionsDialog } from './PluginOptionsDialog.js';
 import { PluginOptionsFlow } from './PluginOptionsFlow.js';
 import type { ViewState as ParentViewState } from './types.js';
 import { UnifiedInstalledCell } from './UnifiedInstalledCell.js';
-import type { UnifiedInstalledItem } from './unifiedTypes.js';
+import type { UnifiedInstalledItem, UnifiedInstalledScope } from './unifiedTypes.js';
 import { usePagination } from './usePagination.js';
 type Props = {
   setViewState: (state: ParentViewState) => void;
@@ -65,17 +66,17 @@ type Props = {
 type FlaggedPluginInfo = {
   id: string;
   name: string;
-  marketplace: string;
+  marketplace?: string;
   reason: string;
   text: string;
-  flaggedAt: string;
+  flaggedAt?: string | number;
 };
 type FailedPluginInfo = {
   id: string;
   name: string;
-  marketplace: string;
+  marketplace?: string;
   errors: PluginError[];
-  scope: PersistablePluginScope;
+  scope: PersistablePluginScope | UnifiedInstalledScope;
 };
 type ViewState = 'plugin-list' | 'plugin-details' | 'configuring' | {
   type: 'plugin-options';
@@ -1169,7 +1170,7 @@ export function ManagePlugins({
       const isEnabled_0 = mergedSettings_0?.enabledPlugins?.[pluginId_4] !== false;
       const pluginScope_0 = item_7.scope;
       const isBuiltin_0 = pluginScope_0 === 'builtin';
-      if (isBuiltin_0 || isInstallableScope(pluginScope_0)) {
+      if (isBuiltin_0 || isInstallableScope(pluginScope_0 as PluginScope)) {
         const newPending = new Map(pendingToggles);
         // Omit scope — see handleSingleOperation's enable/disable comment.
         if (currentPending) {
@@ -1461,7 +1462,7 @@ export function ManagePlugins({
           // is a recovery path for a plugin that failed to load — it may
           // be reinstallable, so don't nuke ${CLAUDE_PLUGIN_DATA} silently.
           // The normal uninstall path prompts; this one preserves.
-          const result_2 = isInstallableScope(pluginScope_1) ? await uninstallPluginOp(pluginId_7, pluginScope_1, false) : await uninstallPluginOp(pluginId_7, 'user', false);
+          const result_2 = isInstallableScope(pluginScope_1 as PluginScope) ? await uninstallPluginOp(pluginId_7, pluginScope_1 as PluginScope, false) : await uninstallPluginOp(pluginId_7, 'user', false);
           let success = result_2.success;
           if (!success) {
             // Plugin was never installed (only in enabledPlugins settings).
@@ -1741,7 +1742,7 @@ export function ManagePlugins({
           </Text>
           <Text>{fp.text}</Text>
           <Text dimColor>
-            Flagged on {new Date(fp.flaggedAt).toLocaleDateString()}
+            Flagged on {fp.flaggedAt !== undefined ? new Date(fp.flaggedAt).toLocaleDateString() : 'unknown'}
           </Text>
         </Box>
 

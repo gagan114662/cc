@@ -1,4 +1,4 @@
-import type { ConfigScope } from '../../entrypoints/sdk/coreTypes.js'
+import type { ConfigScope } from '../../services/mcp/types.js'
 
 type ClientState =
   | { type: 'disabled' }
@@ -20,7 +20,7 @@ type RemoteConfig =
   | { type: 'sse'; url: string; oauth?: Record<string, unknown> }
   | { type: 'http'; url: string; oauth?: Record<string, unknown> }
   | {
-      type: 'claude-ai'
+      type: 'claudeai-proxy'
       url: string
       oauth?: Record<string, unknown>
       id?: string
@@ -31,8 +31,8 @@ export type SSEServerInfo = {
   scope: ConfigScope
   transport: 'sse'
   client: ClientState
-  config: Extract<RemoteConfig, { type: 'sse' }>
-  isAuthenticated: boolean
+  config: { type?: 'sse'; url?: string; oauth?: Record<string, unknown>; [key: string]: unknown }
+  isAuthenticated?: boolean
 }
 
 export type HTTPServerInfo = {
@@ -40,17 +40,17 @@ export type HTTPServerInfo = {
   scope: ConfigScope
   transport: 'http'
   client: ClientState
-  config: Extract<RemoteConfig, { type: 'http' }>
-  isAuthenticated: boolean
+  config: { type?: 'http'; url?: string; oauth?: Record<string, unknown>; [key: string]: unknown }
+  isAuthenticated?: boolean
 }
 
 export type ClaudeAIServerInfo = {
   name: string
   scope: ConfigScope
-  transport: 'claude-ai'
+  transport: 'claudeai-proxy'
   client: ClientState
-  config: Extract<RemoteConfig, { type: 'claude-ai' }>
-  isAuthenticated: boolean
+  config: { type?: 'claudeai-proxy'; url?: string; oauth?: Record<string, unknown>; id?: string; [key: string]: unknown }
+  isAuthenticated?: boolean
 }
 
 export type AgentMcpServerInfo = {

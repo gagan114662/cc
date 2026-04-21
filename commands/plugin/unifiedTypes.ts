@@ -19,6 +19,7 @@ export type UnifiedInstalledScope =
   | 'enterprise'
   | 'dynamic'
   | 'flagged'
+  | 'claudeai'
 
 export type UnifiedInstalledPluginItem = {
   type: 'plugin'
@@ -56,7 +57,7 @@ export type UnifiedInstalledFlaggedPluginItem = {
   // from a single construction site in ManagePlugins.tsx.
   reason: 'delisted'
   text: string
-  flaggedAt?: number
+  flaggedAt?: number | string
 }
 
 export type UnifiedInstalledMcpItem = {
