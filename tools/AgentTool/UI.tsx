@@ -99,7 +99,7 @@ type ProcessedMessage = {
  */
 function processProgressMessages(messages: ProgressMessage<Progress>[], tools: Tools, isAgentRunning: boolean): ProcessedMessage[] {
   // Only process for ants
-  if ("external" !== 'ant') {
+  if (("external" as string) !== 'ant') {
     return messages.filter((m): m is ProgressMessage<AgentToolProgress> => hasProgressMessage(m.data) && m.data.message.type !== 'user').map(m => ({
       type: 'original',
       message: m
@@ -181,7 +181,7 @@ function processProgressMessages(messages: ProgressMessage<Progress>[], tools: T
 const ESTIMATED_LINES_PER_TOOL = 9;
 const TERMINAL_BUFFER_LINES = 7;
 type Output = z.input<ReturnType<typeof outputSchema>>;
-export function AgentPromptDisplay(t0: { prompt: string; dim?: boolean }) {
+export function AgentPromptDisplay(t0: { prompt: string; dim?: boolean; theme?: string }) {
   const $ = _c(3);
   const {
     prompt,
@@ -205,7 +205,7 @@ export function AgentPromptDisplay(t0: { prompt: string; dim?: boolean }) {
   }
   return t3;
 }
-export function AgentResponseDisplay(t0: { content: Array<{ text: string }> }) {
+export function AgentResponseDisplay(t0: { content: Array<{ text: string }>; theme?: string }) {
   const $ = _c(5);
   const {
     content
@@ -252,7 +252,7 @@ function VerboseAgentTranscript(t0: VerboseAgentTranscriptProps) {
   } = t0;
   let t1;
   if ($[0] !== progressMessages) {
-    t1 = buildSubagentLookups(progressMessages.filter(_temp2).map(_temp3));
+    t1 = buildSubagentLookups(progressMessages.filter(_temp2).map(_temp3 as never));
     $[0] = progressMessages;
     $[1] = t1;
   } else {
@@ -382,7 +382,7 @@ export function renderToolResultMessage(data: Output, progressMessagesForMessage
       inference_geo: null,
       iterations: null,
       speed: null
-    }
+    } as never
   });
   return <Box flexDirection="column">
       {("external" as string) === 'ant' && <MessageResponse>
