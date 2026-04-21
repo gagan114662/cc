@@ -26,6 +26,7 @@ export type OAuthProfileResponse = {
     has_extra_usage_enabled?: boolean
     billing_type?: BillingType
     subscription_created_at?: string
+    rate_limit_tier?: RateLimitTier
   }
   account?: {
     uuid?: string

@@ -497,16 +497,16 @@ export async function populateOAuthAccountInfoIfNeeded(): Promise<boolean> {
         )
       }
       storeOAuthAccountInfo({
-        accountUuid: profile.account.uuid,
-        emailAddress: profile.account.email,
-        organizationUuid: profile.organization.uuid,
-        displayName: profile.account.display_name || undefined,
+        accountUuid: profile.account?.uuid ?? '',
+        emailAddress: profile.account?.email ?? '',
+        organizationUuid: profile.organization?.uuid,
+        displayName: profile.account?.display_name || undefined,
         hasExtraUsageEnabled:
-          profile.organization.has_extra_usage_enabled ?? false,
-        billingType: profile.organization.billing_type ?? undefined,
-        accountCreatedAt: profile.account.created_at,
+          profile.organization?.has_extra_usage_enabled ?? false,
+        billingType: profile.organization?.billing_type ?? undefined,
+        accountCreatedAt: profile.account?.created_at,
         subscriptionCreatedAt:
-          profile.organization.subscription_created_at ?? undefined,
+          profile.organization?.subscription_created_at ?? undefined,
       })
       return true
     }
