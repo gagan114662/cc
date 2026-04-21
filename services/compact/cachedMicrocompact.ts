@@ -11,13 +11,40 @@ export type PinnedCacheEdits = {
 export type CachedMCState = {
   pinnedEdits: PinnedCacheEdits[]
   sentToolUseIds: Set<string>
+  registeredTools: Set<string>
+  toolOrder: string[]
+  deletedRefs: Set<string>
 }
 
 export function createCachedMCState(): CachedMCState {
   return {
     pinnedEdits: [],
     sentToolUseIds: new Set(),
+    registeredTools: new Set(),
+    toolOrder: [],
+    deletedRefs: new Set(),
   }
+}
+
+export function registerToolResult(
+  _state: CachedMCState,
+  _toolUseId: string,
+): void {}
+
+export function registerToolMessage(
+  _state: CachedMCState,
+  _toolUseIds: string[],
+): void {}
+
+export function getToolResultsToDelete(_state: CachedMCState): string[] {
+  return []
+}
+
+export function createCacheEditsBlock(
+  _state: CachedMCState,
+  _toolUseIds: string[],
+): CacheEditsBlock | null {
+  return null
 }
 
 export function markToolsSentToAPI(state: CachedMCState): void {
@@ -44,8 +71,12 @@ export function isModelSupportedForCacheEditing(_model: string): boolean {
   return false
 }
 
-export function getCachedMCConfig(): { supportedModels: string[] } {
-  return { supportedModels: [] }
+export function getCachedMCConfig(): {
+  supportedModels: string[]
+  triggerThreshold: number
+  keepRecent: number
+} {
+  return { supportedModels: [], triggerThreshold: 0, keepRecent: 0 }
 }
 
 export type CachedMCEditsBlock = CacheEditsBlock
