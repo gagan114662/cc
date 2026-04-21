@@ -40,6 +40,7 @@ export type UserMessage = {
   mcpMeta?: unknown
   imagePasteIds?: string[]
   sourceToolAssistantUUID?: string
+  sourceToolUseID?: string
   permissionMode?: PermissionMode
   origin?: MessageOrigin
 }
@@ -89,8 +90,13 @@ export type CompactMetadata = {
   trigger: 'auto' | 'manual' | 'microcompact' | string
   preTokens: number
   userContext?: string
-  messagesSummarized: number
+  messagesSummarized?: number
   preCompactDiscoveredTools?: string[]
+  preservedSegment?: {
+    headUuid: string
+    anchorUuid: string
+    tailUuid: string
+  }
 }
 
 export type SystemCompactBoundaryMessage = SystemMessageBase & {
@@ -100,10 +106,19 @@ export type SystemCompactBoundaryMessage = SystemMessageBase & {
   logicalParentUuid?: string
 }
 
+export type MicrocompactMetadata = {
+  trigger?: string
+  preTokens?: number
+  tokensSaved?: number
+  compactedToolIds?: string[]
+  clearedAttachmentUUIDs?: string[]
+}
+
 export type SystemMicrocompactBoundaryMessage = SystemMessageBase & {
   subtype: 'microcompact_boundary'
   content?: string
   compactMetadata?: CompactMetadata
+  microcompactMetadata?: MicrocompactMetadata
   logicalParentUuid?: string
 }
 
@@ -122,7 +137,7 @@ export type SystemTurnDurationMessage = SystemMessageBase & {
   budgetTokens?: number
   budgetLimit?: number
   budgetNudges?: number
-  messageCount: number
+  messageCount?: number
 }
 
 export type SystemMemorySavedMessage = SystemMessageBase & {
@@ -147,6 +162,8 @@ export type SystemThinkingMessage = SystemMessageBase & {
 export type SystemBridgeStatusMessage = SystemMessageBase & {
   subtype: 'bridge_status'
   content?: string
+  url?: string
+  upgradeNudge?: string
 }
 
 export type SystemScheduledTaskFireMessage = SystemMessageBase & {
@@ -193,6 +210,17 @@ export type SystemFileSnapshotMessage = SystemMessageBase & {
 export type SystemApiMetricsMessage = SystemMessageBase & {
   subtype: 'api_metrics'
   content?: string
+  ttftMs?: number
+  otps?: number
+  isP50?: boolean
+  hookDurationMs?: number
+  turnDurationMs?: number
+  toolDurationMs?: number
+  classifierDurationMs?: number
+  toolCount?: number
+  hookCount?: number
+  classifierCount?: number
+  configWriteCount?: number
 }
 
 export type SystemMessage =
@@ -231,9 +259,7 @@ export type ProgressMessage<P = Record<string, unknown>> = {
   timestamp: string
   toolUseID: string
   parentToolUseID?: string
-  data: {
-    message: UserMessage | AssistantMessage
-  } & P
+  data: P & { message?: UserMessage | AssistantMessage }
 }
 
 export type TombstoneMessage = {
@@ -254,6 +280,13 @@ export type ToolUseSummaryMessage = {
 export type StreamEvent = {
   type: 'stream_event'
   event: BetaRawMessageStreamEvent
+  uuid?: string
+  timestamp?: string
+  ttftMs?: number
+}
+
+export type StreamRequestStartMessage = {
+  type: 'stream_request_start'
   uuid?: string
   timestamp?: string
 }
@@ -280,6 +313,7 @@ export type Message =
   | TombstoneMessage
   | ToolUseSummaryMessage
   | StreamEvent
+  | StreamRequestStartMessage
 
 // ---------------------------------------------------------------------------
 // Normalized variants — post-normalization, message.content is always an array.
