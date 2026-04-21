@@ -92,7 +92,15 @@ function renderColorDiff(patch: StructuredPatchHunk, firstLine: string | null, f
   perHunk.set(key, entry);
   return entry;
 }
-export const StructuredDiff = memo(function StructuredDiff(t0) {
+export const StructuredDiff = memo(function StructuredDiff(t0: {
+  patch: unknown;
+  dim?: boolean;
+  filePath: string;
+  firstLine: string | null;
+  fileContent?: string | null;
+  width: number;
+  skipHighlighting?: boolean;
+}) {
   const $ = _c(26);
   const {
     patch,
@@ -111,7 +119,7 @@ export const StructuredDiff = memo(function StructuredDiff(t0) {
   let t2;
   if ($[0] !== dim || $[1] !== fileContent || $[2] !== filePath || $[3] !== firstLine || $[4] !== patch || $[5] !== safeWidth || $[6] !== skipHighlighting || $[7] !== syntaxHighlightingDisabled || $[8] !== theme) {
     const splitGutter = isFullscreenEnvEnabled();
-    t2 = skipHighlighting || syntaxHighlightingDisabled ? null : renderColorDiff(patch, firstLine, filePath, fileContent ?? null, theme, safeWidth, dim, splitGutter);
+    t2 = skipHighlighting || syntaxHighlightingDisabled ? null : renderColorDiff(patch as never, firstLine, filePath, fileContent ?? null, theme, safeWidth, dim ?? false, splitGutter);
     $[0] = dim;
     $[1] = fileContent;
     $[2] = filePath;
@@ -129,7 +137,7 @@ export const StructuredDiff = memo(function StructuredDiff(t0) {
   if (!cached) {
     let t3;
     if ($[10] !== dim || $[11] !== patch || $[12] !== width) {
-      t3 = <Box><StructuredDiffFallback patch={patch} dim={dim} width={width} /></Box>;
+      t3 = <Box><StructuredDiffFallback patch={patch as never} dim={dim ?? false} width={width} /></Box>;
       $[10] = dim;
       $[11] = patch;
       $[12] = width;
