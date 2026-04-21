@@ -35,42 +35,42 @@ export async function registerDeterministicHarnessHooks(): Promise<void> {
       type: 'callback',
       internal: true,
       timeout: 2,
-      callback: input => controller.handleSessionStart(input),
+      callback: input => controller.handleSessionStart(input as never),
     }
 
     const userPromptHook: HookCallback = {
       type: 'callback',
       internal: true,
       timeout: 2,
-      callback: input => controller.handleUserPromptSubmit(input),
+      callback: input => controller.handleUserPromptSubmit(input as never),
     }
 
     const preToolHook: HookCallback = {
       type: 'callback',
       internal: true,
       timeout: 2,
-      callback: input => controller.handlePreToolUse(input),
+      callback: input => controller.handlePreToolUse(input as never),
     }
 
     const postToolHook: HookCallback = {
       type: 'callback',
       internal: true,
       timeout: 2,
-      callback: input => controller.handlePostToolUse(input),
+      callback: input => controller.handlePostToolUse(input as never),
     }
 
     const postToolFailureHook: HookCallback = {
       type: 'callback',
       internal: true,
       timeout: 2,
-      callback: input => controller.handlePostToolUseFailure(input),
+      callback: input => controller.handlePostToolUseFailure(input as never),
     }
 
     const stopHook: HookCallback = {
       type: 'callback',
       internal: true,
       timeout: 3,
-      callback: input => controller.handleStop(input),
+      callback: input => controller.handleStop(input as never),
     }
 
     registerHookCallbacks({
