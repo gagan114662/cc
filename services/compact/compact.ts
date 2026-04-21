@@ -1,10 +1,13 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+type UUID = string
 import uniqBy from 'lodash-es/uniqBy.js'
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const sessionTranscriptModule = feature('KAIROS')
-  ? (require('../sessionTranscript/sessionTranscript.js') as typeof import('../sessionTranscript/sessionTranscript.js'))
+  ? (require('../sessionTranscript/sessionTranscript.js') as typeof import('../sessionTranscript/sessionTranscript.js') & {
+      writeSessionTranscriptSegment?: (messages: unknown) => Promise<void>
+      flushOnDateChange?: () => void
+    })
   : null
 
 import { APIUserAbortError } from '@anthropic-ai/sdk'
@@ -263,7 +266,7 @@ export function truncateHeadForPTLRetry(
     let acc = 0
     dropCount = 0
     for (const g of groups) {
-      acc += roughTokenCountEstimationForMessages(g)
+      acc += roughTokenCountEstimationForMessages(g as never)
       dropCount++
       if (acc >= tokenGap) break
     }
@@ -358,9 +361,9 @@ export function annotateBoundaryWithPreservedSegment(
     compactMetadata: {
       ...boundary.compactMetadata,
       preservedSegment: {
-        headUuid: keep[0]!.uuid,
+        headUuid: keep[0]!.uuid ?? '',
         anchorUuid,
-        tailUuid: keep.at(-1)!.uuid,
+        tailUuid: keep.at(-1)!.uuid ?? '',
       },
     },
   }
@@ -713,7 +716,7 @@ export async function compactConversation(
     // Write a reduced transcript segment for the pre-compaction messages
     // (assistant mode only). Fire-and-forget — errors are logged internally.
     if (feature('KAIROS')) {
-      void sessionTranscriptModule?.writeSessionTranscriptSegment(messages)
+      void sessionTranscriptModule?.writeSessionTranscriptSegment?.(messages as never)
     }
 
     context.onCompactProgress?.({
@@ -1057,7 +1060,7 @@ export async function partialCompactConversation(
     reAppendSessionMetadata()
 
     if (feature('KAIROS')) {
-      void sessionTranscriptModule?.writeSessionTranscriptSegment(
+      void sessionTranscriptModule?.writeSessionTranscriptSegment?.(
         messagesToSummarize,
       )
     }

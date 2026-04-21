@@ -341,7 +341,7 @@ function findFileSnapshotEntry(
       msg.subtype === 'file_snapshot' &&
       'snapshotFiles' in msg
     ) {
-      const files = msg.snapshotFiles as Array<{
+      const files = msg.snapshotFiles as unknown as Array<{
         key: string
         path: string
         content: string
@@ -371,7 +371,7 @@ export async function persistFileSnapshotIfRemote(): Promise<void> {
         key: 'plan',
         path: getPlanFilePath(),
         content: plan,
-      })
+      } as never)
     }
 
     if (snapshotFiles.length === 0) {

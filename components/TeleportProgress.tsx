@@ -27,7 +27,7 @@ const STEPS: {
   key: 'checking_out',
   label: 'Checking out branch'
 }];
-export function TeleportProgress(t0) {
+export function TeleportProgress(t0: Props) {
   const $ = _c(16);
   const {
     currentStep,
@@ -37,7 +37,7 @@ export function TeleportProgress(t0) {
   const frame = Math.floor(time / 100) % SPINNER_FRAMES.length;
   let t1;
   if ($[0] !== currentStep) {
-    t1 = s => s.key === currentStep;
+    t1 = (s: any) => s.key === currentStep;
     $[0] = currentStep;
     $[1] = t1;
   } else {

@@ -255,9 +255,10 @@ export function prepareMessagesForInjection(messages: Message[]): Message[] {
 
   return messages
     .map(msg => {
-      if (!('message' in msg) || !Array.isArray(msg.message.content)) return msg
-      const content = msg.message.content.filter(keep)
-      if (content.length === msg.message.content.length) return msg
+      if (!('message' in msg) || !Array.isArray((msg as { message: { content: unknown } }).message.content)) return msg
+      const m = (msg as { message: { content: { type: string; text?: string }[] } }).message
+      const content = m.content.filter(keep)
+      if (content.length === m.content.length) return msg
       if (content.length === 0) return null
       // Drop messages where all remaining blocks are whitespace-only text
       // (API rejects these with 400: "text content blocks must contain non-whitespace text")
@@ -266,7 +267,7 @@ export function prepareMessagesForInjection(messages: Message[]): Message[] {
           b.type !== 'text' || (b.text !== undefined && b.text.trim() !== ''),
       )
       if (!hasNonWhitespaceContent) return null
-      return { ...msg, message: { ...msg.message, content } } as typeof msg
+      return { ...msg, message: { ...m, content } } as typeof msg
     })
     .filter((m): m is Message => m !== null)
 }

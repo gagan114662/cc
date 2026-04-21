@@ -137,7 +137,7 @@ function getSystemRemindersSection(): string {
 function getAntModelOverrideSection(): string | null {
   if (process.env.USER_TYPE !== 'ant') return null
   if (isUndercover()) return null
-  return getAntModelOverrideConfig()?.defaultSystemPromptSuffix || null
+  return ((): { defaultSystemPromptSuffix?: string } | null => null)()?.defaultSystemPromptSuffix || null
 }
 
 function getLanguageSection(
@@ -860,8 +860,8 @@ function getFunctionResultClearingSection(model: string): string | null {
   if (!feature('CACHED_MICROCOMPACT') || !getCachedMCConfigForFRC) {
     return null
   }
-  const config = getCachedMCConfigForFRC()
-  const isModelSupported = config.supportedModels?.some(pattern =>
+  const config = getCachedMCConfigForFRC() as { supportedModels?: string[]; enabled?: boolean; systemPromptSuggestSummaries?: boolean; keepRecent?: number }
+  const isModelSupported = config.supportedModels?.some((pattern: string) =>
     model.includes(pattern),
   )
   if (

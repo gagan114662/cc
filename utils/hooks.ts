@@ -386,7 +386,7 @@ function validateHookJson(
   const validation = hookJSONOutputSchema().safeParse(parsed)
   if (validation.success) {
     logForDebugging('Successfully parsed and validated hook JSON output')
-    return { json: validation.data }
+    return { json: validation.data as HookJSONOutput }
   }
   const errors = validation.error.issues
     .map(err => `  - ${err.path.join('.')}: ${err.message}`)
@@ -462,7 +462,7 @@ function parseHttpHookOutput(body: string): {
       logForDebugging(
         'HTTP hook returned empty body, treating as empty JSON object',
       )
-      return { json: validation.data }
+      return { json: validation.data as HookJSONOutput }
     }
   }
 
@@ -657,7 +657,8 @@ function processHookJSONOutput({
       case 'PermissionRequest':
         // Extract the permission request decision
         if (json.hookSpecificOutput.decision) {
-          result.permissionRequestResult = json.hookSpecificOutput.decision
+          result.permissionRequestResult = json.hookSpecificOutput
+            .decision as PermissionRequestResult
           // Also update permissionBehavior for consistency
           result.permissionBehavior =
             json.hookSpecificOutput.decision.behavior === 'allow'
@@ -1625,7 +1626,7 @@ export async function getMatchingHooks(
         matchQuery = hookInput.source
         break
       case 'Setup':
-        matchQuery = hookInput.trigger
+        matchQuery = (hookInput as { trigger?: string }).trigger
         break
       case 'PreCompact':
       case 'PostCompact':
@@ -1644,7 +1645,7 @@ export async function getMatchingHooks(
         matchQuery = hookInput.agent_type
         break
       case 'SubagentStop':
-        matchQuery = hookInput.agent_type
+        matchQuery = (hookInput as { agent_type?: string }).agent_type
         break
       case 'TeammateIdle':
       case 'TaskCreated':
@@ -2111,7 +2112,7 @@ async function* executeHooks({
         toolUseID,
         timestamp: new Date().toISOString(),
         uuid: randomUUID(),
-      },
+      } as unknown as HookResultMessage,
     }
   }
 
@@ -2274,7 +2275,7 @@ async function* executeHooks({
           toolUseID,
           messages,
           'agent_type' in hookInput
-            ? (hookInput.agent_type)
+            ? (hookInput.agent_type as string | undefined)
             : undefined,
         )
         // Inject timing fields for hook visibility
@@ -3377,7 +3378,19 @@ async function executeHooksOutsideREPL({
   )
 
   // Wait for all hooks to complete and collect results
-  return await Promise.all(hookPromises)
+  const results = await Promise.all(hookPromises)
+  return results.map(r => ({
+    command: r.command,
+    succeeded: r.succeeded,
+    output: r.output ?? '',
+    blocked: r.blocked,
+    ...(('watchPaths' in r) && r.watchPaths !== undefined
+      ? { watchPaths: r.watchPaths }
+      : {}),
+    ...(('systemMessage' in r) && r.systemMessage !== undefined
+      ? { systemMessage: r.systemMessage }
+      : {}),
+  }))
 }
 
 /**
@@ -3546,7 +3559,7 @@ export async function* executePermissionDeniedHooks<ToolInput>(
     ...createBaseHookInput(permissionMode, undefined, toolUseContext),
     hook_event_name: 'PermissionDenied',
     tool_name: toolName,
-    tool_input: toolInput,
+    tool_input: toolInput as Record<string, unknown>,
     tool_use_id: toolUseID,
     reason,
   }
@@ -3609,7 +3622,8 @@ export async function executeStopFailureHooks(
   // Some createAssistantAPIErrorMessage call sites omit `error` (e.g.
   // image-size at errors.ts:431). Default to 'unknown' so matcher filtering
   // at getMatchingHooks:1525 always applies.
-  const error = lastMessage.error ?? 'unknown'
+  const error =
+    typeof lastMessage.error === 'string' ? lastMessage.error : 'unknown'
   const hookInput: StopFailureHookInput = {
     ...createBaseHookInput(undefined, undefined, toolUseContext),
     hook_event_name: 'StopFailure',
@@ -3668,7 +3682,7 @@ export async function* executeStopHooks(
     : undefined
 
   const hookInput: StopHookInput | SubagentStopHookInput = subagentId
-    ? {
+    ? ({
         ...createBaseHookInput(permissionMode),
         hook_event_name: 'SubagentStop',
         stop_hook_active: stopHookActive,
@@ -3676,13 +3690,13 @@ export async function* executeStopHooks(
         agent_transcript_path: getAgentTranscriptPath(subagentId),
         agent_type: agentType ?? '',
         last_assistant_message: lastAssistantText,
-      }
-    : {
+      } as unknown as SubagentStopHookInput)
+    : ({
         ...createBaseHookInput(permissionMode),
         hook_event_name: 'Stop',
         stop_hook_active: stopHookActive,
         last_assistant_message: lastAssistantText,
-      }
+      } as StopHookInput)
 
   // Trust check is now centralized in executeHooks()
   yield* executeHooks({
@@ -3877,9 +3891,9 @@ export async function* executeSessionStartHooks(
     ...createBaseHookInput(undefined, sessionId),
     hook_event_name: 'SessionStart',
     source,
-    agent_type: agentType,
-    model,
-  }
+    ...(agentType !== undefined ? { agent_type: agentType } : {}),
+    ...(model !== undefined ? { model } : {}),
+  } as SessionStartHookInput
 
   yield* executeHooks({
     hookInput,
@@ -4413,7 +4427,9 @@ function parseElicitationHookOutput(
   }
 
   try {
-    const parsed = hookJSONOutputSchema().parse(JSON.parse(trimmed))
+    const parsed = hookJSONOutputSchema().parse(
+      JSON.parse(trimmed),
+    ) as HookJSONOutput
     if (isAsyncHookJSONOutput(parsed)) {
       return {}
     }
@@ -4495,7 +4511,7 @@ export async function executeElicitationHooks({
     message,
     mode,
     url,
-    elicitation_id: elicitationId,
+    elicitation_id: elicitationId ?? '',
     requested_schema: requestedSchema,
   }
 
@@ -4545,7 +4561,7 @@ export async function executeElicitationResultHooks({
     ...createBaseHookInput(permissionMode),
     hook_event_name: 'ElicitationResult',
     mcp_server_name: serverName,
-    elicitation_id: elicitationId,
+    elicitation_id: elicitationId ?? '',
     mode,
     action,
     content,

@@ -258,6 +258,9 @@ type State = {
   // logAPISuccess to tag the first post-compaction API call so we can
   // distinguish compaction-induced cache misses from TTL expiry.
   pendingPostCompaction: boolean
+  // REPL bridge flag — populated for ant users (USER_TYPE === 'ant').
+  // When true, SendMessageTool delivers via the bridge (see getReplBridgeHandle).
+  replBridgeActive?: boolean
 }
 
 // ALSO HERE - THINK THRICE BEFORE MODIFYING
@@ -428,6 +431,14 @@ const STATE: State = getInitialState()
 
 export function getSessionId(): SessionId {
   return STATE.sessionId
+}
+
+export function isReplBridgeActive(): boolean {
+  return STATE.replBridgeActive === true
+}
+
+export function setReplBridgeActive(active: boolean): void {
+  STATE.replBridgeActive = active
 }
 
 export function regenerateSessionId(

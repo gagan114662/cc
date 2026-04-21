@@ -3,7 +3,7 @@ import * as React from 'react';
 import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useNotifications } from '../context/notifications.js';
 import { useIsModalOverlayActive } from '../context/overlayContext.js';
-import { useGetVoiceState, useSetVoiceState, useVoiceState } from '../context/voice.js';
+import { useGetVoiceState, useSetVoiceState, useVoiceState, type VoiceState } from '../context/voice.js';
 import { KeyboardEvent } from '../ink/events/keyboard-event.js';
 // eslint-disable-next-line custom-rules/prefer-use-keybindings -- backward-compat bridge until REPL wires handleKeyDown to <Box onKeyDown>
 import { useInput } from '../ink.js';
@@ -224,10 +224,10 @@ export function useVoiceIntegration({
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
   const voiceState = feature('VOICE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle' as const;
+  useVoiceState((s: VoiceState) => s.voiceState) : 'idle' as const;
   const voiceInterimTranscript = feature('VOICE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s_0 => s_0.voiceInterimTranscript) : '';
+  useVoiceState((s_0: VoiceState) => s_0.voiceInterimTranscript) : '';
 
   // Set the voice anchor for focus mode (where recording starts via terminal
   // focus, not key hold). Key-hold sets the anchor in stripTrailing.
@@ -391,7 +391,7 @@ export function useVoiceKeybindingHandler({
   const voiceEnabled = feature('VOICE_MODE') ? useVoiceEnabled() : false;
   const voiceState = feature('VOICE_MODE') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useVoiceState(s => s.voiceState) : 'idle';
+  useVoiceState((s: VoiceState) => s.voiceState) : 'idle';
 
   // Find the configured key for voice:pushToTalk from keybinding context.
   // Forward iteration with last-wins (matching the resolver): if a later
@@ -670,7 +670,12 @@ export function useVoiceKeybindingHandler({
 // TODO(onKeyDown-migration): temporary shim so existing JSX callers
 // (<VoiceKeybindingHandler .../>) keep compiling. Remove once REPL.tsx
 // wires handleKeyDown directly.
-export function VoiceKeybindingHandler(props) {
+export function VoiceKeybindingHandler(props: {
+  voiceHandleKeyEvent: (fallbackMs?: number) => void;
+  stripTrailing: (maxStrip: number, opts?: StripOpts) => number;
+  resetAnchor: () => void;
+  isActive: boolean;
+}) {
   useVoiceKeybindingHandler(props);
   return null;
 }

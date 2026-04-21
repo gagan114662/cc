@@ -4,7 +4,7 @@ import {
   getSessionId,
   isSessionPersistenceDisabled,
 } from 'src/bootstrap/state.js'
-import type { SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
+import type { SDKAssistantMessageError, SDKMessage } from 'src/entrypoints/agentSdkTypes.js'
 import type { CanUseToolFn } from '../hooks/useCanUseTool.js'
 import { runTools } from '../services/tools/toolOrchestration.js'
 import { findToolByName, type Tool, type Tools } from '../Tool.js'
@@ -107,14 +107,15 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
         if (!isNotEmptyMessage(_)) {
           continue
         }
+        if (_.type !== 'assistant') continue
         yield {
           type: 'assistant',
           message: _.message,
           parent_tool_use_id: null,
           session_id: getSessionId(),
           uuid: _.uuid,
-          error: _.error,
-        }
+          error: _.error as never,
+        } as unknown as SDKMessage
       }
       return
     case 'progress':
@@ -122,7 +123,9 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
         message.data.type === 'agent_progress' ||
         message.data.type === 'skill_progress'
       ) {
-        for (const _ of normalizeMessages([message.data.message])) {
+        const inner = message.data.message
+        if (!inner) break
+        for (const _ of normalizeMessages([inner])) {
           switch (_.type) {
             case 'assistant':
               // Skip empty messages (e.g., "(no content)") that shouldn't be output to SDK
@@ -132,23 +135,23 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
               yield {
                 type: 'assistant',
                 message: _.message,
-                parent_tool_use_id: message.parentToolUseID,
+                parent_tool_use_id: message.parentToolUseID ?? null,
                 session_id: getSessionId(),
                 uuid: _.uuid,
-                error: _.error,
-              }
+                error: _.error as never,
+              } as unknown as SDKMessage
               break
             case 'user':
               yield {
                 type: 'user',
                 message: _.message,
-                parent_tool_use_id: message.parentToolUseID,
+                parent_tool_use_id: message.parentToolUseID ?? null,
                 session_id: getSessionId(),
                 uuid: _.uuid,
                 timestamp: _.timestamp,
-                isSynthetic: _.isMeta || _.isVisibleInTranscriptOnly,
+                isSynthetic: Boolean(_.isMeta || _.isVisibleInTranscriptOnly),
                 tool_use_result: _.mcpMeta
-                  ? { content: _.toolUseResult, ..._.mcpMeta }
+                  ? { content: _.toolUseResult, ...(_.mcpMeta as Record<string, unknown>) }
                   : _.toolUseResult,
               }
               break
@@ -168,7 +171,7 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
         }
 
         // Use parentToolUseID as the key since toolUseID changes for each progress message
-        const trackingKey = message.parentToolUseID
+        const trackingKey = message.parentToolUseID ?? ''
         const now = Date.now()
         const lastSent = toolProgressLastSentTime.get(trackingKey) || 0
         const timeSinceLastSent = now - lastSent
@@ -191,12 +194,14 @@ export function* normalizeMessage(message: Message): Generator<SDKMessage> {
             tool_use_id: message.toolUseID,
             tool_name:
               message.data.type === 'bash_progress' ? 'Bash' : 'PowerShell',
-            parent_tool_use_id: message.parentToolUseID,
-            elapsed_time_seconds: message.data.elapsedTimeSeconds,
-            task_id: message.data.taskId,
+            parent_tool_use_id: message.parentToolUseID ?? null,
+            elapsed_time_seconds:
+              (message.data as { elapsedTimeSeconds?: number })
+                .elapsedTimeSeconds ?? 0,
+            task_id: (message.data as { taskId?: string }).taskId,
             session_id: getSessionId(),
             uuid: message.uuid,
-          }
+          } as unknown as SDKMessage
         }
       }
       break

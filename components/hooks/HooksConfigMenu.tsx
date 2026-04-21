@@ -48,7 +48,7 @@ type ModeState = {
   event: HookEvent;
   hook: IndividualHookConfig;
 };
-export function HooksConfigMenu(t0) {
+export function HooksConfigMenu(t0: Props) {
   const $ = _c(100);
   const {
     toolNames,
@@ -68,7 +68,7 @@ export function HooksConfigMenu(t0) {
   const [restrictedByPolicy, setRestrictedByPolicy] = useState(_temp2);
   let t2;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
-    t2 = source => {
+    t2 = (source: any) => {
       if (source === "policySettings") {
         const settings_0 = getSettings_DEPRECATED();
         const hooksDisabled_0 = settings_0?.disableAllHooks === true;
@@ -258,11 +258,11 @@ export function HooksConfigMenu(t0) {
   const hooksDisabled_1 = settings_1?.disableAllHooks === true;
   let t20;
   if ($[33] !== hooksByEventAndMatcher) {
-    const byEvent = {};
+    const byEvent: Record<string, number> = {};
     let total = 0;
     for (const [event_0, matchers] of Object.entries(hooksByEventAndMatcher)) {
-      const eventCount = Object.values(matchers).reduce(_temp5, 0);
-      byEvent[event_0 as HookEvent] = eventCount;
+      const eventCount = Object.values(matchers as object).reduce(_temp5 as never, 0) as number;
+      byEvent[event_0] = eventCount;
       total = total + eventCount;
     }
     t20 = {
@@ -382,7 +382,7 @@ export function HooksConfigMenu(t0) {
       {
         let t21;
         if ($[61] !== combinedToolNames) {
-          t21 = event_2 => {
+          t21 = (event_2: any) => {
             if (getMatcherMetadata(event_2, combinedToolNames) !== undefined) {
               setModeState({
                 mode: "select-matcher",
@@ -421,7 +421,7 @@ export function HooksConfigMenu(t0) {
         const t21 = hookEventMetadata[modeState.event];
         let t22;
         if ($[70] !== modeState.event) {
-          t22 = matcher => {
+          t22 = (matcher: any) => {
             setModeState({
               mode: "select-hook",
               event: modeState.event,
@@ -463,7 +463,7 @@ export function HooksConfigMenu(t0) {
         const t21 = hookEventMetadata[modeState.event];
         let t22;
         if ($[79] !== modeState.event) {
-          t22 = hook_1 => {
+          t22 = (hook_1: any) => {
             setModeState({
               mode: "view-hook",
               event: modeState.event,
@@ -558,13 +558,13 @@ export function HooksConfigMenu(t0) {
 function _temp6() {
   return <Text>Esc to close</Text>;
 }
-function _temp5(sum, hooks) {
+function _temp5(sum: any, hooks: any) {
   return sum + hooks.length;
 }
-function _temp4(tool) {
+function _temp4(tool: any) {
   return tool.name;
 }
-function _temp3(s) {
+function _temp3(s: any) {
   return s.mcp;
 }
 function _temp2() {

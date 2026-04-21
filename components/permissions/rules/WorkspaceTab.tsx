@@ -22,7 +22,7 @@ type DirectoryItem = {
   isCurrent: boolean;
   isDeletable: boolean;
 };
-export function WorkspaceTab(t0) {
+export function WorkspaceTab(t0: Props) {
   const $ = _c(23);
   const {
     onExit,
@@ -62,12 +62,12 @@ export function WorkspaceTab(t0) {
   const additionalDirectories = t3;
   let t4;
   if ($[6] !== additionalDirectories || $[7] !== onRequestAddDirectory || $[8] !== onRequestRemoveDirectory) {
-    t4 = selectedValue => {
+    t4 = (selectedValue: string) => {
       if (selectedValue === "add-directory") {
         onRequestAddDirectory();
         return;
       }
-      const directory = additionalDirectories.find(d => d.path === selectedValue);
+      const directory = additionalDirectories.find((d: DirectoryItem) => d.path === selectedValue);
       if (directory && directory.isDeletable) {
         onRequestRemoveDirectory(directory.path);
       }
@@ -134,13 +134,13 @@ export function WorkspaceTab(t0) {
   }
   return t8;
 }
-function _temp2(dir) {
+function _temp2(dir: DirectoryItem) {
   return {
     label: dir.path,
     value: dir.path
   };
 }
-function _temp(path) {
+function _temp(path: string) {
   return {
     path,
     isCurrent: false,

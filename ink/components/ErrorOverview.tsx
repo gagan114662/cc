@@ -12,8 +12,8 @@ import Text from './Text.js';
 const cleanupPath = (path: string | undefined): string | undefined => {
   return path?.replace(`file://${process.cwd()}/`, '');
 };
-let stackUtils: StackUtils | undefined;
-function getStackUtils(): StackUtils {
+let stackUtils: any | undefined;
+function getStackUtils(): any {
   return stackUtils ??= new StackUtils({
     cwd: process.cwd(),
     internals: StackUtils.nodeInternals()

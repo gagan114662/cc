@@ -49,7 +49,7 @@ type RemoteTriggerRequest = (
 
 export type RemoteTriggerDispatchResult = {
   ok: boolean
-  mode: 'shadow' | 'primary'
+  mode: 'shadow' | 'primary' | 'local-only'
   summary: string
   backend?: 'session' | 'trigger'
   sessionId?: string

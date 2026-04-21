@@ -29,7 +29,7 @@ function hasMessageAfterBoundary(messages: Message[], boundaryUuid: string): boo
   }
   return false;
 }
-export function usePostCompactSurvey(messages, isLoading, t0, t1) {
+export function usePostCompactSurvey(messages: unknown, isLoading: unknown, t0: any, t1: unknown) {
   const $ = _c(23);
   const hasActivePrompt = t0 === undefined ? false : t0;
   let t2;
@@ -44,7 +44,7 @@ export function usePostCompactSurvey(messages, isLoading, t0, t1) {
     enabled: t3
   } = t2;
   const enabled = t3 === undefined ? true : t3;
-  const [gateEnabled, setGateEnabled] = useState(null);
+  const [gateEnabled, setGateEnabled] = useState<any>(null);
   let t4;
   if ($[2] === Symbol.for("react.memo_cache_sentinel")) {
     t4 = new Set();
@@ -53,7 +53,7 @@ export function usePostCompactSurvey(messages, isLoading, t0, t1) {
     t4 = $[2];
   }
   const seenCompactBoundaries = useRef(t4);
-  const pendingCompactBoundaryUuid = useRef(null);
+  const pendingCompactBoundaryUuid = useRef<string | null>(null);
   const onOpen = _temp;
   const onSelect = _temp2;
   let t5;
@@ -93,7 +93,7 @@ export function usePostCompactSurvey(messages, isLoading, t0, t1) {
   useEffect(t6, t7);
   let t8;
   if ($[7] !== messages) {
-    t8 = new Set(messages.filter(_temp3).map(_temp4));
+    t8 = new Set((messages as Message[]).filter(_temp3).map(_temp4));
     $[7] = messages;
     $[8] = t8;
   } else {
@@ -123,7 +123,7 @@ export function usePostCompactSurvey(messages, isLoading, t0, t1) {
         return;
       }
       if (pendingCompactBoundaryUuid.current !== null) {
-        if (hasMessageAfterBoundary(messages, pendingCompactBoundaryUuid.current)) {
+        if (hasMessageAfterBoundary(messages as Message[], pendingCompactBoundaryUuid.current)) {
           pendingCompactBoundaryUuid.current = null;
           if (Math.random() < SURVEY_PROBABILITY) {
             open();
@@ -131,10 +131,10 @@ export function usePostCompactSurvey(messages, isLoading, t0, t1) {
           return;
         }
       }
-      const newBoundaries = Array.from(currentCompactBoundaries).filter(uuid => !seenCompactBoundaries.current.has(uuid));
+      const newBoundaries = Array.from(currentCompactBoundaries as Set<string>).filter((uuid: string) => !seenCompactBoundaries.current.has(uuid));
       if (newBoundaries.length > 0) {
-        seenCompactBoundaries.current = new Set(currentCompactBoundaries);
-        pendingCompactBoundaryUuid.current = newBoundaries[newBoundaries.length - 1];
+        seenCompactBoundaries.current = new Set(currentCompactBoundaries as Set<string>);
+        pendingCompactBoundaryUuid.current = (newBoundaries[newBoundaries.length - 1] ?? null) as string | null;
       }
     };
     t10 = [enabled, currentCompactBoundaries, state, isLoading, hasActivePrompt, gateEnabled, messages, open];
@@ -169,13 +169,13 @@ export function usePostCompactSurvey(messages, isLoading, t0, t1) {
   }
   return t11;
 }
-function _temp4(msg_0) {
+function _temp4(msg_0: any) {
   return msg_0.uuid;
 }
-function _temp3(msg) {
+function _temp3(msg: any) {
   return isCompactBoundaryMessage(msg);
 }
-function _temp2(appearanceId_0, selected) {
+function _temp2(appearanceId_0: any, selected: unknown) {
   const smCompactionEnabled_0 = shouldUseSessionMemoryCompaction();
   logEvent("tengu_post_compact_survey_event", {
     event_type: "responded" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,
@@ -186,11 +186,11 @@ function _temp2(appearanceId_0, selected) {
   logOTelEvent("feedback_survey", {
     event_type: "responded",
     appearance_id: appearanceId_0,
-    response: selected,
+    response: selected as string | undefined,
     survey_type: "post_compact"
   });
 }
-function _temp(appearanceId) {
+function _temp(appearanceId: any) {
   const smCompactionEnabled = shouldUseSessionMemoryCompaction();
   logEvent("tengu_post_compact_survey_event", {
     event_type: "appeared" as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS,

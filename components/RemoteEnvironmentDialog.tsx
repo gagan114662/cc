@@ -23,25 +23,25 @@ type Props = {
   onDone: (message?: string) => void;
 };
 type LoadingState = 'loading' | 'updating' | null;
-export function RemoteEnvironmentDialog(t0) {
+export function RemoteEnvironmentDialog(t0: Props) {
   const $ = _c(27);
   const {
     onDone
   } = t0;
-  const [loadingState, setLoadingState] = useState("loading");
-  let t1;
+  const [loadingState, setLoadingState] = useState<LoadingState>("loading");
+  let t1: unknown[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as unknown[];
   }
   const [environments, setEnvironments] = useState(t1);
-  const [selectedEnvironment, setSelectedEnvironment] = useState(null);
-  const [selectedEnvironmentSource, setSelectedEnvironmentSource] = useState(null);
-  const [error, setError] = useState(null);
+  const [selectedEnvironment, setSelectedEnvironment] = useState<any>(null);
+  const [selectedEnvironmentSource, setSelectedEnvironmentSource] = useState<any>(null);
+  const [error, setError] = useState<any>(null);
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => {
       let cancelled = false;
@@ -82,13 +82,13 @@ export function RemoteEnvironmentDialog(t0) {
   useEffect(t2, t3);
   let t4;
   if ($[3] !== environments || $[4] !== onDone) {
-    t4 = function handleSelect(value) {
+    t4 = function handleSelect(value: unknown) {
       if (value === "cancel") {
         onDone();
         return;
       }
       setLoadingState("updating");
-      const selectedEnv = environments.find(env => env.environment_id === value);
+      const selectedEnv = environments.find((env: any) => env.environment_id === value) as { environment_id: string; name: string } | undefined;
       if (!selectedEnv) {
         onDone("Error: Selected environment not found");
         return;
@@ -190,7 +190,7 @@ export function RemoteEnvironmentDialog(t0) {
   }
   return t5;
 }
-function EnvironmentLabel(t0) {
+function EnvironmentLabel(t0: any) {
   const $ = _c(7);
   const {
     environment
@@ -222,7 +222,7 @@ function EnvironmentLabel(t0) {
   }
   return t3;
 }
-function SingleEnvironmentContent(t0) {
+function SingleEnvironmentContent(t0: any) {
   const $ = _c(6);
   const {
     environment,
@@ -257,7 +257,7 @@ function SingleEnvironmentContent(t0) {
   }
   return t3;
 }
-function MultipleEnvironmentsContent(t0) {
+function MultipleEnvironmentsContent(t0: any) {
   const $ = _c(18);
   const {
     environments,
@@ -331,7 +331,7 @@ function MultipleEnvironmentsContent(t0) {
   }
   return t7;
 }
-function _temp(env) {
+function _temp(env: any) {
   return {
     label: <Text>{env.name} <Text dimColor={true}>({env.environment_id})</Text></Text>,
     value: env.environment_id

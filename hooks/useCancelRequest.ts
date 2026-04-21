@@ -12,6 +12,7 @@ import {
   useAppStateStore,
   useSetAppState,
 } from 'src/state/AppState.js'
+import type { AppState } from 'src/state/AppStateStore.js'
 import { isVimModeEnabled } from '../components/PromptInput/utils.js'
 import type { ToolUseConfirm } from '../components/permissions/PermissionRequest.js'
 import type { SpinnerMode } from '../components/Spinner/types.js'
@@ -82,7 +83,7 @@ export function CancelRequestHandler(props: CancelRequestHandlerProps): null {
   const queuedCommandsLength = useCommandQueue().length
   const { addNotification, removeNotification } = useNotifications()
   const lastKillAgentsPressRef = useRef<number>(0)
-  const viewSelectionMode = useAppState(s => s.viewSelectionMode)
+  const viewSelectionMode = useAppState((s: AppState) => s.viewSelectionMode)
 
   const handleCancel = useCallback(() => {
     const cancelProps = {

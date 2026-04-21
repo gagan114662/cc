@@ -173,7 +173,7 @@ function countUserPromptsFromEntries(entries: ReadonlyArray<Entry>): number {
     entry =>
       entry.type === 'user' && !('isSidechain' in entry && entry.isSidechain),
   )
-  return countUserPromptsInMessages(nonSidechain)
+  return countUserPromptsInMessages(nonSidechain as any)
 }
 
 /**

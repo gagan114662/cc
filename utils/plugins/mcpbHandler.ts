@@ -159,7 +159,7 @@ export function loadMcpServerUserConfig(
     logForDebugging(
       `Loaded user config for ${pluginId}/${serverName} (settings + secureStorage)`,
     )
-    return { ...nonSensitive, ...sensitive }
+    return { ...nonSensitive, ...sensitive } as UserConfigValues
   } catch (error) {
     const errorObj = toError(error)
     logError(errorObj)
@@ -736,7 +736,7 @@ export async function loadMcpbFile(
     // Check for user_config requirement
     if (manifest.user_config && Object.keys(manifest.user_config).length > 0) {
       // Server name from DXT manifest
-      const serverName = manifest.name
+      const serverName = manifest.name ?? ''
 
       // Try to load existing config from settings.json or use provided config
       const savedConfig = loadMcpServerUserConfig(pluginId, serverName)
@@ -852,7 +852,7 @@ export async function loadMcpbFile(
   // Parse and validate manifest
   const manifest = await parseAndValidateManifestFromBytes(manifestData)
   logForDebugging(
-    `MCPB manifest: ${manifest.name} v${manifest.version} by ${manifest.author.name}`,
+    `MCPB manifest: ${manifest.name} v${manifest.version} by ${manifest.author?.name}`,
   )
 
   // Check if manifest has server config
@@ -871,7 +871,7 @@ export async function loadMcpbFile(
   // Check for user_config requirement
   if (manifest.user_config && Object.keys(manifest.user_config).length > 0) {
     // Server name from DXT manifest
-    const serverName = manifest.name
+    const serverName = manifest.name ?? ''
 
     // Try to load existing config from settings.json or use provided config
     const savedConfig = loadMcpServerUserConfig(pluginId, serverName)

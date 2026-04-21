@@ -7,7 +7,7 @@ import { useKeybinding } from '../../../keybindings/useKeybinding.js';
 import { getFeatureValue_CACHED_MAY_BE_STALE } from '../../../services/analytics/growthbook.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../../services/analytics/index.js';
 import { sanitizeToolNameForAnalytics } from '../../../services/analytics/metadata.js';
-import { useAppState } from '../../../state/AppState.js';
+import { type AppState, useAppState } from '../../../state/AppState.js';
 import { BashTool } from '../../../tools/BashTool/BashTool.js';
 import { getFirstWordPrefix, getSimpleCommandPrefix } from '../../../tools/BashTool/bashPermissions.js';
 import { getDestructiveCommandWarning } from '../../../tools/BashTool/destructiveCommandWarning.js';
@@ -51,7 +51,7 @@ function ClassifierCheckingSubtitle() {
   }
   let t1;
   if ($[1] !== glimmerIndex) {
-    t1 = <Text>{t0.map((char, i) => <ShimmerChar key={i} char={char} index={i} glimmerIndex={glimmerIndex} messageColor="inactive" shimmerColor="subtle" />)}</Text>;
+    t1 = <Text>{t0.map((char: string, i: number) => <ShimmerChar key={i} char={char} index={i} glimmerIndex={glimmerIndex} messageColor="inactive" shimmerColor="subtle" />)}</Text>;
     $[1] = glimmerIndex;
     $[2] = t1;
   } else {
@@ -68,7 +68,7 @@ function ClassifierCheckingSubtitle() {
   }
   return t2;
 }
-export function BashPermissionRequest(props) {
+export function BashPermissionRequest(props: PermissionRequestProps) {
   const $ = _c(21);
   const {
     toolUseConfirm,
@@ -147,7 +147,7 @@ function BashPermissionRequestInner({
   description?: string;
 }): React.ReactNode {
   const [theme] = useTheme();
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext);
+  const toolPermissionContext = useAppState((s: AppState) => s.toolPermissionContext);
   const explainerState = usePermissionExplainerUI({
     toolName: toolUseConfirm.tool.name,
     toolInput: toolUseConfirm.input,

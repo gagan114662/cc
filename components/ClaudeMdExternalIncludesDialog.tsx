@@ -11,24 +11,24 @@ type Props = {
   isStandaloneDialog?: boolean;
   externalIncludes?: ExternalClaudeMdInclude[];
 };
-export function ClaudeMdExternalIncludesDialog(t0) {
+export function ClaudeMdExternalIncludesDialog(t0: Props) {
   const $ = _c(18);
   const {
     onDone,
     isStandaloneDialog,
     externalIncludes
   } = t0;
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as React.DependencyList;
   }
   React.useEffect(_temp, t1);
   let t2;
   if ($[1] !== onDone) {
-    t2 = value => {
+    t2 = (value: any) => {
       if (value === "no") {
         logEvent("tengu_claude_md_external_includes_dialog_declined", {});
         saveCurrentProjectConfig(_temp2);
@@ -114,17 +114,17 @@ export function ClaudeMdExternalIncludesDialog(t0) {
   }
   return t11;
 }
-function _temp4(include, i) {
+function _temp4(include: any, i: number) {
   return <Text key={i} dimColor={true}>{"  "}{include.path}</Text>;
 }
-function _temp3(current_0) {
+function _temp3(current_0: any) {
   return {
     ...current_0,
     hasClaudeMdExternalIncludesApproved: true,
     hasClaudeMdExternalIncludesWarningShown: true
   };
 }
-function _temp2(current) {
+function _temp2(current: any) {
   return {
     ...current,
     hasClaudeMdExternalIncludesApproved: false,

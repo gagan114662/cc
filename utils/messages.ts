@@ -12,7 +12,8 @@ import type {
   ToolUseBlock,
   ToolUseBlockParam,
 } from '@anthropic-ai/sdk/resources/index.mjs'
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID } from 'crypto'
+import type { UUID } from '../types/uuid.js'
 import isObject from 'lodash-es/isObject.js'
 import last from 'lodash-es/last.js'
 import {
@@ -308,13 +309,21 @@ export const SYNTHETIC_MESSAGES = new Set([
 ])
 
 export function isSyntheticMessage(message: Message): boolean {
+  if (
+    message.type === 'progress' ||
+    message.type === 'attachment' ||
+    message.type === 'system' ||
+    message.type === 'tombstone' ||
+    message.type === 'tool_use_summary' ||
+    message.type === 'stream_event' ||
+    message.type === 'stream_request_start'
+  ) {
+    return false
+  }
   return (
-    message.type !== 'progress' &&
-    message.type !== 'attachment' &&
-    message.type !== 'system' &&
     Array.isArray(message.message.content) &&
     message.message.content[0]?.type === 'text' &&
-    SYNTHETIC_MESSAGES.has(message.message.content[0].text)
+    SYNTHETIC_MESSAGES.has(message.message.content[0].text as string)
   )
 }
 
@@ -370,10 +379,9 @@ function baseCreateAssistantMessage({
       ephemeral_1h_input_tokens: 0,
       ephemeral_5m_input_tokens: 0,
     },
-    inference_geo: null,
     iterations: null,
     speed: null,
-  },
+  } as Usage,
 }: {
   content: BetaContentBlock[]
   isApiErrorMessage?: boolean
@@ -397,8 +405,9 @@ function baseCreateAssistantMessage({
       type: 'message',
       usage,
       content,
+      // Field was added later in upstream SDK; cast to bypass narrower type.
       context_management: null,
-    },
+    } as BetaMessage,
     requestId: undefined,
     apiError,
     error,
@@ -474,19 +483,16 @@ export function createUserMessage({
   origin,
 }: {
   content: string | ContentBlockParam[]
-  isMeta?: true
-  isVisibleInTranscriptOnly?: true
-  isVirtual?: true
-  isCompactSummary?: true
+  isMeta?: boolean
+  isVisibleInTranscriptOnly?: boolean
+  isVirtual?: boolean
+  isCompactSummary?: boolean
   toolUseResult?: unknown // Matches tool's `Output` type
   /** MCP protocol metadata to pass through to SDK consumers (never sent to model) */
-  mcpMeta?: {
-    _meta?: Record<string, unknown>
-    structuredContent?: Record<string, unknown>
-  }
+  mcpMeta?: unknown
   uuid?: UUID | string
   timestamp?: string
-  imagePasteIds?: number[]
+  imagePasteIds?: string[]
   // For tool_result messages: the UUID of the assistant message containing the matching tool_use
   sourceToolAssistantUUID?: UUID
   // Permission mode when message was sent (for rewind restoration)
@@ -611,7 +617,7 @@ export function createProgressMessage<P extends Progress>({
 }): ProgressMessage<P> {
   return {
     type: 'progress',
-    data,
+    data: data as P & { message?: UserMessage | AssistantMessage },
     toolUseID,
     parentToolUseID,
     uuid: randomUUID(),
@@ -690,7 +696,11 @@ export function isNotEmptyMessage(message: Message): boolean {
   if (
     message.type === 'progress' ||
     message.type === 'attachment' ||
-    message.type === 'system'
+    message.type === 'system' ||
+    message.type === 'tombstone' ||
+    message.type === 'tool_use_summary' ||
+    message.type === 'stream_event' ||
+    message.type === 'stream_request_start'
   ) {
     return true
   }
@@ -722,7 +732,7 @@ export function isNotEmptyMessage(message: Message): boolean {
 // Deterministic UUID derivation. Produces a stable UUID-shaped string from a
 // parent UUID + content block index so that the same input always produces the
 // same key across calls. Used by normalizeMessages and synthetic message creation.
-export function deriveUUID(parentUUID: UUID, index: number): UUID {
+export function deriveUUID(parentUUID: string, index: number): UUID {
   const hex = index.toString(16).padStart(12, '0')
   return `${parentUUID.slice(0, 24)}${hex}` as UUID
 }
@@ -760,8 +770,10 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
             message: {
               ...message.message,
               content: [_],
-              context_management: message.message.context_management ?? null,
-            },
+              context_management:
+                (message.message as unknown as { context_management?: unknown })
+                  .context_management ?? null,
+            } as BetaMessage,
             isMeta: message.isMeta,
             isVirtual: message.isVirtual,
             requestId: message.requestId,
@@ -818,6 +830,8 @@ export function normalizeMessages(messages: Message[]): NormalizedMessage[] {
           } as NormalizedMessage
         })
       }
+      default:
+        return []
     }
   })
 }
@@ -1215,6 +1229,7 @@ export function buildMessageLookups(
     if (msg.type === 'progress') {
       // Build progress messages lookup
       const toolUseID = msg.parentToolUseID
+      if (toolUseID === undefined) continue
       const existing = progressMessagesByToolUseID.get(toolUseID)
       if (existing) {
         existing.push(msg)
@@ -1223,8 +1238,9 @@ export function buildMessageLookups(
       }
 
       // Count in-progress hooks
-      if (msg.data.type === 'hook_progress') {
-        const hookEvent = msg.data.hookEvent
+      const data = msg.data as { type?: string; hookEvent?: HookEvent }
+      if (data.type === 'hook_progress' && data.hookEvent !== undefined) {
+        const hookEvent = data.hookEvent
         let byHookEvent = inProgressHookCounts.get(toolUseID)
         if (!byHookEvent) {
           byHookEvent = new Map()
@@ -1464,12 +1480,16 @@ export function getToolUseIDs(
   return new Set(
     normalizedMessages
       .filter(
-        (_): _ is NormalizedAssistantMessage<BetaToolUseBlock> =>
+        (_): _ is NormalizedAssistantMessage =>
           _.type === 'assistant' &&
           Array.isArray(_.message.content) &&
           _.message.content[0]?.type === 'tool_use',
       )
-      .map(_ => _.message.content[0].id),
+      .map(_ => {
+        const block = (_ as NormalizedAssistantMessage).message.content[0]
+        return block && block.type === 'tool_use' ? block.id : ''
+      })
+      .filter(id => id !== ''),
   )
 }
 
@@ -2977,7 +2997,9 @@ export function handleMessageFromStream(
     // from deferredMessages to messages in the same batch, making the
     // transition from streaming text → final message atomic (no gap, no duplication).
     onStreamingText?.(() => null)
-    onMessage(message)
+    if (message.type !== 'request_start_event') {
+      onMessage(message)
+    }
     return
   }
 
@@ -3030,19 +3052,13 @@ export function handleMessageFromStream(
           ])
           return
         }
-        case 'server_tool_use':
-        case 'web_search_tool_result':
-        case 'code_execution_tool_result':
-        case 'mcp_tool_use':
-        case 'mcp_tool_result':
-        case 'container_upload':
-        case 'web_fetch_tool_result':
-        case 'bash_code_execution_tool_result':
-        case 'text_editor_code_execution_tool_result':
-        case 'tool_search_tool_result':
-        case 'compaction':
+        default: {
+          // Other server-side / MCP / search tool content blocks all surface
+          // as tool-input on the spinner. Use a default branch so newly added
+          // upstream block types don't break compilation.
           onSetStreamMode('tool-input')
           return
+        }
       }
       return
     case 'content_block_delta':

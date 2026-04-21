@@ -1,5 +1,5 @@
 import type { ContentBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
-import type { UUID } from 'crypto'
+type UUID = string
 import type { CanUseToolFn } from '../hooks/useCanUseTool.js'
 import type { CompactionResult } from '../services/compact/compact.js'
 import type { ScopedMcpServerConfig } from '../services/mcp/types.js'

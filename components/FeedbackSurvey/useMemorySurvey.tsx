@@ -15,6 +15,7 @@ import { submitTranscriptShare } from './submitTranscriptShare.js';
 import type { TranscriptShareResponse } from './TranscriptSharePrompt.js';
 import { useSurveyState } from './useSurveyState.js';
 import type { FeedbackSurveyResponse } from './utils.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 const HIDE_THANKS_AFTER_MS = 3000;
 const MEMORY_SURVEY_GATE = 'tengu_dunwich_bell';
 const MEMORY_SURVEY_EVENT = 'tengu_memory_survey_event';
@@ -87,7 +88,7 @@ export function useMemorySurvey(messages: Message[], isLoading: boolean, hasActi
     });
   }, []);
   const shouldShowTranscriptPrompt = useCallback((selected_0: FeedbackSurveyResponse) => {
-    if ("external" !== 'ant') {
+    if (USER_TYPE !== 'ant') {
       return false;
     }
     if (selected_0 !== 'bad' && selected_0 !== 'good') {

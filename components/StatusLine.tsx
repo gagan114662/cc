@@ -62,7 +62,7 @@ function buildStatusLineCommandInput(permissionMode: PermissionMode, exceeds200k
       }
     })
   };
-  return {
+  return ({
     ...createBaseHookInput(),
     ...(sessionName && {
       session_name: sessionName
@@ -91,9 +91,9 @@ function buildStatusLineCommandInput(permissionMode: PermissionMode, exceeds200k
       total_input_tokens: getTotalInputTokens(),
       total_output_tokens: getTotalOutputTokens(),
       context_window_size: contextWindowSize,
-      current_usage: currentUsage,
-      used_percentage: contextPercentages.used,
-      remaining_percentage: contextPercentages.remaining
+      current_usage: currentUsage as never,
+      used_percentage: contextPercentages.used as never,
+      remaining_percentage: contextPercentages.remaining as never
     },
     exceeds_200k_tokens: exceeds200kTokens,
     ...((rateLimits.five_hour || rateLimits.seven_day) && {
@@ -123,7 +123,7 @@ function buildStatusLineCommandInput(permissionMode: PermissionMode, exceeds200k
         original_branch: worktreeSession.originalBranch
       }
     })
-  };
+  } as never);
 }
 type Props = {
   // messages stays behind a ref (read only in the debounced callback);

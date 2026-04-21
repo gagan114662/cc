@@ -473,7 +473,7 @@ const loadAllCommands = memoize(async (cwd: string): Promise<Command[]> => {
     ...pluginCommands,
     ...pluginSkills,
     ...COMMANDS(),
-  ]
+  ] as Command[]
 })
 
 /**

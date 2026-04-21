@@ -5,15 +5,15 @@ import {
   rankCapabilityNames,
 } from 'src/utils/capabilityDiscovery.js'
 
-function makePromptCommand(overrides: Partial<Command> & Pick<Command, 'name'>): Command {
+function makePromptCommand(overrides: Partial<Command> & Pick<Command, 'name'> & { source?: string; description?: string }): Command {
+  const o = overrides as { name: string; description?: string; source?: string; loadedFrom?: string }
   return {
     type: 'prompt',
-    name: overrides.name,
-    description: overrides.description ?? 'Generic capability',
+    description: o.description ?? 'Generic capability',
     contentLength: 0,
     progressMessage: 'running',
-    source: overrides.source ?? 'bundled',
-    loadedFrom: overrides.loadedFrom ?? 'bundled',
+    source: o.source ?? 'bundled',
+    loadedFrom: o.loadedFrom ?? 'bundled',
     async getPromptForCommand() {
       return [{ type: 'text', text: '# capability' }]
     },

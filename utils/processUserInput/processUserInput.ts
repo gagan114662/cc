@@ -186,7 +186,7 @@ export async function processUserInput({
     context.requestPrompt,
   )) {
     // We only care about the result
-    if (hookResult.message?.type === 'progress') {
+    if ((hookResult.message as { type?: string } | undefined)?.type === 'progress') {
       continue
     }
 
@@ -241,23 +241,29 @@ export async function processUserInput({
 
     // TODO: Clean this up
     if (hookResult.message) {
-      switch (hookResult.message.attachment.type) {
-        case 'hook_success':
-          if (!hookResult.message.attachment.content) {
-            // Skip if there is no content
+      if (hookResult.message.type === 'attachment') {
+        switch (hookResult.message.attachment.type) {
+          case 'hook_success': {
+            const hookSuccessAttachment = hookResult.message.attachment
+            if (!('content' in hookSuccessAttachment) || !hookSuccessAttachment.content) {
+              // Skip if there is no content
+              break
+            }
+            result.messages.push({
+              ...hookResult.message,
+              attachment: {
+                ...hookSuccessAttachment,
+                content: applyTruncation(hookSuccessAttachment.content as string),
+              },
+            })
             break
           }
-          result.messages.push({
-            ...hookResult.message,
-            attachment: {
-              ...hookResult.message.attachment,
-              content: applyTruncation(hookResult.message.attachment.content),
-            },
-          })
-          break
-        default:
-          result.messages.push(hookResult.message)
-          break
+          default:
+            result.messages.push(hookResult.message)
+            break
+        }
+      } else {
+        result.messages.push(hookResult.message)
       }
     }
   }

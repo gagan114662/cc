@@ -244,7 +244,7 @@ ${sessionIds.map(id => `- ${id}`).join('\n')}`
         appendSystemMessage({
           ...createMemorySavedMessage(dreamState.filesTouched),
           verb: 'Improved',
-        })
+        } as any)
       }
       logForDebugging(
         `[autoDream] completed — cache: read=${result.totalUsage.cache_read_input_tokens} created=${result.totalUsage.cache_creation_input_tokens}`,

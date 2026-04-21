@@ -16,7 +16,7 @@ type Props = {
   scope: ConfigScope;
   onDone(): void;
 };
-export function MCPServerDesktopImportDialog(t0) {
+export function MCPServerDesktopImportDialog(t0: Props) {
   const $ = _c(36);
   const {
     servers,
@@ -41,7 +41,7 @@ export function MCPServerDesktopImportDialog(t0) {
   }
   const [existingServers, setExistingServers] = useState(t2);
   let t3;
-  let t4;
+  let t4: React.DependencyList;
   if ($[3] === Symbol.for("react.memo_cache_sentinel")) {
     t3 = () => {
       getAllMcpConfigs().then(t5 => {
@@ -51,17 +51,17 @@ export function MCPServerDesktopImportDialog(t0) {
         return setExistingServers(servers_0);
       });
     };
-    t4 = [];
+    t4 = [] as React.DependencyList;
     $[3] = t3;
     $[4] = t4;
   } else {
     t3 = $[3];
-    t4 = $[4];
+    t4 = $[4] as React.DependencyList;
   }
   useEffect(t3, t4);
   let t5;
   if ($[5] !== existingServers || $[6] !== serverNames) {
-    t5 = serverNames.filter(name => existingServers[name] !== undefined);
+    t5 = serverNames.filter((name: any) => existingServers[name] !== undefined);
     $[5] = existingServers;
     $[6] = serverNames;
     $[7] = t5;
@@ -69,7 +69,7 @@ export function MCPServerDesktopImportDialog(t0) {
     t5 = $[7];
   }
   const collisions = t5;
-  const onSubmit = async function onSubmit(selectedServers) {
+  const onSubmit = async function onSubmit(selectedServers: string[]) {
     let importedCount = 0;
     for (const serverName of selectedServers) {
       const serverConfig = servers[serverName];
@@ -91,7 +91,7 @@ export function MCPServerDesktopImportDialog(t0) {
   const [theme] = useTheme();
   let t6;
   if ($[8] !== onDone || $[9] !== scope || $[10] !== theme) {
-    t6 = importedCount_0 => {
+    t6 = (importedCount_0: any) => {
       if (importedCount_0 > 0) {
         writeToStdout(`\n${color("success", theme)(`Successfully imported ${importedCount_0} MCP ${plural(importedCount_0, "server")} to ${scope} config.`)}\n`);
       } else {
@@ -148,11 +148,11 @@ export function MCPServerDesktopImportDialog(t0) {
   let t13;
   let t14;
   if ($[19] !== collisions || $[20] !== serverNames) {
-    t13 = serverNames.map(server => ({
+    t13 = serverNames.map((server: any) => ({
       label: `${server}${collisions.includes(server) ? " (already exists)" : ""}`,
       value: server
     }));
-    t14 = serverNames.filter(name_0 => !collisions.includes(name_0));
+    t14 = serverNames.filter((name_0: any) => !collisions.includes(name_0));
     $[19] = collisions;
     $[20] = serverNames;
     $[21] = t13;

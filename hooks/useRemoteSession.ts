@@ -206,17 +206,18 @@ export function useRemoteSession({
         // registerTask() → task_started, and complete via task_notification.
         // Return early — these are status signals, not renderable messages.
         if (sdkMessage.type === 'system') {
-          if (sdkMessage.subtype === 'task_started') {
-            runningTaskIdsRef.current.add(sdkMessage.task_id)
+          const subtype = sdkMessage.subtype as string
+          if (subtype === 'task_started') {
+            runningTaskIdsRef.current.add((sdkMessage as unknown as { task_id: string }).task_id)
             writeTaskCount()
             return
           }
-          if (sdkMessage.subtype === 'task_notification') {
-            runningTaskIdsRef.current.delete(sdkMessage.task_id)
+          if (subtype === 'task_notification') {
+            runningTaskIdsRef.current.delete((sdkMessage as unknown as { task_id: string }).task_id)
             writeTaskCount()
             return
           }
-          if (sdkMessage.subtype === 'task_progress') {
+          if (subtype === 'task_progress') {
             return
           }
           // Track compaction state. The CLI emits status='compacting' at
@@ -345,8 +346,8 @@ export function useRemoteSession({
         const permissionResult: PermissionAskDecision = {
           behavior: 'ask',
           message:
-            request.description ?? `${request.tool_name} requires permission`,
-          suggestions: request.permission_suggestions,
+            (request as { description?: string }).description ?? `${request.tool_name} requires permission`,
+          suggestions: request.permission_suggestions as never,
           blockedPath: request.blocked_path,
         }
 
@@ -354,7 +355,7 @@ export function useRemoteSession({
           assistantMessage: syntheticMessage,
           tool,
           description:
-            request.description ?? `${request.tool_name} requires permission`,
+            (request as { description?: string }).description ?? `${request.tool_name} requires permission`,
           input: request.input,
           toolUseContext: {} as ToolUseConfirm['toolUseContext'],
           toolUseID: request.tool_use_id,

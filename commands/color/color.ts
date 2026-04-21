@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+type UUID = string
 import { getSessionId } from '../../bootstrap/state.js'
 import type { ToolUseContext } from '../../Tool.js'
 import {

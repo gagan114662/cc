@@ -12,7 +12,6 @@ function makePromptCommand(
 ): Command {
   return {
     type: 'prompt',
-    name: overrides.name,
     description: '',
     hasUserSpecifiedDescription: false,
     contentLength: 0,

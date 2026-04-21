@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+type UUID = string
 import type { Dirent } from 'fs'
 // Sync fs primitives for readFileTailSync — separate from fs/promises
 // imports above. Named (not wildcard) per CLAUDE.md style; no collisions
@@ -1046,6 +1046,7 @@ class Project {
             message.type === 'user' ? (getPromptId() ?? undefined) : undefined,
           agentId,
           ...message,
+          uuid: message.uuid ?? crypto.randomUUID(),
           // Session-stamp fields MUST come after the spread. On --fork-session
           // and --resume, messages arrive as SerializedMessage (carries source
           // sessionId/cwd/etc. because removeExtraFields only strips parentUuid
@@ -1223,7 +1224,7 @@ class Project {
         // All other entry types have been handled above
         const isAgentSidechain =
           entry.isSidechain && entry.agentId !== undefined
-        const targetFile = isAgentSidechain
+        const targetFile = isAgentSidechain && entry.agentId !== undefined
           ? getAgentTranscriptPath(asAgentId(entry.agentId))
           : sessionFile
 

@@ -23,6 +23,8 @@ import type { MCPServerConnection, McpClaudeAIProxyServerConfig, McpHTTPServerCo
 import { filterToolsByServer } from '../../services/mcp/utils.js';
 import { disablePluginOp, enablePluginOp, getPluginInstallationFromV2, isInstallableScope, isPluginEnabledAtProjectScope, uninstallPluginOp, updatePluginOp } from '../../services/plugins/pluginOperations.js';
 import { useAppState } from '../../state/AppState.js';
+import type { AppState } from '../../state/AppStateStore.js';
+import type { PluginOptionValues } from '../../utils/plugins/pluginOptionsStorage.js';
 import type { Tool } from '../../Tool.js';
 import type { LoadedPlugin, PluginError } from '../../types/plugin.js';
 import { count } from '../../utils/array.js';
@@ -37,6 +39,7 @@ import { isMcpbSource, loadMcpbFile, type McpbNeedsConfigResult, type UserConfig
 import { getPluginDataDirSize, pluginDataDirPath } from '../../utils/plugins/pluginDirectories.js';
 import { getFlaggedPlugins, markFlaggedPluginsSeen, removeFlaggedPlugin } from '../../utils/plugins/pluginFlagging.js';
 import { type PersistablePluginScope, parsePluginIdentifier } from '../../utils/plugins/pluginIdentifier.js';
+import type { PluginScope } from '../../utils/plugins/schemas.js';
 import { loadAllPlugins } from '../../utils/plugins/pluginLoader.js';
 import { loadPluginOptions, type PluginOptionSchema, savePluginOptions } from '../../utils/plugins/pluginOptionsStorage.js';
 import { isPluginBlockedByPolicy } from '../../utils/plugins/pluginPolicy.js';
@@ -49,7 +52,7 @@ import { PluginOptionsDialog } from './PluginOptionsDialog.js';
 import { PluginOptionsFlow } from './PluginOptionsFlow.js';
 import type { ViewState as ParentViewState } from './types.js';
 import { UnifiedInstalledCell } from './UnifiedInstalledCell.js';
-import type { UnifiedInstalledItem } from './unifiedTypes.js';
+import type { UnifiedInstalledItem, UnifiedInstalledScope } from './unifiedTypes.js';
 import { usePagination } from './usePagination.js';
 type Props = {
   setViewState: (state: ParentViewState) => void;
@@ -63,17 +66,17 @@ type Props = {
 type FlaggedPluginInfo = {
   id: string;
   name: string;
-  marketplace: string;
+  marketplace?: string;
   reason: string;
   text: string;
-  flaggedAt: string;
+  flaggedAt?: string | number;
 };
 type FailedPluginInfo = {
   id: string;
   name: string;
-  marketplace: string;
+  marketplace?: string;
   errors: PluginError[];
-  scope: PersistablePluginScope;
+  scope: PersistablePluginScope | UnifiedInstalledScope;
 };
 type ViewState = 'plugin-list' | 'plugin-details' | 'configuring' | {
   type: 'plugin-options';
@@ -404,9 +407,9 @@ export function ManagePlugins({
   action
 }: Props): React.ReactNode {
   // App state for MCP access
-  const mcpClients = useAppState(s => s.mcp.clients);
-  const mcpTools = useAppState(s_0 => s_0.mcp.tools);
-  const pluginErrors = useAppState(s_1 => s_1.plugins.errors);
+  const mcpClients = useAppState((s: AppState) => s.mcp.clients);
+  const mcpTools = useAppState((s_0: AppState) => s_0.mcp.tools);
+  const pluginErrors = useAppState((s_1: AppState) => s_1.plugins.errors);
   const flaggedPlugins = getFlaggedPlugins();
 
   // Search state
@@ -559,7 +562,7 @@ export function ManagePlugins({
     for (const state of pluginStates) {
       const pluginId = `${state.plugin.name}@${state.marketplace}`;
       const isEnabled = mergedSettings?.enabledPlugins?.[pluginId] !== false;
-      const errors = pluginErrors.filter(e => 'plugin' in e && e.plugin === state.plugin.name || e.source === pluginId || e.source.startsWith(`${state.plugin.name}@`));
+      const errors = pluginErrors.filter((e: PluginError) => 'plugin' in e && e.plugin === state.plugin.name || e.source === pluginId || e.source.startsWith(`${state.plugin.name}@`));
 
       // Built-in plugins use 'builtin' scope; others look up from V2 data.
       const originalScope = state.plugin.isBuiltin ? 'builtin' : state.scope || 'user';
@@ -845,7 +848,7 @@ export function ManagePlugins({
           }) => p.name === selectedPlugin!.plugin.name);
           if (entry_0?.mcpServers) {
             const spec = entry_0.mcpServers;
-            hasMcpb = typeof spec === 'string' && isMcpbSource(spec) || Array.isArray(spec) && spec.some((s_3: unknown) => typeof s_3 === 'string' && isMcpbSource(s_3));
+            hasMcpb = typeof spec === 'string' && isMcpbSource(spec) || Array.isArray(spec) && spec.some((s_3: any) => typeof s_3 === 'string' && isMcpbSource(s_3));
           }
         } catch (err) {
           logForDebugging(`Failed to read raw marketplace.json: ${err}`);
@@ -1167,7 +1170,7 @@ export function ManagePlugins({
       const isEnabled_0 = mergedSettings_0?.enabledPlugins?.[pluginId_4] !== false;
       const pluginScope_0 = item_7.scope;
       const isBuiltin_0 = pluginScope_0 === 'builtin';
-      if (isBuiltin_0 || isInstallableScope(pluginScope_0)) {
+      if (isBuiltin_0 || isInstallableScope(pluginScope_0 as PluginScope)) {
         const newPending = new Map(pendingToggles);
         // Omit scope — see handleSingleOperation's enable/disable comment.
         if (currentPending) {
@@ -1459,7 +1462,7 @@ export function ManagePlugins({
           // is a recovery path for a plugin that failed to load — it may
           // be reinstallable, so don't nuke ${CLAUDE_PLUGIN_DATA} silently.
           // The normal uninstall path prompts; this one preserves.
-          const result_2 = isInstallableScope(pluginScope_1) ? await uninstallPluginOp(pluginId_7, pluginScope_1, false) : await uninstallPluginOp(pluginId_7, 'user', false);
+          const result_2 = isInstallableScope(pluginScope_1 as PluginScope) ? await uninstallPluginOp(pluginId_7, pluginScope_1 as Exclude<PluginScope, 'managed'>, false) : await uninstallPluginOp(pluginId_7, 'user', false);
           let success = result_2.success;
           if (!success) {
             // Plugin was never installed (only in enabledPlugins settings).
@@ -1660,7 +1663,7 @@ export function ManagePlugins({
   // Configure options (from the Manage menu)
   if (typeof viewState === 'object' && viewState.type === 'configuring-options' && selectedPlugin) {
     const pluginId_11 = `${selectedPlugin.plugin.name}@${selectedPlugin.marketplace}`;
-    return <PluginOptionsDialog title={`Configure ${selectedPlugin.plugin.name}`} subtitle="Plugin options" configSchema={viewState.schema} initialValues={loadPluginOptions(pluginId_11)} onSave={values => {
+    return <PluginOptionsDialog title={`Configure ${selectedPlugin.plugin.name}`} subtitle="Plugin options" configSchema={viewState.schema} initialValues={loadPluginOptions(pluginId_11)} onSave={(values: PluginOptionValues) => {
       try {
         savePluginOptions(pluginId_11, values, viewState.schema);
         clearAllCaches();
@@ -1739,7 +1742,7 @@ export function ManagePlugins({
           </Text>
           <Text>{fp.text}</Text>
           <Text dimColor>
-            Flagged on {new Date(fp.flaggedAt).toLocaleDateString()}
+            Flagged on {fp.flaggedAt !== undefined ? new Date(fp.flaggedAt).toLocaleDateString() : 'unknown'}
           </Text>
         </Box>
 
@@ -1816,13 +1819,13 @@ export function ManagePlugins({
     const isEnabled_2 = mergedSettings_2?.enabledPlugins?.[pluginId_13] !== false;
 
     // Compute plugin errors section
-    const filteredPluginErrors = pluginErrors.filter(e_1 => 'plugin' in e_1 && e_1.plugin === selectedPlugin.plugin.name || e_1.source === pluginId_13 || e_1.source.startsWith(`${selectedPlugin.plugin.name}@`));
+    const filteredPluginErrors = pluginErrors.filter((e_1: PluginError) => 'plugin' in e_1 && e_1.plugin === selectedPlugin.plugin.name || e_1.source === pluginId_13 || e_1.source.startsWith(`${selectedPlugin.plugin.name}@`));
     const pluginErrorsSection = filteredPluginErrors.length === 0 ? null : <Box flexDirection="column" marginBottom={1}>
           <Text bold color="error">
             {filteredPluginErrors.length}{' '}
             {plural(filteredPluginErrors.length, 'error')}:
           </Text>
-          {filteredPluginErrors.map((error_3, i_0) => {
+          {filteredPluginErrors.map((error_3: PluginError, i_0: number) => {
         const guidance = getErrorGuidance(error_3);
         return <Box key={i_0} flexDirection="column" marginLeft={2}>
                 <Text color="error">{formatErrorMessage(error_3)}</Text>

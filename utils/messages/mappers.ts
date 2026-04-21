@@ -1,5 +1,6 @@
 import type { BetaContentBlock } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
-import { randomUUID, type UUID } from 'crypto'
+import { randomUUID } from 'crypto'
+import type { UUID } from '../../types/uuid.js'
 import { getSessionId } from 'src/bootstrap/state.js'
 import {
   LOCAL_COMMAND_STDERR_TAG,
@@ -80,7 +81,7 @@ export function toSDKCompactMetadata(
 ): SDKCompactMetadata {
   const seg = meta.preservedSegment
   return {
-    trigger: meta.trigger,
+    trigger: meta.trigger as 'auto' | 'manual',
     pre_tokens: meta.preTokens,
     ...(seg && {
       preserved_segment: {
@@ -89,7 +90,7 @@ export function toSDKCompactMetadata(
         tail_uuid: seg.tailUuid,
       },
     }),
-  }
+  } as SDKCompactMetadata
 }
 
 /**
@@ -98,7 +99,7 @@ export function toSDKCompactMetadata(
 export function fromSDKCompactMetadata(
   meta: SDKCompactMetadata,
 ): CompactMetadata {
-  const seg = meta.preserved_segment
+  const seg = (meta as { preserved_segment?: { head_uuid: string; anchor_uuid: string; tail_uuid: string } }).preserved_segment
   return {
     trigger: meta.trigger,
     preTokens: meta.pre_tokens,
@@ -123,8 +124,8 @@ export function toSDKMessages(messages: Message[]): SDKMessage[] {
             session_id: getSessionId(),
             parent_tool_use_id: null,
             uuid: message.uuid,
-            error: message.error,
-          },
+            error: message.error as never,
+          } as never,
         ]
       case 'user':
         return [
@@ -152,7 +153,7 @@ export function toSDKMessages(messages: Message[]): SDKMessage[] {
               type: 'system',
               subtype: 'compact_boundary' as const,
               session_id: getSessionId(),
-              uuid: message.uuid,
+              uuid: message.uuid as SDKCompactBoundaryMessage['uuid'],
               compact_metadata: toSDKCompactMetadata(message.compactMetadata),
             },
           ]
@@ -210,7 +211,7 @@ export function localCommandOutputToSDKAssistantMessage(
     message: synthetic.message,
     parent_tool_use_id: null,
     session_id: getSessionId(),
-    uuid,
+    uuid: uuid as SDKAssistantMessage['uuid'],
   }
 }
 

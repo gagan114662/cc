@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import { USER_TYPE } from '../utils/buildConstants.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { Box, Text } from '../ink.js';
 import * as React from 'react';
@@ -46,6 +47,7 @@ type Props = {
   pauseStartTimeRef: React.RefObject<number | null>;
   spinnerTip?: string;
   responseLengthRef: React.RefObject<number>;
+  apiMetricsRef?: React.RefObject<unknown>;
   overrideColor?: keyof Theme | null;
   overrideShimmerColor?: keyof Theme | null;
   overrideMessage?: string | null;
@@ -219,8 +221,10 @@ function SpinnerWithVerbInner({
   // doesn't trigger re-renders; we pick up updates on the parent's ~25x/turn
   // re-render cadence, same as the old ApiMetricsLine did.
   let ttftText: string | null = null;
-  if ("external" === 'ant' && apiMetricsRef?.current && apiMetricsRef.current.length > 0) {
-    ttftText = computeTtftText(apiMetricsRef.current);
+  const apiMetricsRef: { current: unknown[] } | undefined = undefined;
+  const computeTtftText = (_arr: unknown[]): string | null => null;
+  if (USER_TYPE === 'ant' && apiMetricsRef && (apiMetricsRef as { current: unknown[] }).current && (apiMetricsRef as { current: unknown[] }).current.length > 0) {
+    ttftText = computeTtftText((apiMetricsRef as { current: unknown[] }).current);
   }
 
   // When leader is idle but teammates are running (and we're viewing the leader),
@@ -313,7 +317,7 @@ type BriefSpinnerProps = {
   mode: SpinnerMode;
   overrideMessage?: string | null;
 };
-function BriefSpinner(t0) {
+function BriefSpinner(t0: BriefSpinnerProps) {
   const $ = _c(31);
   const {
     mode,
@@ -439,10 +443,10 @@ function BriefSpinner(t0) {
 // as BriefSpinner so the input bar never jumps when toggling between
 // working/idle/disconnected. See BriefSpinner's comment for the
 // Notifications overlay coupling.
-function _temp6(s_0) {
-  return count(Object.values(s_0.tasks), isBackgroundTask) + s_0.remoteBackgroundTaskCount;
+function _temp6(s_0: any) {
+  return count(Object.values(s_0.tasks) as never, isBackgroundTask) + s_0.remoteBackgroundTaskCount;
 }
-function _temp5(s) {
+function _temp5(s: any) {
   return s.remoteConnectionStatus;
 }
 function _temp4() {
@@ -498,10 +502,10 @@ export function BriefIdleStatus() {
   }
   return t2;
 }
-function _temp8(s_0) {
-  return count(Object.values(s_0.tasks), isBackgroundTask) + s_0.remoteBackgroundTaskCount;
+function _temp8(s_0: any) {
+  return count(Object.values(s_0.tasks) as never, isBackgroundTask) + s_0.remoteBackgroundTaskCount;
 }
-function _temp7(s) {
+function _temp7(s: any) {
   return s.remoteConnectionStatus;
 }
 export function Spinner() {

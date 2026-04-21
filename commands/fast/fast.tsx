@@ -8,6 +8,7 @@ import { Box, Link, Text } from '../../ink.js';
 import { useKeybindings } from '../../keybindings/useKeybinding.js';
 import { type AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS, logEvent } from '../../services/analytics/index.js';
 import { type AppState, useAppState, useSetAppState } from '../../state/AppState.js';
+import type { ExitState } from '../../hooks/useExitOnCtrlCD.js';
 import type { LocalJSXCommandOnDone } from '../../types/command.js';
 import { clearFastModeCooldown, FAST_MODE_MODEL_DISPLAY, getFastModeModel, getFastModeRuntimeState, getFastModeUnavailableReason, isFastModeEnabled, isFastModeSupportedByModel, prefetchFastModeStatus } from '../../utils/fastMode.js';
 import { formatDuration } from '../../utils/format.js';
@@ -38,7 +39,7 @@ function applyFastMode(enable: boolean, setAppState: (f: (prev: AppState) => App
     }));
   }
 }
-export function FastModePicker(t0) {
+export function FastModePicker(t0: { onDone: LocalJSXCommandOnDone; unavailableReason: string | null }) {
   const $ = _c(30);
   const {
     onDone,
@@ -172,7 +173,7 @@ export function FastModePicker(t0) {
   const title = t8;
   let t9;
   if ($[20] !== isUnavailable) {
-    t9 = exitState => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : isUnavailable ? <Text>Esc to cancel</Text> : <Text>Tab to toggle · Enter to confirm · Esc to cancel</Text>;
+    t9 = (exitState: ExitState) => exitState.pending ? <Text>Press {exitState.keyName} again to exit</Text> : isUnavailable ? <Text>Esc to cancel</Text> : <Text>Tab to toggle · Enter to confirm · Esc to cancel</Text>;
     $[20] = isUnavailable;
     $[21] = t9;
   } else {
@@ -208,19 +209,19 @@ export function FastModePicker(t0) {
   }
   return t12;
 }
-function _temp4(prev_0) {
+function _temp4(prev_0: boolean) {
   return !prev_0;
 }
-function _temp3(prev) {
+function _temp3(prev: AppState) {
   return {
     ...prev,
     fastMode: false
   };
 }
-function _temp2(s_0) {
+function _temp2(s_0: AppState) {
   return s_0.fastMode;
 }
-function _temp(s) {
+function _temp(s: AppState) {
   return s.mainLoopModel;
 }
 async function handleFastModeShortcut(enable: boolean, getAppState: () => AppState, setAppState: (f: (prev: AppState) => AppState) => void): Promise<string> {

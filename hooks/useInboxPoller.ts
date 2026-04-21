@@ -6,11 +6,11 @@ import { TEAMMATE_MESSAGE_TAG } from '../constants/xml.js'
 import { useTerminalNotification } from '../ink/useTerminalNotification.js'
 import { sendNotification } from '../services/notifier.js'
 import {
-  type AppState,
   useAppState,
   useAppStateStore,
   useSetAppState,
 } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import { findToolByName } from '../Tool.js'
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js'
 import { getAllBaseTools } from '../tools.js'
@@ -133,7 +133,7 @@ export function useInboxPoller({
   const onSubmitTeammateMessage = onSubmitMessage
   const store = useAppStateStore()
   const setAppState = useSetAppState()
-  const inboxMessageCount = useAppState(s => s.inbox.messages.length)
+  const inboxMessageCount = useAppState((s: AppState) => s.inbox.messages.length)
   const terminal = useTerminalNotification()
 
   const poll = useCallback(async () => {

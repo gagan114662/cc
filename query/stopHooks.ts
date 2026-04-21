@@ -119,7 +119,7 @@ export async function* handleStopHooks(
     )
     const p = jobClassifierModule!
       .classifyAndWriteState(process.env.CLAUDE_JOB_DIR, turnAssistantMessages)
-      .catch(err => {
+      .catch((err: unknown) => {
         logForDebugging(`[job] classifier error: ${errorMessage(err)}`, {
           level: 'error',
         })
@@ -201,16 +201,23 @@ export async function* handleStopHooks(
       if (result.message) {
         yield result.message
         // Track toolUseID from progress messages and count hooks
-        if (result.message.type === 'progress' && result.message.toolUseID) {
-          stopHookToolUseID = result.message.toolUseID
-          hookCount++
-          // Extract hook command and prompt text from progress data
-          const progressData = result.message.data as HookProgress
-          if (progressData.command) {
-            hookInfos.push({
-              command: progressData.command,
-              promptText: progressData.promptText,
-            })
+        {
+          const progressMsg = result.message as {
+            type: string
+            toolUseID?: string
+            data?: unknown
+          }
+          if (progressMsg.type === 'progress' && progressMsg.toolUseID) {
+            stopHookToolUseID = progressMsg.toolUseID
+            hookCount++
+            // Extract hook command and prompt text from progress data
+            const progressData = progressMsg.data as HookProgress
+            if (progressData.command) {
+              hookInfos.push({
+                command: progressData.command,
+                promptText: progressData.promptText,
+              } as StopHookInfo)
+            }
           }
         }
         // Track errors and output from attachments
@@ -364,11 +371,15 @@ export async function* handleStopHooks(
 
         for await (const result of taskCompletedGenerator) {
           if (result.message) {
+            const progressMsg = result.message as {
+              type: string
+              toolUseID?: string
+            }
             if (
-              result.message.type === 'progress' &&
-              result.message.toolUseID
+              progressMsg.type === 'progress' &&
+              progressMsg.toolUseID
             ) {
-              teammateHookToolUseID = result.message.toolUseID
+              teammateHookToolUseID = progressMsg.toolUseID
             }
             yield result.message
           }
@@ -409,8 +420,12 @@ export async function* handleStopHooks(
 
       for await (const result of teammateIdleGenerator) {
         if (result.message) {
-          if (result.message.type === 'progress' && result.message.toolUseID) {
-            teammateHookToolUseID = result.message.toolUseID
+          const progressMsg = result.message as {
+            type: string
+            toolUseID?: string
+          }
+          if (progressMsg.type === 'progress' && progressMsg.toolUseID) {
+            teammateHookToolUseID = progressMsg.toolUseID
           }
           yield result.message
         }

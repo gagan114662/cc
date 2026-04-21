@@ -112,17 +112,17 @@ describe('inMemoryErrorLog partitioning by tenant', () => {
 
     const acmeEntries = runWithTenantScope(buildTenantScope(ACME), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
     const globexEntries = runWithTenantScope(buildTenantScope(GLOBEX), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
 
-    const acmeMessages = acmeEntries.map(e => e.error)
-    const globexMessages = globexEntries.map(e => e.error)
-    expect(acmeMessages.some(m => m.includes('acme-boom'))).toBe(true)
-    expect(acmeMessages.some(m => m.includes('globex-boom'))).toBe(false)
-    expect(globexMessages.some(m => m.includes('globex-boom'))).toBe(true)
-    expect(globexMessages.some(m => m.includes('acme-boom'))).toBe(false)
+    const acmeMessages = acmeEntries.map((e: { error: string; timestamp: string }) => e.error)
+    const globexMessages = globexEntries.map((e: { error: string; timestamp: string }) => e.error)
+    expect(acmeMessages.some((m: string) => m.includes('acme-boom'))).toBe(true)
+    expect(acmeMessages.some((m: string) => m.includes('globex-boom'))).toBe(false)
+    expect(globexMessages.some((m: string) => m.includes('globex-boom'))).toBe(true)
+    expect(globexMessages.some((m: string) => m.includes('acme-boom'))).toBe(false)
   })
 
   test('no-scope reads fall back to DEFAULT_TENANT bucket (legacy CLI path)', () => {
@@ -150,10 +150,10 @@ describe('inMemoryErrorLog partitioning by tenant', () => {
     })
     const acmeEntries = runWithTenantScope(buildTenantScope(ACME), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
     const globexEntries = runWithTenantScope(buildTenantScope(GLOBEX), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
     expect(acmeEntries.length).toBe(100)
     // Oldest surviving error should be index 5 (0..4 evicted)
     expect(acmeEntries[0]!.error).toContain('acme-5')

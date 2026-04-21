@@ -8,14 +8,14 @@ import { Dialog } from './design-system/Dialog.js';
 type IdeAutoConnectDialogProps = {
   onComplete: () => void;
 };
-export function IdeAutoConnectDialog(t0) {
+export function IdeAutoConnectDialog(t0: IdeAutoConnectDialogProps) {
   const $ = _c(9);
   const {
     onComplete
   } = t0;
   let t1;
   if ($[0] !== onComplete) {
-    t1 = async value => {
+    t1 = async (value: unknown) => {
       const autoConnect = value === "yes";
       saveGlobalConfig(current => ({
         ...current,
@@ -77,14 +77,14 @@ export function shouldShowAutoConnectDialog(): boolean {
 type IdeDisableAutoConnectDialogProps = {
   onComplete: (disableAutoConnect: boolean) => void;
 };
-export function IdeDisableAutoConnectDialog(t0) {
+export function IdeDisableAutoConnectDialog(t0: IdeDisableAutoConnectDialogProps) {
   const $ = _c(10);
   const {
     onComplete
   } = t0;
   let t1;
   if ($[0] !== onComplete) {
-    t1 = value => {
+    t1 = (value: any) => {
       const disableAutoConnect = value === "yes";
       if (disableAutoConnect) {
         saveGlobalConfig(_temp);
@@ -141,7 +141,7 @@ export function IdeDisableAutoConnectDialog(t0) {
   }
   return t5;
 }
-function _temp(current) {
+function _temp(current: any) {
   return {
     ...current,
     autoConnectIde: false

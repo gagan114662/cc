@@ -15,7 +15,7 @@ type Props = {
  * moved neutral or positive status to src/components/Status.tsx instead, which
  * users can access through /status.
  */
-export function StatusNotices(t0) {
+export function StatusNotices(t0: Props) {
   const $ = _c(4);
   const {
     agentDefinitions
@@ -28,10 +28,10 @@ export function StatusNotices(t0) {
   } else {
     t2 = $[0];
   }
-  const context = {
+  const context: StatusNoticeContext = {
     config: t1,
     agentDefinitions,
-    memoryFiles: use(t2)
+    memoryFiles: use(t2) as StatusNoticeContext['memoryFiles']
   };
   const activeNotices = getActiveNotices(context);
   if (activeNotices.length === 0) {

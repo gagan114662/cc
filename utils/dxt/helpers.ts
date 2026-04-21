@@ -14,13 +14,15 @@ export async function validateManifest(
   manifestJson: unknown,
 ): Promise<McpbManifest> {
   const { McpbManifestSchema } = await import('@anthropic-ai/mcpb')
-  const parseResult = McpbManifestSchema.safeParse(manifestJson)
+  const parseResult = (McpbManifestSchema as unknown as {
+    safeParse: (v: unknown) => { success: boolean; data: McpbManifest; error: { flatten: () => { fieldErrors: Record<string, string[] | undefined>; formErrors: string[] } } }
+  }).safeParse(manifestJson)
 
   if (!parseResult.success) {
     const errors = parseResult.error.flatten()
     const errorMessages = [
       ...Object.entries(errors.fieldErrors).map(
-        ([field, errs]) => `${field}: ${errs?.join(', ')}`,
+        ([field, errs]) => `${field}: ${(errs ?? []).join(', ')}`,
       ),
       ...(errors.formErrors || []),
     ]
@@ -76,8 +78,8 @@ export function generateExtensionId(
       .replace(/-+/g, '-')
       .replace(/^-+|-+$/g, '')
 
-  const authorName = manifest.author.name
-  const extensionName = manifest.name
+  const authorName = manifest.author?.name ?? ''
+  const extensionName = manifest.name ?? ''
 
   const sanitizedAuthor = sanitize(authorName)
   const sanitizedName = sanitize(extensionName)

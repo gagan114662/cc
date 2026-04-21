@@ -61,10 +61,10 @@ export function createFallbackStorage(
       return { success: false }
     },
     delete(): boolean {
-      const primarySuccess = primary.delete()
-      const secondarySuccess = secondary.delete()
+      const primarySuccess = primary.delete() as boolean | void
+      const secondarySuccess = secondary.delete() as boolean | void
 
-      return primarySuccess || secondarySuccess
+      return Boolean(primarySuccess || secondarySuccess)
     },
   }
 }

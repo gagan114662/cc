@@ -22,7 +22,7 @@ type Props<A> = {
   yesInputMode: boolean;
   noInputMode: boolean;
 };
-export function ShowInIDEPrompt(t0) {
+export function ShowInIDEPrompt(t0: Props<unknown>) {
   const $ = _c(36);
   const {
     onChange,
@@ -80,8 +80,8 @@ export function ShowInIDEPrompt(t0) {
   }
   let t6;
   if ($[9] !== acceptFeedback || $[10] !== input || $[11] !== onChange || $[12] !== options || $[13] !== rejectFeedback) {
-    t6 = value => {
-      const selected = options.find(opt => opt.value === value);
+    t6 = (value: any) => {
+      const selected = options.find((opt: any) => opt.value === value);
       if (selected) {
         if (selected.option.type === "reject") {
           const trimmedFeedback = rejectFeedback.trim();
@@ -118,7 +118,7 @@ export function ShowInIDEPrompt(t0) {
   }
   let t8;
   if ($[18] !== setFocusedOption) {
-    t8 = value_0 => setFocusedOption(value_0);
+    t8 = (value_0: any) => setFocusedOption(value_0);
     $[18] = setFocusedOption;
     $[19] = t8;
   } else {

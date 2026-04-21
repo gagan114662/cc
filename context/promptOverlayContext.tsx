@@ -31,13 +31,13 @@ const DataContext = createContext<PromptOverlayData | null>(null);
 const SetContext = createContext<Setter<PromptOverlayData> | null>(null);
 const DialogContext = createContext<ReactNode>(null);
 const SetDialogContext = createContext<Setter<ReactNode> | null>(null);
-export function PromptOverlayProvider(t0) {
+export function PromptOverlayProvider(t0: { children: ReactNode }): ReactNode {
   const $ = _c(6);
   const {
     children
   } = t0;
-  const [data, setData] = useState(null);
-  const [dialog, setDialog] = useState(null);
+  const [data, setData] = useState<any>(null);
+  const [dialog, setDialog] = useState<any>(null);
   let t1;
   if ($[0] !== children || $[1] !== dialog) {
     t1 = <DialogContext.Provider value={dialog}>{children}</DialogContext.Provider>;
@@ -69,7 +69,7 @@ export function usePromptOverlayDialog() {
  * Register suggestion data for the floating overlay. Clears on unmount.
  * No-op outside the provider (non-fullscreen renders inline instead).
  */
-export function useSetPromptOverlay(data) {
+export function useSetPromptOverlay(data: PromptOverlayData | null): void {
   const $ = _c(4);
   const set = useContext(SetContext);
   let t0;
@@ -98,7 +98,7 @@ export function useSetPromptOverlay(data) {
  * Register a dialog node to float above the prompt. Clears on unmount.
  * No-op outside the provider (non-fullscreen renders inline instead).
  */
-export function useSetPromptOverlayDialog(node) {
+export function useSetPromptOverlayDialog(node: ReactNode): void {
   const $ = _c(4);
   const set = useContext(SetDialogContext);
   let t0;

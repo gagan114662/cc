@@ -3,6 +3,7 @@ import { useEffect, useRef } from 'react'
 import { useNotifications } from 'src/context/notifications.js'
 import { getIsRemoteMode } from '../../bootstrap/state.js'
 import { useAppState } from '../../state/AppState.js'
+import type { AppState } from '../../state/AppStateStore.js'
 import type { PermissionMode } from '../../utils/permissions/PermissionMode.js'
 import {
   getAutoModeUnavailableNotification,
@@ -18,9 +19,9 @@ import { hasAutoModeOptIn } from '../../utils/settings/settings.js'
  */
 export function useAutoModeUnavailableNotification(): void {
   const { addNotification } = useNotifications()
-  const mode = useAppState(s => s.toolPermissionContext.mode)
+  const mode = useAppState((s: AppState) => s.toolPermissionContext.mode)
   const isAutoModeAvailable = useAppState(
-    s => s.toolPermissionContext.isAutoModeAvailable,
+    (s: AppState) => s.toolPermissionContext.isAutoModeAvailable,
   )
   const shownRef = useRef(false)
   const prevModeRef = useRef<PermissionMode>(mode)

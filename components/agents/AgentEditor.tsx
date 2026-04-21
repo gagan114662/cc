@@ -150,27 +150,27 @@ export function AgentEditor({
     case 'menu':
       return renderMenu();
     case 'edit-tools':
-      return <ToolSelector tools={tools} initialTools={agent.tools} onComplete={async finalTools => {
+      return <ToolSelector tools={tools} initialTools={agent.tools} onComplete={(async (finalTools: string[] | undefined) => {
         setEditMode('menu');
         await handleSave({
-          tools: finalTools
+          tools: finalTools as string[]
         });
-      }} />;
+      })} />;
     case 'edit-color':
-      return <ColorPicker agentName={agent.agentType} currentColor={selectedColor || agent.color as AgentColorName || 'automatic'} onConfirm={async color => {
-        setSelectedColor(color);
+      return <ColorPicker agentName={agent.agentType} currentColor={selectedColor || agent.color as AgentColorName || 'automatic'} onConfirm={(async (color: AgentColorName | undefined) => {
+        setSelectedColor(color as AgentColorName);
         setEditMode('menu');
         await handleSave({
-          color
+          color: color as AgentColorName
         });
-      }} />;
+      })} />;
     case 'edit-model':
-      return <ModelSelector initialModel={agent.model} onComplete={async model => {
+      return <ModelSelector initialModel={agent.model} onComplete={(async (model?: string) => {
         setEditMode('menu');
         await handleSave({
           model
         });
-      }} />;
+      })} />;
     default:
       return null;
   }

@@ -63,7 +63,8 @@ const TabsContext = createContext<TabsContextValue>({
   blurHeader: () => {},
   registerOptIn: () => () => {}
 });
-export function Tabs(t0) {
+type TabTuple = [string, string];
+export function Tabs(t0: TabsProps) {
   const $ = _c(25);
   const {
     title,
@@ -85,11 +86,11 @@ export function Tabs(t0) {
   const {
     columns: terminalWidth
   } = useTerminalSize();
-  const tabs = children.map(_temp);
-  const defaultTabIndex = defaultTab ? tabs.findIndex(tab => defaultTab === tab[0]) : 0;
+  const tabs = children.map(_temp as never) as unknown as TabTuple[];
+  const defaultTabIndex = defaultTab ? tabs.findIndex((tab: TabTuple) => defaultTab === tab[0]) : 0;
   const isControlled = controlledSelectedTab !== undefined;
   const [internalSelectedTab, setInternalSelectedTab] = useState(defaultTabIndex !== -1 ? defaultTabIndex : 0);
-  const controlledTabIndex = isControlled ? tabs.findIndex(tab_0 => tab_0[0] === controlledSelectedTab) : -1;
+  const controlledTabIndex = isControlled ? tabs.findIndex((tab_0: TabTuple) => tab_0[0] === controlledSelectedTab) : -1;
   const selectedTabIndex = isControlled ? controlledTabIndex !== -1 ? controlledTabIndex : 0 : internalSelectedTab;
   const modalScrollRef = useModalScrollRef();
   const [headerFocused, setHeaderFocused] = useState(initialHeaderFocused);
@@ -122,7 +123,7 @@ export function Tabs(t0) {
   }
   const registerOptIn = t5;
   const optedIn = optInCount > 0;
-  const handleTabChange = offset => {
+  const handleTabChange = (offset: number) => {
     const newIndex = (selectedTabIndex + tabs.length + offset) % tabs.length;
     const newTabId = tabs[newIndex]?.[0];
     if (isControlled && onTabChange && newTabId) {
@@ -150,7 +151,7 @@ export function Tabs(t0) {
   }, t7);
   let t8;
   if ($[5] !== headerFocused || $[6] !== hidden || $[7] !== optedIn) {
-    t8 = e => {
+    t8 = (e: KeyboardEvent) => {
       if (!headerFocused || !optedIn || hidden) {
         return;
       }
@@ -190,7 +191,7 @@ export function Tabs(t0) {
     }
   }, t10);
   const titleWidth = title ? stringWidth(title) + 1 : 0;
-  const tabsWidth = tabs.reduce(_temp4, 0);
+  const tabsWidth = (tabs as unknown[]).reduce(_temp4 as never, 0) as number;
   const usedWidth = titleWidth + tabsWidth;
   const spacerWidth = useFullWidth ? Math.max(0, terminalWidth - usedWidth) : 0;
   const contentWidth = useFullWidth ? terminalWidth : undefined;
@@ -199,7 +200,7 @@ export function Tabs(t0) {
   const t12 = 0;
   const t13 = true;
   const t14 = modalScrollRef ? 0 : undefined;
-  const t15 = !hidden && <Box flexDirection="row" gap={1} flexShrink={modalScrollRef ? 0 : undefined}>{title !== undefined && <Text bold={true} color={color}>{title}</Text>}{tabs.map((t16, i) => {
+  const t15 = !hidden && <Box flexDirection="row" gap={1} flexShrink={modalScrollRef ? 0 : undefined}>{title !== undefined && <Text bold={true} color={color}>{title}</Text>}{tabs.map((t16: TabTuple, i: number) => {
       const [id, title_0] = t16;
       const isCurrent = selectedTabIndex === i;
       const hasColorCursor = color && isCurrent && headerFocused;
@@ -240,17 +241,17 @@ export function Tabs(t0) {
     registerOptIn
   }}>{t18}</TabsContext.Provider>;
 }
-function _temp4(sum, t0) {
+function _temp4(sum: number, t0: TabTuple) {
   const [, tabTitle] = t0;
   return sum + (tabTitle ? stringWidth(tabTitle) : 0) + 2 + 1;
 }
-function _temp3(n_0) {
+function _temp3(n_0: number) {
   return n_0 - 1;
 }
-function _temp2(n) {
+function _temp2(n: number) {
   return n + 1;
 }
-function _temp(child) {
+function _temp(child: React.ReactElement<TabProps>) {
   return [child.props.id ?? child.props.title, child.props.title];
 }
 type TabProps = {
@@ -258,7 +259,7 @@ type TabProps = {
   id?: string;
   children: React.ReactNode;
 };
-export function Tab(t0) {
+export function Tab(t0: TabProps) {
   const $ = _c(4);
   const {
     title,

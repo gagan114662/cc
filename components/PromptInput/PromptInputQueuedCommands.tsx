@@ -2,7 +2,7 @@ import { feature } from 'bun:bundle';
 import * as React from 'react';
 import { useMemo } from 'react';
 import { Box } from 'src/ink.js';
-import { useAppState } from 'src/state/AppState.js';
+import { useAppState, type AppState } from 'src/state/AppState.js';
 import { STATUS_TAG, SUMMARY_TAG, TASK_NOTIFICATION_TAG } from '../../constants/xml.js';
 import { QueuedMessageProvider } from '../../context/QueuedMessageContext.js';
 import { useCommandQueue } from '../../hooks/useCommandQueue.js';
@@ -70,14 +70,14 @@ function processQueuedCommands(queuedCommands: QueuedCommand[]): QueuedCommand[]
 }
 function PromptInputQueuedCommandsImpl(): React.ReactNode {
   const queuedCommands = useCommandQueue();
-  const viewingAgent = useAppState(s => !!s.viewingAgentTaskId);
+  const viewingAgent = useAppState((s: AppState) => !!s.viewingAgentTaskId);
   // Brief layout: dim queue items + skip the paddingX (brief messages
   // already indent themselves). Gate mirrors the brief-spinner/message
   // check elsewhere — no teammate-view override needed since this
   // component early-returns when viewing a teammate.
   const useBriefLayout = feature('KAIROS') || feature('KAIROS_BRIEF') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s_0 => s_0.isBriefOnly) : false;
+  useAppState((s_0: AppState) => s_0.isBriefOnly) : false;
 
   // createUserMessage mints a fresh UUID per call; without memoization, streaming
   // re-renders defeat Message's areMessagePropsEqual (compares uuid) → flicker.

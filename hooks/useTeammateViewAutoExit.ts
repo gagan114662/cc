@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useAppState, useSetAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import { exitTeammateView } from '../state/teammateViewHelpers.js'
 import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js'
 
@@ -10,10 +11,10 @@ import { isInProcessTeammateTask } from '../tasks/InProcessTeammateTask/types.js
  */
 export function useTeammateViewAutoExit(): void {
   const setAppState = useSetAppState()
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
+  const viewingAgentTaskId = useAppState((s: AppState) => s.viewingAgentTaskId)
   // Select only the viewed task, not the full tasks map — otherwise every
   // streaming update from any teammate re-renders this hook.
-  const task = useAppState(s =>
+  const task = useAppState((s: AppState) =>
     s.viewingAgentTaskId ? s.tasks[s.viewingAgentTaskId] : undefined,
   )
 

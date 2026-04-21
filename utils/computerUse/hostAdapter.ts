@@ -41,8 +41,8 @@ export function getComputerUseHostAdapter(): ComputerUseHostAdapter {
     serverName: COMPUTER_USE_MCP_SERVER_NAME,
     logger: new DebugLogger(),
     executor: createCliExecutor({
-      getMouseAnimationEnabled: () => getChicagoSubGates().mouseAnimation,
-      getHideBeforeActionEnabled: () => getChicagoSubGates().hideBeforeAction,
+      getMouseAnimationEnabled: () => Boolean(getChicagoSubGates().mouseAnimation),
+      getHideBeforeActionEnabled: () => Boolean(getChicagoSubGates().hideBeforeAction),
     }),
     ensureOsPermissions: async () => {
       const cu = requireComputerUseSwift()

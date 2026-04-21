@@ -72,7 +72,7 @@ export const loadPluginOptions = memoize(
     // secureStorage wins on collision — schema determines destination so
     // collision shouldn't happen, but if a user hand-edits settings.json we
     // trust the more secure source.
-    return { ...nonSensitive, ...sensitive }
+    return { ...nonSensitive, ...sensitive } as any
   },
 )
 

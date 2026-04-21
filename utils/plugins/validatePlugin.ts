@@ -361,7 +361,7 @@ export async function validateMarketplaceManifest(
     const obj = parsed as Record<string, unknown>
 
     if (Array.isArray(obj.plugins)) {
-      obj.plugins.forEach((plugin: unknown, i: number) => {
+      obj.plugins.forEach((plugin: any, i: number) => {
         if (plugin && typeof plugin === 'object' && 'source' in plugin) {
           const source = (plugin as { source: unknown }).source
           // Check string sources (relative paths)

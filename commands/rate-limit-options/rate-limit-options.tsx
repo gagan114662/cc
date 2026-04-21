@@ -21,13 +21,13 @@ type RateLimitOptionsMenuProps = {
   } | undefined) => void;
   context: ToolUseContext & LocalJSXCommandContext;
 };
-function RateLimitOptionsMenu(t0) {
+function RateLimitOptionsMenu(t0: RateLimitOptionsMenuProps) {
   const $ = _c(25);
   const {
     onDone,
     context
   } = t0;
-  const [subCommandJSX, setSubCommandJSX] = useState(null);
+  const [subCommandJSX, setSubCommandJSX] = useState<any>(null);
   const claudeAiLimits = useClaudeAiLimits();
   let t1;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
@@ -150,7 +150,7 @@ function RateLimitOptionsMenu(t0) {
   const handleCancel = t4;
   let t5;
   if ($[15] !== context || $[16] !== handleCancel || $[17] !== onDone) {
-    t5 = function handleSelect(value) {
+    t5 = function handleSelect(value: RateLimitOptionsMenuOptionType) {
       if (value === "upgrade") {
         logEvent("tengu_rate_limit_options_menu_select_upgrade", {});
         upgradeCall(onDone, context).then(jsx => {

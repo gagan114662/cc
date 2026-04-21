@@ -20,7 +20,7 @@ async function _temp() {
     notifs.push({
       key: "marketplace-config-save-failed",
       jsx: <Text color="error">Failed to save marketplace retry info · Check ~/.claude.json permissions</Text>,
-      priority: "immediate",
+      priority: "immediate" as const,
       timeoutMs: 10000
     });
   }
@@ -29,7 +29,7 @@ async function _temp() {
     notifs.push({
       key: "marketplace-installed",
       jsx: <Text color="success">✓ Anthropic marketplace installed · /plugin to see available plugins</Text>,
-      priority: "immediate",
+      priority: "immediate" as const,
       timeoutMs: 7000
     });
   } else {
@@ -38,7 +38,7 @@ async function _temp() {
       notifs.push({
         key: "marketplace-install-failed",
         jsx: <Text color="warning">Failed to install Anthropic marketplace · Will retry on next startup</Text>,
-        priority: "immediate",
+        priority: "immediate" as const,
         timeoutMs: 8000
       });
     }

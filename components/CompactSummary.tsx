@@ -11,7 +11,7 @@ type Props = {
   message: NormalizedUserMessage;
   screen: Screen;
 };
-export function CompactSummary(t0) {
+export function CompactSummary(t0: Props) {
   const $ = _c(24);
   const {
     message,
@@ -27,7 +27,7 @@ export function CompactSummary(t0) {
     t1 = $[1];
   }
   const textContent = t1;
-  const metadata = message.summarizeMetadata;
+  const metadata = message.summarizeMetadata as { messagesSummarized?: number; direction?: 'up_to' | string; userContext?: string } | undefined;
   if (metadata) {
     let t2;
     if ($[2] === Symbol.for("react.memo_cache_sentinel")) {

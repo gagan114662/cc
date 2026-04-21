@@ -194,7 +194,7 @@ type VirtualItemProps = {
 // verbose). Memoing with a comparator that ignores renderItem would use a
 // STALE closure on bail (wrong selection highlight, stale verbose). Including
 // renderItem in the comparator defeats memo since it's fresh each render.
-function VirtualItem(t0) {
+function VirtualItem(t0: VirtualItemProps) {
   const $ = _c(30);
   const {
     itemKey: k,
@@ -222,7 +222,7 @@ function VirtualItem(t0) {
   const t3 = expanded ? 1 : undefined;
   let t4;
   if ($[3] !== clickable || $[4] !== msg || $[5] !== onClickK) {
-    t4 = clickable ? e => onClickK(msg, e.cellIsBlank) : undefined;
+    t4 = clickable ? (e: { cellIsBlank: boolean }) => onClickK(msg, e.cellIsBlank) : undefined;
     $[3] = clickable;
     $[4] = msg;
     $[5] = onClickK;
@@ -344,10 +344,10 @@ export function VirtualMessageList({
   }, [getItemHeight, messages]);
   useImperativeHandle(cursorNavRef, (): MessageActionsNav => {
     const select = (m: NavigableMessage) => setCursor?.({
-      uuid: m.uuid,
-      msgType: m.type,
+      uuid: m.uuid as string,
+      msgType: m.type as never,
       expanded: false,
-      toolName: toolCallOf(m)?.name
+      toolName: toolCallOf(m)?.name as never
     });
     const selIdx = selectedIndex ?? -1;
     const scan = (from: number, dir: 1 | -1, pred: (i: number) => boolean = isVisible) => {

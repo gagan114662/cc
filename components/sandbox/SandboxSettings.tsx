@@ -19,7 +19,7 @@ type Props = {
   depCheck: SandboxDependencyCheck;
 };
 type SandboxMode = 'auto-allow' | 'regular' | 'disabled';
-export function SandboxSettings(t0) {
+export function SandboxSettings(t0: Props) {
   const $ = _c(34);
   const {
     onComplete,
@@ -107,7 +107,7 @@ export function SandboxSettings(t0) {
   const options = t9;
   let t10;
   if ($[13] !== onComplete) {
-    t10 = async function handleSelect(value) {
+    t10 = async function handleSelect(value: unknown) {
       const mode = value as SandboxMode;
       bb33: switch (mode) {
         case "auto-allow":
@@ -219,7 +219,7 @@ export function SandboxSettings(t0) {
   }
   return t17;
 }
-function SandboxModeTab(t0) {
+function SandboxModeTab(t0: any) {
   const $ = _c(16);
   const {
     showSocketWarning,

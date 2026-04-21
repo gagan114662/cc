@@ -4,7 +4,7 @@ import * as React from 'react';
 import type { SettingSource } from 'src/utils/settings/constants.js';
 import type { KeyboardEvent } from '../../ink/events/keyboard-event.js';
 import { Box, Text } from '../../ink.js';
-import type { ResolvedAgent } from '../../tools/AgentTool/agentDisplay.js';
+import type { AgentSourceGroup, ResolvedAgent } from '../../tools/AgentTool/agentDisplay.js';
 import { AGENT_SOURCE_GROUPS, compareAgentsByName, getOverrideSourceLabel, resolveAgentModelDisplay } from '../../tools/AgentTool/agentDisplay.js';
 import type { AgentDefinition } from '../../tools/AgentTool/loadAgentsDir.js';
 import { count } from '../../utils/array.js';
@@ -19,7 +19,7 @@ type Props = {
   onCreateNew?: () => void;
   changes?: string[];
 };
-export function AgentsList(t0) {
+export function AgentsList(t0: Props) {
   const $ = _c(96);
   const {
     source,
@@ -29,7 +29,7 @@ export function AgentsList(t0) {
     onCreateNew,
     changes
   } = t0;
-  const [selectedAgent, setSelectedAgent] = React.useState(null);
+  const [selectedAgent, setSelectedAgent] = React.useState<any>(null);
   const [isCreateNewSelected, setIsCreateNewSelected] = React.useState(true);
   let t1;
   if ($[0] !== agents) {
@@ -52,7 +52,7 @@ export function AgentsList(t0) {
   const renderCreateNewOption = t2;
   let t3;
   if ($[4] !== isCreateNewSelected || $[5] !== selectedAgent?.agentType || $[6] !== selectedAgent?.source) {
-    t3 = agent_0 => {
+    t3 = (agent_0: ResolvedAgent) => {
       const isBuiltIn = agent_0.source === "built-in";
       const isSelected = !isBuiltIn && !isCreateNewSelected && selectedAgent?.agentType === agent_0.agentType && selectedAgent?.source === agent_0.source;
       const {
@@ -81,7 +81,7 @@ export function AgentsList(t0) {
           const {
             source: groupSource
           } = t5;
-          return nonBuiltIn.filter(a_0 => a_0.source === groupSource);
+          return nonBuiltIn.filter((a_0: ResolvedAgent) => a_0.source === groupSource);
         });
         break bb0;
       }
@@ -120,7 +120,7 @@ export function AgentsList(t0) {
   React.useEffect(t5, t6);
   let t7;
   if ($[17] !== isCreateNewSelected || $[18] !== onCreateNew || $[19] !== onSelect || $[20] !== selectableAgentsInOrder || $[21] !== selectedAgent) {
-    t7 = e => {
+    t7 = (e: KeyboardEvent) => {
       if (e.key === "return") {
         e.preventDefault();
         if (isCreateNewSelected && onCreateNew) {
@@ -143,7 +143,7 @@ export function AgentsList(t0) {
       }
       let currentPosition = 0;
       if (!isCreateNewSelected && selectedAgent) {
-        const agentIndex = selectableAgentsInOrder.findIndex(a_1 => a_1.agentType === selectedAgent.agentType && a_1.source === selectedAgent.source);
+        const agentIndex = selectableAgentsInOrder.findIndex((a_1: ResolvedAgent) => a_1.agentType === selectedAgent.agentType && a_1.source === selectedAgent.source);
         if (agentIndex >= 0) {
           currentPosition = hasCreateOption ? agentIndex + 1 : agentIndex;
         }
@@ -173,7 +173,7 @@ export function AgentsList(t0) {
   const handleKeyDown = t7;
   let t8;
   if ($[23] !== renderAgent || $[24] !== sortedAgents) {
-    t8 = t9 => {
+    t8 = (t9: string | undefined) => {
       const title = t9 === undefined ? "Built-in (always available):" : t9;
       const builtInAgents = sortedAgents.filter(_temp4);
       return <Box flexDirection="column" marginBottom={1} paddingLeft={2}><Text bold={true} dimColor={true}>{title}</Text>{builtInAgents.map(renderAgent)}</Box>;
@@ -187,12 +187,12 @@ export function AgentsList(t0) {
   const renderBuiltInAgentsSection = t8;
   let t9;
   if ($[26] !== renderAgent) {
-    t9 = (title_0, groupAgents) => {
+    t9 = (title_0: string, groupAgents: ResolvedAgent[]) => {
       if (!groupAgents.length) {
         return null;
       }
       const folderPath = groupAgents[0]?.baseDir;
-      return <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true} dimColor={true}>{title_0}</Text>{folderPath && <Text dimColor={true}> ({folderPath})</Text>}</Box>{groupAgents.map(agent_1 => renderAgent(agent_1))}</Box>;
+      return <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true} dimColor={true}>{title_0}</Text>{folderPath && <Text dimColor={true}> ({folderPath})</Text>}</Box>{groupAgents.map((agent_1: ResolvedAgent) => renderAgent(agent_1))}</Box>;
     };
     $[26] = renderAgent;
     $[27] = t9;
@@ -324,8 +324,8 @@ export function AgentsList(t0) {
             label,
             source: groupSource_0
           } = t24;
-          return <React.Fragment key={groupSource_0}>{renderAgentGroup(label, sortedAgents.filter(a_7 => a_7.source === groupSource_0))}</React.Fragment>;
-        })}{builtInAgents_0.length > 0 && <Box flexDirection="column" marginBottom={1} paddingLeft={2}><Text dimColor={true}><Text bold={true}>Built-in agents</Text> (always available)</Text>{builtInAgents_0.map(renderAgent)}</Box>}</> : source === "built-in" ? <><Text dimColor={true} italic={true}>Built-in agents are provided by default and cannot be modified.</Text><Box marginTop={1} flexDirection="column">{sortedAgents.map(agent_2 => renderAgent(agent_2))}</Box></> : <>{sortedAgents.filter(_temp0).map(agent_3 => renderAgent(agent_3))}{sortedAgents.some(_temp1) && <><Divider />{renderBuiltInAgentsSection()}</>}</>;
+          return <React.Fragment key={groupSource_0}>{renderAgentGroup(label, sortedAgents.filter((a_7: ResolvedAgent) => a_7.source === groupSource_0))}</React.Fragment>;
+        })}{builtInAgents_0.length > 0 && <Box flexDirection="column" marginBottom={1} paddingLeft={2}><Text dimColor={true}><Text bold={true}>Built-in agents</Text> (always available)</Text>{builtInAgents_0.map(renderAgent)}</Box>}</> : source === "built-in" ? <><Text dimColor={true} italic={true}>Built-in agents are provided by default and cannot be modified.</Text><Box marginTop={1} flexDirection="column">{sortedAgents.map((agent_2: ResolvedAgent) => renderAgent(agent_2))}</Box></> : <>{sortedAgents.filter(_temp0).map((agent_3: ResolvedAgent) => renderAgent(agent_3))}{sortedAgents.some(_temp1) && <><Divider />{renderBuiltInAgentsSection()}</>}</>;
     }
     $[30] = changes;
     $[31] = handleKeyDown;
@@ -401,37 +401,37 @@ export function AgentsList(t0) {
   }
   return t24;
 }
-function _temp1(a_9) {
+function _temp1(a_9: ResolvedAgent) {
   return a_9.source === "built-in";
 }
-function _temp0(a_8) {
+function _temp0(a_8: ResolvedAgent) {
   return a_8.source !== "built-in";
 }
-function _temp9(g_0) {
+function _temp9(g_0: AgentSourceGroup) {
   return g_0.source !== "built-in";
 }
-function _temp8(a_6) {
+function _temp8(a_6: ResolvedAgent) {
   return !a_6.overriddenBy;
 }
-function _temp7(a_5) {
+function _temp7(a_5: ResolvedAgent) {
   return a_5.source === "built-in";
 }
-function _temp6(a_4) {
+function _temp6(a_4: ResolvedAgent) {
   return a_4.source !== "built-in";
 }
-function _temp5(a_3) {
+function _temp5(a_3: ResolvedAgent) {
   return a_3.source === "built-in";
 }
-function _temp4(a_2) {
+function _temp4(a_2: ResolvedAgent) {
   return a_2.source === "built-in";
 }
-function _temp3(g) {
+function _temp3(g: AgentSourceGroup) {
   return g.source !== "built-in";
 }
-function _temp2(a) {
+function _temp2(a: ResolvedAgent) {
   return a.source !== "built-in";
 }
-function _temp(agent) {
+function _temp(agent: ResolvedAgent) {
   return {
     isOverridden: !!agent.overriddenBy,
     overriddenBy: agent.overriddenBy || null

@@ -193,7 +193,7 @@ export function createRedisQueueBackend(): QueueBackend {
         // workers are short-lived (see drainOnce comment above) —
         // a long-running worker would conflict with its own lock.
         try {
-          await job.moveToWait('daemon_boot_recovery', job.token ?? '')
+          await (job as any).moveToWait('daemon_boot_recovery', job.token ?? '')
           recovered.push(job.id ?? job.name)
         } catch {
           // Job may have been consumed between listing and moving;

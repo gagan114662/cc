@@ -242,11 +242,11 @@ export async function applyCollapsesIfNeeded(
 
 export function isWithheldPromptTooLong(
   _message: unknown,
-  _isPromptTooLongMessage: (message: unknown) => boolean,
+  _isPromptTooLongMessage: (message: never) => boolean,
   _querySource?: QuerySource,
 ): boolean {
   if (!state.enabled) return false
-  if (_isPromptTooLongMessage(_message)) return true
+  if (_isPromptTooLongMessage(_message as never)) return true
   if (
     typeof _message === 'object' &&
     _message !== null &&

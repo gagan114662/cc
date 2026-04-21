@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import type { ToolUseBlockParam } from '@anthropic-ai/sdk/resources/index.mjs';
 import { feature } from 'bun:bundle';
 import { basename } from 'path';
 import React, { useRef } from 'react';
@@ -39,7 +40,14 @@ type Props = {
 };
 
 /** Render a single tool use in verbose mode */
-function VerboseToolUse(t0) {
+function VerboseToolUse(t0: {
+  content: ToolUseBlockParam;
+  tools: Tools;
+  lookups: ReturnType<typeof buildMessageLookups>;
+  inProgressToolUseIDs: Set<string>;
+  shouldAnimate: boolean;
+  theme: ThemeName;
+}) {
   const $ = _c(24);
   const {
     content,
@@ -150,13 +158,13 @@ export function CollapsedReadSearchContent({
 }: Props): React.ReactNode {
   const bg = useSelectedMessageBg();
   const {
-    searchCount: rawSearchCount,
-    readCount: rawReadCount,
-    listCount: rawListCount,
-    replCount,
-    memorySearchCount,
-    memoryReadCount,
-    memoryWriteCount,
+    searchCount: rawSearchCount = 0,
+    readCount: rawReadCount = 0,
+    listCount: rawListCount = 0,
+    replCount = 0,
+    memorySearchCount = 0,
+    memoryReadCount = 0,
+    memoryWriteCount = 0,
     messages: groupMessages
   } = message;
   const [theme] = useTheme();
@@ -211,7 +219,7 @@ export function CollapsedReadSearchContent({
           pattern?: string;
           file_path?: string;
         };
-        incomingHint = input.file_path ?? (input.pattern ? `"${input.pattern}"` : undefined) ?? input.command ?? latest.toolName;
+        incomingHint = input.file_path ?? (input.pattern ? `"${input.pattern}"` : undefined) ?? input.command ?? (latest.toolName as string | undefined);
       }
     }
   }
@@ -224,7 +232,9 @@ export function CollapsedReadSearchContent({
       if (msg.type === 'assistant') {
         toolUses.push(msg);
       } else if (msg.type === 'grouped_tool_use') {
-        toolUses.push(...msg.messages);
+        for (const inner of msg.messages) {
+          if (inner.type === 'assistant') toolUses.push(inner);
+        }
       }
     }
     return <Box flexDirection="column">
@@ -239,7 +249,7 @@ export function CollapsedReadSearchContent({
               {message.hookCount === 1 ? 'hook' : 'hooks'} (
               {formatSecondsShort(message.hookTotalMs ?? 0)})
             </Text>
-            {message.hookInfos.map((info, idx) => <Text key={`hook-${idx}`} dimColor>
+            {message.hookInfos.map((info: any, idx: number) => <Text key={`hook-${idx}`} dimColor>
                 {'     ⎿ '}
                 {info.command} ({formatSecondsShort(info.durationMs ?? 0)})
               </Text>)}
@@ -280,9 +290,10 @@ export function CollapsedReadSearchContent({
       if (data?.type !== 'bash_progress' && data?.type !== 'powershell_progress') {
         continue;
       }
-      if (elapsed === undefined || data.elapsedTimeSeconds > elapsed) {
-        elapsed = data.elapsedTimeSeconds;
-        lines = data.totalLines;
+      const progress = data as { elapsedTimeSeconds: number; totalLines: number };
+      if (elapsed === undefined || progress.elapsedTimeSeconds > elapsed) {
+        elapsed = progress.elapsedTimeSeconds;
+        lines = progress.totalLines;
       }
     }
     if (elapsed !== undefined && elapsed >= 2) {
@@ -310,27 +321,27 @@ export function CollapsedReadSearchContent({
       'cherry-picked': 'cherry-picked'
     };
     for (const kind of ['committed', 'amended', 'cherry-picked'] as const) {
-      const shas = message.commits.filter(c => c.kind === kind).map(c_0 => c_0.sha);
+      const shas = message.commits.filter((c: { kind: string; sha: string }) => c.kind === kind).map((c_0: { kind: string; sha: string }) => c_0.sha);
       if (shas.length) {
         pushPart(kind, byKind[kind], <Text bold>{shas.join(', ')}</Text>);
       }
     }
   }
   if (isFullscreenEnvEnabled() && message.pushes?.length) {
-    const branches = uniq(message.pushes.map(p => p.branch));
+    const branches = uniq(message.pushes.map((p: { branch: string }) => p.branch));
     pushPart('push', 'pushed to', <Text bold>{branches.join(', ')}</Text>);
   }
   if (isFullscreenEnvEnabled() && message.branches?.length) {
-    const byAction = {
+    const byAction: Record<string, string> = {
       merged: 'merged',
       rebased: 'rebased onto'
     };
     for (const b of message.branches) {
-      pushPart(`br-${b.action}-${b.ref}`, byAction[b.action], <Text bold>{b.ref}</Text>);
+      pushPart(`br-${b.action}-${b.ref}`, byAction[b.action] ?? b.action, <Text bold>{b.ref}</Text>);
     }
   }
   if (isFullscreenEnvEnabled() && message.prs?.length) {
-    const verbs = {
+    const verbs: Record<string, string> = {
       created: 'created',
       edited: 'edited',
       merged: 'merged',
@@ -339,7 +350,7 @@ export function CollapsedReadSearchContent({
       ready: 'marked ready'
     };
     for (const pr of message.prs) {
-      pushPart(`pr-${pr.action}-${pr.number}`, verbs[pr.action], pr.url ? <PrBadge number={pr.number} url={pr.url} bold /> : <Text bold>PR #{pr.number}</Text>);
+      pushPart(`pr-${pr.action}-${pr.number}`, verbs[pr.action] ?? pr.action, pr.url ? <PrBadge number={pr.number} url={pr.url} bold /> : <Text bold>PR #{pr.number}</Text>);
     }
   }
   if (searchCount > 0) {
@@ -386,7 +397,7 @@ export function CollapsedReadSearchContent({
       </Text>);
   }
   if (mcpCallCount > 0) {
-    const serverLabel = message.mcpServerNames?.map(n => n.replace(/^claude\.ai /, '')).join(', ') || 'MCP';
+    const serverLabel = message.mcpServerNames?.map((n: string) => n.replace(/^claude\.ai /, '')).join(', ') || 'MCP';
     const isFirst_3 = nonMemParts.length === 0;
     const verb_0 = isActiveGroup ? isFirst_3 ? 'Querying' : 'querying' : isFirst_3 ? 'Queried' : 'queried';
     if (!isFirst_3) {
@@ -459,7 +470,7 @@ export function CollapsedReadSearchContent({
           {isActiveGroup && <Text key="ellipsis">…</Text>} <CtrlOToExpand />
         </Text>
       </Box>
-      {isActiveGroup && displayedHint !== undefined &&
+      {isActiveGroup && displayedHint != null &&
     // Row layout: 5-wide gutter for ⎿, then a flex column for the text.
     // Ink's wrap stays inside the right column so continuation lines
     // indent under ⎿. MAX_HINT_CHARS in commandAsHint caps total at ~5 lines.
@@ -468,7 +479,7 @@ export function CollapsedReadSearchContent({
             <Text dimColor>{'  ⎿  '}</Text>
           </Box>
           <Box flexDirection="column" flexGrow={1}>
-            {displayedHint.split('\n').map((line, i, arr) => <Text key={`hint-${i}`} dimColor>
+            {displayedHint.split('\n').map((line: string, i: number, arr: string[]) => <Text key={`hint-${i}`} dimColor>
                 {line}
                 {i === arr.length - 1 && shellProgressSuffix}
               </Text>)}

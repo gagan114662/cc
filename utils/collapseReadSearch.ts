@@ -1,5 +1,5 @@
 import { feature } from 'bun:bundle'
-import type { UUID } from 'crypto'
+type UUID = string
 import { findToolByName, type Tools } from '../Tool.js'
 import { extractBashCommentLabel } from '../tools/BashTool/commentLabel.js'
 import { BASH_TOOL_NAME } from '../tools/BashTool/toolName.js'
@@ -15,11 +15,14 @@ import {
 } from '../tools/shared/gitOperationTracking.js'
 import { TOOL_SEARCH_TOOL_NAME } from '../tools/ToolSearchTool/prompt.js'
 import type {
+  AssistantMessage,
   CollapsedReadSearchGroup,
   CollapsibleMessage,
+  GroupedToolUseMessage,
   RenderableMessage,
   StopHookInfo,
   SystemStopHookSummaryMessage,
+  UserMessage,
 } from '../types/message.js'
 import { getDisplayPath } from './file.js'
 import { isFullscreenEnvEnabled } from './fullscreen.js'
@@ -312,14 +315,26 @@ function getCollapsibleToolInfo(
   if (msg.type === 'grouped_tool_use') {
     // For grouped tool uses, check the first message's input
     const firstContent = msg.messages[0]?.message.content[0]
+    const toolUseContent =
+      firstContent && (firstContent as { type?: unknown }).type === 'tool_use'
+        ? (firstContent as { type: 'tool_use'; name: string; input: unknown })
+        : undefined
     const info = getSearchOrReadFromContent(
-      firstContent
-        ? { type: 'tool_use', name: msg.toolName, input: firstContent.input }
+      toolUseContent
+        ? {
+            type: 'tool_use',
+            name: msg.toolName ?? toolUseContent.name,
+            input: toolUseContent.input,
+          }
         : undefined,
       tools,
     )
-    if (info && firstContent?.type === 'tool_use') {
-      return { name: msg.toolName, input: firstContent.input, ...info }
+    if (info && toolUseContent) {
+      return {
+        name: msg.toolName ?? toolUseContent.name,
+        input: toolUseContent.input,
+        ...info,
+      }
     }
   }
   return null
@@ -356,10 +371,16 @@ function isNonCollapsibleToolUse(
     }
   }
   if (msg.type === 'grouped_tool_use') {
-    const firstContent = msg.messages[0]?.message.content[0]
+    const firstContent = msg.messages[0]?.message.content[0] as
+      | { type?: string; name?: string; input?: unknown }
+      | undefined
     if (
       firstContent?.type === 'tool_use' &&
-      !isToolSearchOrRead(msg.toolName, firstContent.input, tools)
+      !isToolSearchOrRead(
+        msg.toolName ?? firstContent.name ?? '',
+        firstContent.input,
+        tools,
+      )
     ) {
       return true
     }
@@ -415,10 +436,16 @@ function isCollapsibleToolUse(
     )
   }
   if (msg.type === 'grouped_tool_use') {
-    const firstContent = msg.messages[0]?.message.content[0]
+    const firstContent = msg.messages[0]?.message.content[0] as
+      | { type?: string; name?: string; input?: unknown }
+      | undefined
     return (
       firstContent?.type === 'tool_use' &&
-      isToolSearchOrRead(msg.toolName, firstContent.input, tools)
+      isToolSearchOrRead(
+        msg.toolName ?? firstContent.name ?? '',
+        firstContent.input,
+        tools,
+      )
     )
   }
   return false
@@ -459,8 +486,10 @@ function getToolUseIdsFromMessage(msg: RenderableMessage): string[] {
   if (msg.type === 'grouped_tool_use') {
     return msg.messages
       .map(m => {
-        const content = m.message.content[0]
-        return content.type === 'tool_use' ? content.id : ''
+        const content = m.message.content[0] as
+          | { type?: string; id?: string }
+          | undefined
+        return content?.type === 'tool_use' ? content.id ?? '' : ''
       })
       .filter(Boolean)
   }
@@ -475,7 +504,7 @@ export function getToolUseIdsFromCollapsedGroup(
 ): string[] {
   const ids: string[] = []
   for (const msg of message.messages) {
-    ids.push(...getToolUseIdsFromMessage(msg))
+    ids.push(...getToolUseIdsFromMessage(msg as RenderableMessage))
   }
   return ids
 }
@@ -500,11 +529,22 @@ export function hasAnyToolInProgress(
 export function getDisplayMessageFromCollapsed(
   message: CollapsedReadSearchGroup,
 ): Exclude<CollapsibleMessage, { type: 'grouped_tool_use' }> {
-  const firstMsg = message.displayMessage
-  if (firstMsg.type === 'grouped_tool_use') {
-    return firstMsg.displayMessage
+  const firstMsg = message.displayMessage as
+    | { type?: string; displayMessage?: unknown }
+    | undefined
+  if (!firstMsg) {
+    return message.messages[0] as Exclude<
+      CollapsibleMessage,
+      { type: 'grouped_tool_use' }
+    >
   }
-  return firstMsg
+  if (firstMsg.type === 'grouped_tool_use') {
+    return firstMsg.displayMessage as Exclude<
+      CollapsibleMessage,
+      { type: 'grouped_tool_use' }
+    >
+  }
+  return firstMsg as Exclude<CollapsibleMessage, { type: 'grouped_tool_use' }>
 }
 
 /**
@@ -534,7 +574,9 @@ function getFilePathsFromReadMessage(msg: RenderableMessage): string[] {
     }
   } else if (msg.type === 'grouped_tool_use') {
     for (const m of msg.messages) {
-      const content = m.message.content[0]
+      const content = m.message.content[0] as
+        | { type?: string; input?: unknown }
+        | undefined
       if (content?.type === 'tool_use') {
         const input = content.input as { file_path?: string } | undefined
         if (input?.file_path) {
@@ -716,8 +758,15 @@ function createCollapsedGroup(
     readFilePaths: nonMemReadFilePaths,
     searchArgs: group.nonMemSearchArgs,
     latestDisplayHint: group.latestDisplayHint,
-    messages: group.messages,
-    displayMessage: firstMsg,
+    messages: group.messages as unknown as (
+      | UserMessage
+      | AssistantMessage
+      | GroupedToolUseMessage
+    )[],
+    displayMessage: firstMsg as unknown as
+      | UserMessage
+      | AssistantMessage
+      | GroupedToolUseMessage,
     uuid: `collapsed-${firstMsg.uuid}` as UUID,
     timestamp: firstMsg.timestamp,
   }
@@ -896,15 +945,20 @@ export function collapseReadSearchGroups(
       }
     } else if (currentGroup.messages.length > 0 && isPreToolHookSummary(msg)) {
       // Absorb PreToolUse hook summaries into the group instead of deferring
-      currentGroup.hookCount += msg.hookCount
+      const hookMsg = msg as SystemStopHookSummaryMessage
+      currentGroup.hookCount += hookMsg.hookCount
       currentGroup.hookTotalMs +=
-        msg.totalDurationMs ??
-        msg.hookInfos.reduce((sum, h) => sum + (h.durationMs ?? 0), 0)
-      currentGroup.hookInfos.push(...msg.hookInfos)
+        hookMsg.totalDurationMs ??
+        hookMsg.hookInfos.reduce(
+          (sum: number, h: StopHookInfo) => sum + (h.durationMs ?? 0),
+          0,
+        )
+      currentGroup.hookInfos.push(...hookMsg.hookInfos)
     } else if (
       currentGroup.messages.length > 0 &&
-      msg.type === 'attachment' &&
-      msg.attachment.type === 'relevant_memories'
+      (msg as { type?: string }).type === 'attachment' &&
+      (msg as { attachment?: { type?: string } }).attachment?.type ===
+        'relevant_memories'
     ) {
       // Absorb auto-injected memory attachments so "recalled N memories"
       // renders inline with "ran N bash commands" instead of as a separate
@@ -914,7 +968,10 @@ export function collapseReadSearchGroups(
       // suppresses the fallback). createCollapsedGroup adds .length to
       // memoryReadCount after the readCount subtraction instead.
       currentGroup.relevantMemories ??= []
-      currentGroup.relevantMemories.push(...msg.attachment.memories)
+      currentGroup.relevantMemories.push(
+        ...((msg as { attachment: { memories: unknown[] } }).attachment
+          .memories as never[]),
+      )
     } else if (shouldSkipMessage(msg)) {
       // Don't flush the group for skippable messages (thinking, attachments, system)
       // If a group is in progress, defer these messages to output after the collapsed group
@@ -924,7 +981,11 @@ export function collapseReadSearchGroups(
       // ⎿ Loaded lines cluster tightly instead of being split by the badge's marginTop.
       if (
         currentGroup.messages.length > 0 &&
-        !(msg.type === 'attachment' && msg.attachment.type === 'nested_memory')
+        !(
+          (msg as { type?: string }).type === 'attachment' &&
+          (msg as { attachment?: { type?: string } }).attachment?.type ===
+            'nested_memory'
+        )
       ) {
         deferredSkippable.push(msg)
       } else {

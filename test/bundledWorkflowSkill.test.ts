@@ -55,7 +55,7 @@ describe('bundled workflow skills', () => {
       command => command.name === 'publish-draft',
     )
 
-    expect(competitive?.context).toBe('fork')
+    expect((competitive as { context?: string } | undefined)?.context).toBe('fork')
     expect(competitive?.workflowRuntime).toBe('code')
     expect(competitive?.capabilityGrants).toEqual([
       'browser',
@@ -66,7 +66,7 @@ describe('bundled workflow skills', () => {
     expect(competitive?.verbs).toContain('map positioning gaps')
     expect(competitive?.workflowSteps).toHaveLength(3)
 
-    expect(support?.context).toBe('fork')
+    expect((support as { context?: string } | undefined)?.context).toBe('fork')
     expect(support?.workflowRuntime).toBe('code')
     expect(support?.capabilityGrants).toEqual([
       'browser',

@@ -638,7 +638,7 @@ export class QueryEngine {
           initialAppState.fastMode,
         ),
         uuid: randomUUID(),
-      }
+      } as unknown as SDKMessage
       return
     }
 
@@ -879,7 +879,7 @@ export class QueryEngine {
               errors: [
                 `Reached maximum number of turns (${message.attachment.maxTurns})`,
               ],
-            }
+            } as unknown as SDKMessage
             return
           }
           // Yield queued_command attachments as SDK user message replays
@@ -946,22 +946,29 @@ export class QueryEngine {
               type: 'system',
               subtype: 'compact_boundary' as const,
               session_id: getSessionId(),
-              uuid: message.uuid,
+              uuid: message.uuid as SDKCompactBoundaryMessage['uuid'],
               compact_metadata: toSDKCompactMetadata(message.compactMetadata),
             }
           }
           if (message.subtype === 'api_error') {
+            const apiErr = message.error as Error & {
+              status?: number | null
+            }
             yield {
               type: 'system',
               subtype: 'api_retry' as const,
               attempt: message.retryAttempt,
               max_retries: message.maxRetries,
               retry_delay_ms: message.retryInMs,
-              error_status: message.error.status ?? null,
-              error: categorizeRetryableAPIError(message.error),
+              error_status: apiErr.status ?? null,
+              error: categorizeRetryableAPIError(
+                apiErr as unknown as Parameters<
+                  typeof categorizeRetryableAPIError
+                >[0],
+              ),
               session_id: getSessionId(),
               uuid: message.uuid,
-            }
+            } as unknown as SDKMessage
           }
           // Don't yield other system messages in headless mode
           break
@@ -974,7 +981,7 @@ export class QueryEngine {
             preceding_tool_use_ids: message.precedingToolUseIds,
             session_id: getSessionId(),
             uuid: message.uuid,
-          }
+          } as unknown as SDKMessage
           break
       }
 
@@ -1007,7 +1014,7 @@ export class QueryEngine {
           ),
           uuid: randomUUID(),
           errors: [`Reached maximum budget ($${maxBudgetUsd})`],
-        }
+        } as unknown as SDKMessage
         return
       }
 
@@ -1052,7 +1059,7 @@ export class QueryEngine {
             errors: [
               `Failed to provide valid structured output after ${maxRetries} attempts`,
             ],
-          }
+          } as unknown as SDKMessage
           return
         }
       }
@@ -1123,7 +1130,7 @@ export class QueryEngine {
             ...all.slice(start).map(_ => _.error),
           ]
         })(),
-      }
+      } as unknown as SDKMessage
       return
     }
 
@@ -1162,7 +1169,7 @@ export class QueryEngine {
         initialAppState.fastMode,
       ),
       uuid: randomUUID(),
-    }
+    } as unknown as SDKMessage
   }
 
   interrupt(): void {
@@ -1292,7 +1299,7 @@ export async function* ask({
           },
         }
       : {}),
-  })
+  } as unknown as QueryEngineConfig)
 
   try {
     yield* engine.submitMessage(prompt, {

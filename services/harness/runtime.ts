@@ -746,7 +746,7 @@ async function emitHarnessExportHeartbeat(input: {
       heartbeat.lastTelemetryExportAt = result.exportedAt
     }
     state.observability.exportLastSuccessAt = result.exportedAt
-    refreshObservabilityHealth(state, new Date(result.exportedAt))
+    refreshObservabilityHealth(state, new Date(result.exportedAt ?? Date.now()) as never)
   })
 }
 
@@ -1201,7 +1201,7 @@ async function executeRemotePrimaryWorker(
       if (event.type === 'result') {
         const totalCostUsd =
           typeof event.total_cost_usd === 'number' ? event.total_cost_usd : 0
-        const errors = Array.isArray(event.errors) ? event.errors.join('\n') : ''
+        const errors = Array.isArray((event as { errors?: unknown }).errors) ? ((event as { errors: string[] }).errors).join('\n') : ''
         if (event.is_error || event.subtype !== 'success') {
           return {
             dispatched: true,

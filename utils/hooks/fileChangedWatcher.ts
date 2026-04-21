@@ -54,7 +54,7 @@ function resolveWatchPaths(
   const staticPaths: string[] = []
   for (const m of matchers) {
     if (!m.matcher) continue
-    for (const name of m.matcher.split('|').map(s => s.trim())) {
+    for (const name of m.matcher.split('|').map((s: string) => s.trim())) {
       if (!name) continue
       staticPaths.push(isAbsolute(name) ? name : join(currentCwd, name))
     }

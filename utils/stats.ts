@@ -498,8 +498,8 @@ function cacheToStats(
             usage.contextWindow,
           ),
           maxOutputTokens: Math.max(
-            modelUsage[model].maxOutputTokens,
-            usage.maxOutputTokens,
+            modelUsage[model].maxOutputTokens ?? 0,
+            usage.maxOutputTokens ?? 0,
           ),
         }
       } else {

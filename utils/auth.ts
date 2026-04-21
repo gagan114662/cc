@@ -1351,7 +1351,7 @@ export function getClaudeAIOAuthTokensForScopesSync(
 type ScopedOAuthTokenResolverDeps = {
   getActiveTokens?: () => OAuthTokens | null
   getStoredTokens?: () => Promise<OAuthTokens | null>
-  isTokenExpired?: (expiresAt: string | null) => boolean
+  isTokenExpired?: (expiresAt: number | null) => boolean
   refreshToken?: typeof refreshOAuthToken
   saveTokens?: typeof saveOAuthTokensIfNeeded
 }
@@ -2066,7 +2066,7 @@ export async function validateForceLoginOrg(): Promise<OrgValidationResult> {
     }
   }
 
-  const tokenOrgUuid = profile.organization.uuid
+  const tokenOrgUuid = profile.organization?.uuid
   if (tokenOrgUuid === requiredOrgUuid) {
     return { valid: true }
   }

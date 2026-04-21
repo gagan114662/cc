@@ -82,7 +82,7 @@ Use the public surface and identify the biggest GTM gaps.`,
     const skills = await fetchMcpSkillsForClient(client)
 
     expect(skills).toHaveLength(1)
-    const skill = skills[0]
+    const skill = skills[0] as typeof skills[0] & { source: string; getPromptForCommand: (...args: unknown[]) => Promise<unknown[]> }
     expect(skill.name).toBe('browser_harness:growth:outbound-audit')
     expect(skill.source).toBe('mcp')
     expect(skill.loadedFrom).toBe('mcp')
@@ -216,7 +216,13 @@ highest-leverage GTM actions.`,
     const workflows = await fetchMcpWorkflowsForClient(client)
 
     expect(workflows).toHaveLength(1)
-    const workflow = workflows[0]
+    const workflow = workflows[0] as typeof workflows[0] & {
+      source: string
+      context: string
+      progressMessage: string
+      argNames: string[]
+      getPromptForCommand: (...args: unknown[]) => Promise<unknown[]>
+    }
     expect(workflow.name).toBe('browser_harness:workflow:growth:pipeline-refresh')
     expect(workflow.kind).toBe('workflow')
     expect(workflow.source).toBe('mcp')
@@ -348,6 +354,6 @@ description: Refresh the site backlog
 
     const workflows = await fetchMcpWorkflowsForClient(client)
     expect(workflows).toHaveLength(1)
-    expect(workflows[0]?.context).toBe('fork')
+    expect((workflows[0] as { context?: string } | undefined)?.context).toBe('fork')
   })
 })

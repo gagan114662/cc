@@ -6,7 +6,7 @@ const DEFAULT_POOLED_WORKER_RESTART_DELAY_MS = 1000
 
 type HarnessWorkerDescriptor = {
   workerId: string
-  runnerId: string
+  runnerId: string | undefined
   agentKind: 'claude' | 'codex'
   workerSlots: number
   runnerLabels: string[]

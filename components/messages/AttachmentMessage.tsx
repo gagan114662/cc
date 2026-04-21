@@ -1,10 +1,11 @@
 import { c as _c } from "react/compiler-runtime";
+import { USER_TYPE } from '../../utils/buildConstants.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import React, { useMemo } from 'react';
 import { Ansi, Box, Text } from '../../ink.js';
 import type { Attachment } from 'src/utils/attachments.js';
 import type { NullRenderingAttachmentType } from './nullRenderingAttachments.js';
-import { useAppState } from '../../state/AppState.js';
+import { type AppState, useAppState } from '../../state/AppState.js';
 import { getDisplayPath } from 'src/utils/file.js';
 import { formatFileSize } from 'src/utils/format.js';
 import { MessageResponse } from '../MessageResponse.js';
@@ -113,7 +114,7 @@ export function AttachmentMessage({
       // names — shortId is undefined outside ant builds anyway.
       const names = attachment.skills.map(s => s.shortId ? `${s.name} [${s.shortId}]` : s.name).join(', ');
       const firstId = attachment.skills[0]?.shortId;
-      const hint = "external" === 'ant' && !isDemoEnv && firstId ? ` · /skill-feedback ${firstId} 1=wrong 2=noisy 3=good [comment]` : '';
+      const hint = USER_TYPE === 'ant' && !isDemoEnv && firstId ? ` · /skill-feedback ${firstId} 1=wrong 2=noisy 3=good [comment]` : '';
       return <Line>
           <Text bold>{attachment.skills.length}</Text> relevant{' '}
           {plural(attachment.skills.length, 'skill')}: {names}
@@ -351,14 +352,14 @@ export function AttachmentMessage({
       // skill_discovery and teammate_mailbox are handled BEFORE the switch in
       // runtime-gated blocks (feature() / isAgentSwarmsEnabled()) that TS can't
       // narrow through — excluded here via type union (compile-time only, no emit).
-      attachment.type satisfies NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox';
+      attachment.type as unknown as NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox';
       return null;
   }
 }
 type TaskStatusAttachment = Extract<Attachment, {
   type: 'task_status';
 }>;
-function TaskStatusMessage(t0) {
+function TaskStatusMessage(t0: { attachment: TaskStatusAttachment }) {
   const $ = _c(4);
   const {
     attachment
@@ -387,7 +388,7 @@ function TaskStatusMessage(t0) {
   }
   return t1;
 }
-function GenericTaskStatus(t0) {
+function GenericTaskStatus(t0: { attachment: TaskStatusAttachment }) {
   const $ = _c(9);
   const {
     attachment
@@ -429,7 +430,7 @@ function GenericTaskStatus(t0) {
   }
   return t4;
 }
-function TeammateTaskStatus(t0) {
+function TeammateTaskStatus(t0: { attachment: TaskStatusAttachment }) {
   const $ = _c(16);
   const {
     attachment
@@ -437,13 +438,13 @@ function TeammateTaskStatus(t0) {
   const bg = useSelectedMessageBg();
   let t1;
   if ($[0] !== attachment.taskId) {
-    t1 = s => s.tasks[attachment.taskId];
+    t1 = (s: AppState) => s.tasks[attachment.taskId];
     $[0] = attachment.taskId;
     $[1] = t1;
   } else {
     t1 = $[1];
   }
-  const task = useAppState(t1);
+  const task = useAppState(t1) as { type?: string; identity: { color?: string; agentName?: string } } | undefined;
   if (task?.type !== "in_process_teammate") {
     let t2;
     if ($[2] !== attachment) {
@@ -503,7 +504,7 @@ function TeammateTaskStatus(t0) {
 }
 // We allow setting dimColor to false here to help work around the dim-bold bug.
 // https://github.com/chalk/chalk/issues/290
-function Line(t0) {
+function Line(t0: { dimColor?: boolean; children?: React.ReactNode; color?: string }) {
   const $ = _c(7);
   const {
     dimColor: t1,
@@ -514,7 +515,7 @@ function Line(t0) {
   const bg = useSelectedMessageBg();
   let t2;
   if ($[0] !== children || $[1] !== color || $[2] !== dimColor) {
-    t2 = <MessageResponse><Text color={color} dimColor={dimColor} wrap="wrap">{children}</Text></MessageResponse>;
+    t2 = <MessageResponse><Text color={color as never} dimColor={dimColor} wrap="wrap">{children}</Text></MessageResponse>;
     $[0] = children;
     $[1] = color;
     $[2] = dimColor;

@@ -1,6 +1,7 @@
-import type { UUID } from 'crypto'
+type UUID = string
 import { useEffect, useRef } from 'react'
 import { useAppState } from '../state/AppState.js'
+import type { AppState } from '../state/AppStateStore.js'
 import type { Message } from '../types/message.js'
 import { isAgentSwarmsEnabled } from '../utils/agentSwarmsEnabled.js'
 import {
@@ -17,7 +18,7 @@ import {
  * @param ignore When true, messages will not be recorded to the transcript
  */
 export function useLogMessages(messages: Message[], ignore: boolean = false) {
-  const teamContext = useAppState(s => s.teamContext)
+  const teamContext = useAppState((s: AppState) => s.teamContext)
 
   // messages is append-only between compactions, so track where we left off
   // and only pass the new tail to recordTranscript. Avoids O(n) filter+scan

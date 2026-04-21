@@ -24,7 +24,7 @@ type Props = {
  * 1. isLoading is true (a query is in progress)
  * 2. No foreground tasks (bash/agent) are running (those take priority for Ctrl+B)
  */
-export function SessionBackgroundHint(t0) {
+export function SessionBackgroundHint(t0: Props) {
   const $ = _c(10);
   const {
     onBackgroundSession,
@@ -98,7 +98,7 @@ export function SessionBackgroundHint(t0) {
   }
   return t5;
 }
-function _temp2(c) {
+function _temp2(c: any) {
   return c.hasUsedBackgroundTask ? c : {
     ...c,
     hasUsedBackgroundTask: true

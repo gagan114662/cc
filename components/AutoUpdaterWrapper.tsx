@@ -16,7 +16,7 @@ type Props = {
   showSuccessMessage: boolean;
   verbose: boolean;
 };
-export function AutoUpdaterWrapper(t0) {
+export function AutoUpdaterWrapper(t0: Props) {
   const $ = _c(17);
   const {
     isUpdating,
@@ -26,10 +26,10 @@ export function AutoUpdaterWrapper(t0) {
     showSuccessMessage,
     verbose
   } = t0;
-  const [useNativeInstaller, setUseNativeInstaller] = React.useState(null);
-  const [isPackageManager, setIsPackageManager] = React.useState(null);
+  const [useNativeInstaller, setUseNativeInstaller] = React.useState<any>(null);
+  const [isPackageManager, setIsPackageManager] = React.useState<any>(null);
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       const checkInstallation = async function checkInstallation() {
@@ -49,7 +49,7 @@ export function AutoUpdaterWrapper(t0) {
     $[1] = t2;
   } else {
     t1 = $[0];
-    t2 = $[1];
+    t2 = $[1] as React.DependencyList;
   }
   React.useEffect(t1, t2);
   if (useNativeInstaller === null || isPackageManager === null) {

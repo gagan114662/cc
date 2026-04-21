@@ -1156,12 +1156,14 @@ export async function readImageWithTokenBudget(
       // Fallback: heavily compressed version from the SAME buffer
       try {
         const sharpModule = await import('sharp')
-        const sharp =
-          (
-            sharpModule as {
-              default?: typeof sharpModule
-            } & typeof sharpModule
-          ).default || sharpModule
+        const sharp = (
+          (sharpModule as unknown as { default?: unknown }).default ??
+          sharpModule
+        ) as (input?: Buffer | string) => {
+          resize: (w: number, h: number, opts?: unknown) => {
+            jpeg: (opts?: unknown) => { toBuffer: () => Promise<Buffer> }
+          }
+        }
 
         const fallbackBuffer = await sharp(imageBuffer)
           .resize(400, 400, {

@@ -1221,6 +1221,7 @@ async function* queryLoop(
         // so hooks have nothing meaningful to evaluate. Running stop hooks
         // on prompt-too-long creates a death spiral: error → hook blocking
         // → retry → error → … (the hook injects more tokens each cycle).
+        if (!lastMessage) return { reason: 'no_last_message' }
         yield lastMessage
         void executeStopFailureHooks(lastMessage, toolUseContext)
         return { reason: isWithheldMedia ? 'image_error' : 'prompt_too_long' }
@@ -1228,6 +1229,7 @@ async function* queryLoop(
         // reactiveCompact compiled out but contextCollapse withheld and
         // couldn't recover (staged queue empty/stale). Surface. Same
         // early-return rationale — don't fall through to stop hooks.
+        if (!lastMessage) return { reason: 'no_last_message' }
         yield lastMessage
         void executeStopFailureHooks(lastMessage, toolUseContext)
         return { reason: 'prompt_too_long' }
@@ -1680,7 +1682,7 @@ async function* queryLoop(
       const skillAttachments =
         await skillPrefetch.collectSkillDiscoveryPrefetch(pendingSkillPrefetch)
       for (const att of skillAttachments) {
-        const msg = createAttachmentMessage(att)
+        const msg = createAttachmentMessage(att as Parameters<typeof createAttachmentMessage>[0])
         yield msg
         toolResults.push(msg)
       }

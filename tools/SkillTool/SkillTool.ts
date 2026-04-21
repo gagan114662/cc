@@ -74,6 +74,7 @@ import {
   renderToolUseRejectedMessage,
 } from './UI.js'
 import { executeForkedWorkflow } from './workflowExecution.js'
+import type { WorkflowCommand } from '../../utils/workflowCommands.js'
 
 /**
  * Gets all commands including MCP resource-delivered prompt commands from
@@ -215,7 +216,7 @@ async function executeForkedSkill(
 
   if (command.kind === 'workflow' && command.workflowSteps?.length) {
     return executeForkedWorkflow({
-      command,
+      command: command as WorkflowCommand,
       commandName,
       args: args || '',
       context,

@@ -1,4 +1,4 @@
-import type { UUID } from 'crypto'
+type UUID = string
 import type { FileHistorySnapshot } from 'src/utils/fileHistory.js'
 import type { ContentReplacementRecord } from 'src/utils/toolResultStorage.js'
 import type { AgentId } from './ids.js'
@@ -219,6 +219,7 @@ export type AttributionSnapshotMessage = {
 }
 
 export type TranscriptMessage = SerializedMessage & {
+  uuid: UUID
   parentUuid: UUID | null
   logicalParentUuid?: UUID | null // Preserves logical parent when parentUuid is nullified for session breaks
   isSidechain: boolean

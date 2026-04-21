@@ -75,7 +75,7 @@ function cachedLexer(content: string): Token[] {
  * - Tables are rendered as React components with proper flexbox layout
  * - Other content is rendered as ANSI strings via formatToken
  */
-export function Markdown(props) {
+export function Markdown(props: Props) {
   const $ = _c(4);
   const settings = useSettings();
   if (settings.syntaxHighlightingDisabled) {
@@ -99,7 +99,7 @@ export function Markdown(props) {
   }
   return t0;
 }
-function MarkdownWithHighlight(props) {
+function MarkdownWithHighlight(props: Props) {
   const $ = _c(4);
   let t0;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
@@ -120,7 +120,7 @@ function MarkdownWithHighlight(props) {
   }
   return t1;
 }
-function MarkdownBody(t0) {
+function MarkdownBody(t0: StreamingProps) {
   const $ = _c(7);
   const {
     children,
@@ -136,16 +136,17 @@ function MarkdownBody(t0) {
     let nonTableContent = "";
     const flushNonTableContent = function flushNonTableContent() {
       if (nonTableContent) {
-        elements.push(<Ansi key={elements.length} dimColor={dimColor}>{nonTableContent.trim()}</Ansi>);
+        const AnsiAny = Ansi as unknown as React.ComponentType<{ key?: unknown; dimColor?: boolean; children?: React.ReactNode }>;
+        elements.push(<AnsiAny key={elements.length} dimColor={dimColor}>{nonTableContent.trim()}</AnsiAny>);
         nonTableContent = "";
       }
     };
     for (const token of tokens) {
       if (token.type === "table") {
         flushNonTableContent();
-        elements.push(<MarkdownTable key={elements.length} token={token as Tokens.Table} highlight={highlight} />);
+        elements.push(<MarkdownTable key={elements.length} token={token as Tokens.Table} highlight={highlight as never} />);
       } else {
-        nonTableContent = nonTableContent + formatToken(token, theme, 0, null, null, highlight);
+        nonTableContent = nonTableContent + formatToken(token, theme, 0, null, null, highlight as never);
         nonTableContent;
       }
     }
@@ -171,6 +172,8 @@ function MarkdownBody(t0) {
 }
 type StreamingProps = {
   children: string;
+  dimColor?: boolean;
+  highlight?: unknown;
 };
 
 /**

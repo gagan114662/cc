@@ -61,6 +61,7 @@ export function isNavigableMessage(msg: NavigableMessage): boolean {
       }
       return false;
   }
+  return false;
 }
 type PrimaryInput = {
   label: string;
@@ -131,9 +132,11 @@ export function toolCallOf(msg: NavigableMessage): {
     };
   }
   if (msg.type === 'grouped_tool_use') {
-    const b = msg.messages[0]?.message.content[0];
+    const b = msg.messages[0]?.message.content[0] as
+      | { type?: string; input?: unknown }
+      | undefined;
     if (b?.type === 'tool_use') return {
-      name: msg.toolName,
+      name: msg.toolName ?? '',
       input: b.input as Record<string, unknown>
     };
   }
@@ -271,7 +274,7 @@ export function useMessageActions(cursor: MessageActionsState | null, setCursor:
 }
 
 // Must mount inside <KeybindingSetup>.
-export function MessageActionsKeybindings(t0) {
+export function MessageActionsKeybindings(t0: any) {
   const $ = _c(2);
   const {
     handlers,
@@ -293,7 +296,7 @@ export function MessageActionsKeybindings(t0) {
 }
 
 // borderTop-only Box matches PromptInput's ─── line for stable footer height.
-export function MessageActionsBar(t0) {
+export function MessageActionsBar(t0: any) {
   const $ = _c(28);
   const {
     cursor
@@ -410,22 +413,26 @@ export function copyTextOf(msg: NavigableMessage): string {
   switch (msg.type) {
     case 'user':
       {
-        const b = msg.message.content[0];
-        return b?.type === 'text' ? stripSystemReminders(b.text) : '';
+        const b = msg.message.content[0] as
+          | { type?: string; text?: string }
+          | undefined;
+        return b?.type === 'text' ? stripSystemReminders(b.text ?? '') : '';
       }
     case 'assistant':
       {
-        const b = msg.message.content[0];
-        if (b?.type === 'text') return b.text;
+        const b = msg.message.content[0] as
+          | { type?: string; text?: string }
+          | undefined;
+        if (b?.type === 'text') return b.text ?? '';
         const tc = toolCallOf(msg);
         return tc ? PRIMARY_INPUT[tc.name]?.extract(tc.input) ?? '' : '';
       }
     case 'grouped_tool_use':
-      return msg.results.map(toolResultText).filter(Boolean).join('\n\n');
+      return ((msg.results ?? []) as NormalizedUserMessage[]).map(r => toolResultText(r)).filter(Boolean).join('\n\n');
     case 'collapsed_read_search':
-      return msg.messages.flatMap(m => m.type === 'user' ? [toolResultText(m)] : m.type === 'grouped_tool_use' ? m.results.map(toolResultText) : []).filter(Boolean).join('\n\n');
+      return msg.messages.flatMap(m => m.type === 'user' ? [toolResultText(m as unknown as NormalizedUserMessage)] : m.type === 'grouped_tool_use' ? ((m.results ?? []) as NormalizedUserMessage[]).map(r => toolResultText(r)) : []).filter(Boolean).join('\n\n');
     case 'system':
-      if ('content' in msg) return msg.content;
+      if ('content' in msg) return msg.content ?? '';
       if ('error' in msg) return String(msg.error);
       return msg.subtype;
     case 'attachment':
@@ -438,6 +445,7 @@ export function copyTextOf(msg: NavigableMessage): string {
         return `[${a.type}]`;
       }
   }
+  return '';
 }
 function toolResultText(r: NormalizedUserMessage): string {
   const b = r.message.content[0];

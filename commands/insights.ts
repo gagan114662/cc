@@ -122,7 +122,7 @@ const collectFromRemoteHost: (
           const projectsDir = join(tempDir, 'projects')
           let projectDirents: Awaited<ReturnType<typeof readdir>>
           try {
-            projectDirents = await readdir(projectsDir, { withFileTypes: true })
+            projectDirents = (await readdir(projectsDir, { withFileTypes: true })) as never
           } catch {
             return result
           }
@@ -130,7 +130,7 @@ const collectFromRemoteHost: (
           // Merge into destination (parallel per project directory)
           await Promise.all(
             projectDirents.map(async dirent => {
-              const projectName = dirent.name
+              const projectName = dirent.name as unknown as string
               const projectPath = join(projectsDir, projectName)
 
               // Skip if not a directory
@@ -148,13 +148,13 @@ const collectFromRemoteHost: (
               // Copy session files (skip existing)
               let files: Awaited<ReturnType<typeof readdir>>
               try {
-                files = await readdir(projectPath, { withFileTypes: true })
+                files = (await readdir(projectPath, { withFileTypes: true })) as never
               } catch {
                 return
               }
               await Promise.all(
                 files.map(async fileDirent => {
-                  const fileName = fileDirent.name
+                  const fileName = fileDirent.name as unknown as string
                   if (!fileName.endsWith('.jsonl')) return
 
                   const srcFile = join(projectPath, fileName)
@@ -2757,14 +2757,14 @@ async function scanAllSessions(): Promise<LiteSessionInfo[]> {
 
   let dirents: Awaited<ReturnType<typeof readdir>>
   try {
-    dirents = await readdir(projectsDir, { withFileTypes: true })
+    dirents = (await readdir(projectsDir, { withFileTypes: true })) as never
   } catch {
     return []
   }
 
   const projectDirs = dirents
     .filter(dirent => dirent.isDirectory())
-    .map(dirent => join(projectsDir, dirent.name))
+    .map(dirent => join(projectsDir, dirent.name as unknown as string))
 
   const allSessions: LiteSessionInfo[] = []
 

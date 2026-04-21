@@ -1,4 +1,4 @@
-import { validateReport } from "./reportUtils.ts";
+import { validateReport } from "./reportUtils.js";
 
 async function main(): Promise<void> {
   const inputPath = process.argv[2];

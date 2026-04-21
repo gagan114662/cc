@@ -3,7 +3,10 @@ import { closeSync, constants as fsConstants, openSync, readSync, writeSync } fr
 import noop from 'lodash-es/noop.js';
 import throttle from 'lodash-es/throttle.js';
 import React, { type ReactNode } from 'react';
+import { NODE_ENV } from '../utils/buildConstants.js'
+// @ts-expect-error -- react-reconciler ships no types in this build
 import type { FiberRoot } from 'react-reconciler';
+// @ts-expect-error -- react-reconciler ships no types in this build
 import { ConcurrentRoot } from 'react-reconciler/constants.js';
 import { onExit } from 'signal-exit';
 import { flushInteractionTime } from 'src/bootstrap/state.js';
@@ -257,8 +260,6 @@ export default class Ink {
       }
     };
 
-    // @ts-expect-error @types/react-reconciler@0.32.3 declares 11 args with transitionCallbacks,
-    // but react-reconciler 0.33.0 source only accepts 10 args (no transitionCallbacks)
     this.container = reconciler.createContainer(this.rootNode, ConcurrentRoot, null, false, null, 'id', noop,
     // onUncaughtError
     noop,
@@ -267,7 +268,7 @@ export default class Ink {
     // onRecoverableError
     noop // onDefaultTransitionIndicator
     );
-    if ("production" === 'development') {
+    if (NODE_ENV === 'development') {
       reconciler.injectIntoDevTools({
         bundleType: 0,
         // Reporting React DOM's version, not Ink's
@@ -674,8 +675,8 @@ export default class Ink {
       // elsewhere, move back before the diff runs. Alt-screen's CSI H
       // already resets to (0,0) so no preamble needed.
       if (parked !== null && !this.altScreenActive && hasDiff) {
-        const pdx = prevFrame.cursor.x - parked.x;
-        const pdy = prevFrame.cursor.y - parked.y;
+        const pdx = (prevFrame.cursor.x ?? 0) - parked.x;
+        const pdy = (prevFrame.cursor.y ?? 0) - parked.y;
         if (pdx !== 0 || pdy !== 0) {
           optimized.unshift({
             type: 'stdout',
@@ -698,11 +699,11 @@ export default class Ink {
           // diff AND previously parked, it's still at the old park position
           // (log-update wrote nothing). Otherwise it's at frame.cursor.
           const from = !hasDiff && parked !== null ? parked : {
-            x: frame.cursor.x,
-            y: frame.cursor.y
+            x: frame.cursor.x ?? 0,
+            y: frame.cursor.y ?? 0
           };
-          const dx = target.x - from.x;
-          const dy = target.y - from.y;
+          const dx = target.x - (from.x ?? 0);
+          const dy = target.y - (from.y ?? 0);
           if (dx !== 0 || dy !== 0) {
             optimized.push({
               type: 'stdout',
@@ -720,8 +721,8 @@ export default class Ink {
         // !hasDiff (e.g. accessibility mode where blur doesn't change
         // renderedValue since invert is identity).
         if (parked !== null && !this.altScreenActive && !hasDiff) {
-          const rdx = frame.cursor.x - parked.x;
-          const rdy = frame.cursor.y - parked.y;
+          const rdx = (frame.cursor.x ?? 0) - parked.x;
+          const rdy = (frame.cursor.y ?? 0) - parked.y;
           if (rdx !== 0 || rdy !== 0) {
             optimized.push({
               type: 'stdout',
@@ -789,7 +790,6 @@ export default class Ink {
   }
   pause(): void {
     // Flush pending React updates and render before pausing.
-    // @ts-expect-error flushSyncFromReconciler exists in react-reconciler 0.31 but not in @types/react-reconciler
     reconciler.flushSyncFromReconciler();
     this.onRender();
     this.isPaused = true;
@@ -1447,9 +1447,7 @@ export default class Ink {
         </TerminalWriteProvider>
       </App>;
 
-    // @ts-expect-error updateContainerSync exists in react-reconciler but not in @types/react-reconciler
     reconciler.updateContainerSync(tree, this.container, null, noop);
-    // @ts-expect-error flushSyncWork exists in react-reconciler but not in @types/react-reconciler
     reconciler.flushSyncWork();
   }
   unmount(error?: Error | number | null): void {
@@ -1514,9 +1512,7 @@ export default class Ink {
       this.drainTimer = null;
     }
 
-    // @ts-expect-error updateContainerSync exists in react-reconciler but not in @types/react-reconciler
     reconciler.updateContainerSync(null, this.container, null, noop);
-    // @ts-expect-error flushSyncWork exists in react-reconciler but not in @types/react-reconciler
     reconciler.flushSyncWork();
     instances.delete(this.options.stdout);
 
@@ -1612,7 +1608,7 @@ export default class Ink {
       // don't stack-overflow.
       if (reentered) {
         const encoding = typeof encodingOrCb === 'string' ? encodingOrCb : undefined;
-        return originalWrite.call(stderr, chunk, encoding, callback);
+        return originalWrite.call(stderr, chunk, encoding, callback as ((err?: Error | null) => void) | undefined);
       }
       reentered = true;
       try {

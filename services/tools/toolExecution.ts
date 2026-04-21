@@ -255,7 +255,8 @@ function getNextImagePasteId(messages: Message[]): number {
   for (const message of messages) {
     if (message.type === 'user' && message.imagePasteIds) {
       for (const id of message.imagePasteIds) {
-        if (id > maxId) maxId = id
+        const n = Number(id)
+        if (n > maxId) maxId = n
       }
     }
   }
@@ -1070,7 +1071,7 @@ async function checkPermissionsAndCallTool(
     resultingMessages.push({
       message: createUserMessage({
         content: messageContent,
-        imagePasteIds: rejectImageIds,
+        imagePasteIds: rejectImageIds as never,
         toolUseResult: `Error: ${errorMessage}`,
         sourceToolAssistantUUID: assistantMessage.uuid,
       }),
@@ -1462,7 +1463,7 @@ async function checkPermissionsAndCallTool(
       resultingMessages.push({
         message: createUserMessage({
           content: contentBlocks,
-          imagePasteIds: allowImageIds,
+          imagePasteIds: allowImageIds as never,
           toolUseResult:
             toolUseContext.agentId && !toolUseContext.preserveToolUseResults
               ? undefined

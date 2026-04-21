@@ -8,7 +8,7 @@ const OrderedListContext = createContext({
 type OrderedListProps = {
   children: ReactNode;
 };
-function OrderedListComponent(t0) {
+function OrderedListComponent(t0: OrderedListProps) {
   const $ = _c(9);
   const {
     children
@@ -28,7 +28,7 @@ function OrderedListComponent(t0) {
   if ($[0] !== children || $[1] !== maxMarkerWidth || $[2] !== parentMarker) {
     let t2;
     if ($[4] !== maxMarkerWidth || $[5] !== parentMarker) {
-      t2 = (child_0, index) => {
+      t2 = (child_0: any, index: number) => {
         if (!isValidElement(child_0) || child_0.type !== OrderedListItem) {
           return child_0;
         }

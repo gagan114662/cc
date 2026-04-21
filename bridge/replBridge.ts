@@ -450,7 +450,7 @@ export async function initBridgeCore(
     // UUIDs cause the server to kill the WebSocket.
     if (initialMessages && previouslyFlushedUUIDs) {
       for (const msg of initialMessages) {
-        previouslyFlushedUUIDs.add(msg.uuid)
+        if (msg.uuid) previouslyFlushedUUIDs.add(msg.uuid)
       }
     }
   } else {
@@ -497,7 +497,7 @@ export async function initBridgeCore(
   const initialMessageUUIDs = new Set<string>()
   if (initialMessages) {
     for (const msg of initialMessages) {
-      initialMessageUUIDs.add(msg.uuid)
+      if (msg.uuid) initialMessageUUIDs.add(msg.uuid)
     }
   }
 
@@ -855,7 +855,7 @@ export async function initBridgeCore(
       return
     }
     for (const msg of msgs) {
-      recentPostedUUIDs.add(msg.uuid)
+      if (msg.uuid) recentPostedUUIDs.add(msg.uuid)
     }
     const sdkMessages = toSDKMessages(msgs)
     const events = sdkMessages.map(sdkMsg => ({
@@ -1253,6 +1253,7 @@ export async function initBridgeCore(
             const eligibleMessages = initialMessages.filter(
               m =>
                 isEligibleBridgeMessage(m) &&
+                !!m.uuid &&
                 !previouslyFlushedUUIDs?.has(m.uuid),
             )
             const cappedMessages =
@@ -1699,6 +1700,7 @@ export async function initBridgeCore(
       const filtered = messages.filter(
         m =>
           isEligibleBridgeMessage(m) &&
+          !!m.uuid &&
           !initialMessageUUIDs.has(m.uuid) &&
           !recentPostedUUIDs.has(m.uuid),
       )
@@ -1738,7 +1740,7 @@ export async function initBridgeCore(
 
       // Track in the bounded ring buffer for echo filtering and dedup.
       for (const msg of filtered) {
-        recentPostedUUIDs.add(msg.uuid)
+        if (msg.uuid) recentPostedUUIDs.add(msg.uuid)
       }
 
       logForDebugging(

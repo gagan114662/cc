@@ -48,7 +48,6 @@ describe('cli help smoke', () => {
 
   test(
     'renders harness status in non-interactive mode',
-    { timeout: CLI_STATUS_TIMEOUT_MS },
     async () => {
       const result = await execFileNoThrowWithCwd(
         process.execPath,
@@ -62,11 +61,11 @@ describe('cli help smoke', () => {
       expect(result.code).toBe(0)
       expect(result.stdout).toContain('jobs configured')
     },
+    CLI_STATUS_TIMEOUT_MS,
   )
 
   test(
     'renders daemon status in non-interactive mode without auth',
-    { timeout: CLI_STATUS_TIMEOUT_MS },
     async () => {
       const result = await execFileNoThrowWithCwd(
         process.execPath,
@@ -80,5 +79,6 @@ describe('cli help smoke', () => {
       expect(result.code).toBe(0)
       expect(result.stdout).toContain('control plane')
     },
+    CLI_STATUS_TIMEOUT_MS,
   )
 })

@@ -157,7 +157,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
     fileDialogResult.onChange(option_0, parsedInput, feedback?.trim());
   };
   if (showingDiffInIDE && ideDiffConfig && path) {
-    return <ShowInIDEPrompt onChange={(option_1: PermissionOption, _input, feedback_0?: string) => onChange(option_1, feedback_0)} options={options} filePath={path} input={parsedInput} ideName={ideName} symlinkTarget={symlinkTarget} rejectFeedback={rejectFeedback} acceptFeedback={acceptFeedback} setFocusedOption={setFocusedOption} onInputModeToggle={handleInputModeToggle} focusedOption={focusedOption} yesInputMode={yesInputMode} noInputMode={noInputMode} />;
+    return <ShowInIDEPrompt onChange={((option_1: PermissionOption, _input: unknown, feedback_0?: string) => onChange(option_1, feedback_0)) as any} options={options} filePath={path} input={parsedInput} ideName={ideName} symlinkTarget={symlinkTarget} rejectFeedback={rejectFeedback} acceptFeedback={acceptFeedback} setFocusedOption={setFocusedOption} onInputModeToggle={handleInputModeToggle} focusedOption={focusedOption} yesInputMode={yesInputMode} noInputMode={noInputMode} />;
   }
   const isSymlinkOutsideCwd = symlinkTarget != null && relative(getCwd(), symlinkTarget).startsWith('..');
   const symlinkWarning = symlinkTarget ? <Box paddingX={1} marginBottom={1}>
@@ -171,7 +171,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
         {content}
         <Box flexDirection="column" paddingX={1}>
           {typeof question === 'string' ? <Text>{question}</Text> : question}
-          <Select options={options} inlineDescriptions onChange={value => {
+          <Select options={options} inlineDescriptions onChange={(value: string) => {
           const selected = options.find(opt => opt.value === value);
           if (selected) {
             // For reject option
@@ -190,7 +190,7 @@ export function FilePermissionDialog<T extends ToolInput = ToolInput>({
           }
         }} onCancel={() => onChange({
           type: 'reject'
-        })} onFocus={value_0 => setFocusedOption(value_0)} onInputModeToggle={handleInputModeToggle} />
+        })} onFocus={(value_0: string) => setFocusedOption(value_0)} onInputModeToggle={handleInputModeToggle} />
         </Box>
       </PermissionDialog>
       <Box paddingX={1} marginTop={1}>

@@ -552,10 +552,10 @@ export function extractAgentMcpServers(
       result.push({
         name,
         sourceAgents,
-        transport: 'stdio',
+        transport: 'stdio' as never,
         command: config.command,
         needsAuth: false,
-      })
+      } as never)
     } else if (isSSEConfig(config)) {
       result.push({
         name,
@@ -563,7 +563,7 @@ export function extractAgentMcpServers(
         transport: 'sse',
         url: config.url,
         needsAuth: true,
-      })
+      } as never)
     } else if (isHTTPConfig(config)) {
       result.push({
         name,
@@ -571,15 +571,15 @@ export function extractAgentMcpServers(
         transport: 'http',
         url: config.url,
         needsAuth: true,
-      })
+      } as never)
     } else if (isWebSocketConfig(config)) {
       result.push({
         name,
         sourceAgents,
-        transport: 'ws',
+        transport: 'ws' as never,
         url: config.url,
         needsAuth: false,
-      })
+      } as never)
     }
     // Skip unsupported transport types (sdk, claudeai-proxy, sse-ide, ws-ide)
     // These are internal types not meant for agent MCP server display

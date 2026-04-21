@@ -886,9 +886,9 @@ export async function resolveDeterministicHarnessConfig(
     return {
       enabled: true,
       strictWorkflow: false,
-      requireHumanGate: settings.requireHumanGate !== false,
-      emitTelemetry: settings.emitTelemetry !== false,
-      strictJsonResponses: settings.strictJsonResponses !== false,
+      requireHumanGate: settings.requireHumanGate ?? true,
+      emitTelemetry: settings.emitTelemetry ?? true,
+      strictJsonResponses: settings.strictJsonResponses ?? true,
       invalidReason:
         'deterministicHarness currently supports only strictWorkflow: true.',
       repoRoot,
@@ -900,8 +900,8 @@ export async function resolveDeterministicHarnessConfig(
     return {
       enabled: true,
       strictWorkflow: true,
-      requireHumanGate: settings.requireHumanGate !== false,
-      emitTelemetry: settings.emitTelemetry !== false,
+      requireHumanGate: settings.requireHumanGate ?? true,
+      emitTelemetry: settings.emitTelemetry ?? true,
       strictJsonResponses: false,
       invalidReason:
         'deterministicHarness currently supports only strictJsonResponses: true.',
@@ -919,10 +919,10 @@ export async function resolveDeterministicHarnessConfig(
     } catch (error) {
       return {
         enabled: true,
-        strictWorkflow: settings.strictWorkflow !== false,
-        requireHumanGate: settings.requireHumanGate !== false,
-        emitTelemetry: settings.emitTelemetry !== false,
-        strictJsonResponses: settings.strictJsonResponses !== false,
+        strictWorkflow: settings.strictWorkflow ?? true,
+        requireHumanGate: settings.requireHumanGate ?? true,
+        emitTelemetry: settings.emitTelemetry ?? true,
+        strictJsonResponses: settings.strictJsonResponses ?? true,
         invalidReason: `Failed to read deterministic harness repo adapter at ${adapterPath}: ${String(
           error,
         )}`,
@@ -935,10 +935,10 @@ export async function resolveDeterministicHarnessConfig(
   if (!rawAdapter) {
     return {
       enabled: true,
-      strictWorkflow: settings.strictWorkflow !== false,
-      requireHumanGate: settings.requireHumanGate !== false,
-      emitTelemetry: settings.emitTelemetry !== false,
-      strictJsonResponses: settings.strictJsonResponses !== false,
+      strictWorkflow: settings.strictWorkflow ?? true,
+      requireHumanGate: settings.requireHumanGate ?? true,
+      emitTelemetry: settings.emitTelemetry ?? true,
+      strictJsonResponses: settings.strictJsonResponses ?? true,
       invalidReason:
         'Strict deterministic harness mode requires repoAdapter or repoAdapterPath.',
       repoRoot,
@@ -950,10 +950,10 @@ export async function resolveDeterministicHarnessConfig(
   if (!parsedAdapter.success) {
     return {
       enabled: true,
-      strictWorkflow: settings.strictWorkflow !== false,
-      requireHumanGate: settings.requireHumanGate !== false,
-      emitTelemetry: settings.emitTelemetry !== false,
-      strictJsonResponses: settings.strictJsonResponses !== false,
+      strictWorkflow: settings.strictWorkflow ?? true,
+      requireHumanGate: settings.requireHumanGate ?? true,
+      emitTelemetry: settings.emitTelemetry ?? true,
+      strictJsonResponses: settings.strictJsonResponses ?? true,
       invalidReason: `Repo adapter validation failed: ${parsedAdapter.error.message}`,
       repoRoot,
       repoAdapter: null,
@@ -962,10 +962,10 @@ export async function resolveDeterministicHarnessConfig(
 
   return {
     enabled: true,
-    strictWorkflow: settings.strictWorkflow !== false,
-    requireHumanGate: settings.requireHumanGate !== false,
-    emitTelemetry: settings.emitTelemetry !== false,
-    strictJsonResponses: settings.strictJsonResponses !== false,
+    strictWorkflow: settings.strictWorkflow ?? true,
+    requireHumanGate: settings.requireHumanGate ?? true,
+    emitTelemetry: settings.emitTelemetry ?? true,
+    strictJsonResponses: settings.strictJsonResponses ?? true,
     repoRoot,
     repoAdapter: parsedAdapter.data,
   }
@@ -977,7 +977,7 @@ export class DeterministicHarnessController {
   constructor(private readonly config: ResolvedDeterministicHarnessConfig) {}
 
   private getMainSessionKey(input: HookInput): string | null {
-    return input.agent_id ? null : input.session_id
+    return (input as { agent_id?: string }).agent_id ? null : input.session_id
   }
 
   private async getState(sessionId: string): Promise<HarnessState> {
@@ -1157,16 +1157,17 @@ export class DeterministicHarnessController {
     }
 
     const state = await this.getState(sessionId)
+    const toolInput = (input.tool_input ?? {}) as Record<string, unknown>
     const decision = evaluateToolPolicy(
       state,
       this.config.repoAdapter,
       input.tool_name,
-      input.tool_input ?? {},
+      toolInput,
     )
     const command =
       input.tool_name === 'Bash' &&
-      typeof input.tool_input?.command === 'string'
-        ? input.tool_input.command
+      typeof toolInput.command === 'string'
+        ? (toolInput.command as string)
         : undefined
     const policyRecord = createPolicyRecord(
       state,
@@ -1220,11 +1221,12 @@ export class DeterministicHarnessController {
     }
 
     const state = await this.getState(sessionId)
+    const toolInput = (input.tool_input ?? {}) as Record<string, unknown>
     const record = createEvidenceRecord(
       state,
       input.tool_name,
       'tool_succeeded',
-      input.tool_input ?? {},
+      toolInput,
       input.tool_response,
     )
     state.evidence.push(record)
@@ -1232,9 +1234,9 @@ export class DeterministicHarnessController {
     let verifierResult: VerifierResult | undefined
     if (
       input.tool_name === 'Bash' &&
-      typeof input.tool_input?.command === 'string'
+      typeof toolInput.command === 'string'
     ) {
-      const command = input.tool_input.command
+      const command = toolInput.command as string
       const verifier = getVerifierName(this.config.repoAdapter, command)
       if (verifier?.type === 'bootstrap') {
         state.bootstrapCompleted = true
@@ -1248,9 +1250,9 @@ export class DeterministicHarnessController {
 
     if (
       (input.tool_name === 'Write' || input.tool_name === 'Edit') &&
-      typeof input.tool_input?.file_path === 'string'
+      typeof toolInput.file_path === 'string'
     ) {
-      recordArtifactWrite(state, this.config.repoAdapter, input.tool_input.file_path)
+      recordArtifactWrite(state, this.config.repoAdapter, toolInput.file_path as string)
     }
 
     await this.saveState(state)
@@ -1287,11 +1289,12 @@ export class DeterministicHarnessController {
     }
 
     const state = await this.getState(sessionId)
+    const toolInput = (input.tool_input ?? {}) as Record<string, unknown>
     const record = createEvidenceRecord(
       state,
       input.tool_name,
       'tool_failed',
-      input.tool_input ?? {},
+      toolInput,
       input.error,
     )
     state.evidence.push(record)
@@ -1299,11 +1302,11 @@ export class DeterministicHarnessController {
     let verifierResult: VerifierResult | undefined
     if (
       input.tool_name === 'Bash' &&
-      typeof input.tool_input?.command === 'string'
+      typeof toolInput.command === 'string'
     ) {
       const verifier = getVerifierName(
         this.config.repoAdapter,
-        input.tool_input.command,
+        toolInput.command as string,
       )
       if (verifier && verifier.type !== 'bootstrap') {
         verifierResult = createVerifierResult(
@@ -1348,7 +1351,7 @@ export class DeterministicHarnessController {
     }
 
     const state = await this.getState(sessionId)
-    const lastAssistantMessage = input.last_assistant_message ?? ''
+    const lastAssistantMessage = (input as { last_assistant_message?: string }).last_assistant_message ?? ''
     const decision = validatePhaseResult(
       state,
       this.config.repoAdapter,

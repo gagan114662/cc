@@ -67,10 +67,10 @@ function stepTeammateSelection(
 export function useBackgroundTaskNavigation(options?: {
   onOpenBackgroundTasks?: () => void
 }): { handleKeyDown: (e: KeyboardEvent) => void } {
-  const tasks = useAppState(s => s.tasks)
-  const viewSelectionMode = useAppState(s => s.viewSelectionMode)
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId)
-  const selectedIPAgentIndex = useAppState(s => s.selectedIPAgentIndex)
+  const tasks = useAppState((s: AppState) => s.tasks)
+  const viewSelectionMode = useAppState((s: AppState) => s.viewSelectionMode)
+  const viewingAgentTaskId = useAppState((s: AppState) => s.viewingAgentTaskId)
+  const selectedIPAgentIndex = useAppState((s: AppState) => s.selectedIPAgentIndex)
   const setAppState = useSetAppState()
 
   // Filter to running teammates and sort alphabetically to match TeammateSpinnerTree display

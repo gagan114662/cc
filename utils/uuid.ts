@@ -1,4 +1,5 @@
-import { randomBytes, type UUID } from 'crypto'
+import { randomBytes } from 'crypto'
+import type { UUID } from '../types/uuid.js'
 import type { AgentId } from 'src/types/ids.js'
 
 const uuidRegex =

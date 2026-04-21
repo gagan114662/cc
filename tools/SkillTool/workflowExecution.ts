@@ -546,9 +546,9 @@ function createDefaultWorkflowStageRunner({
         canUseTool,
         isAsync: false,
         querySource: 'agent:custom',
-        model: command.model,
+        model: command.model as never,
         availableTools: context.options.tools,
-        override: { agentId },
+        override: { agentId: agentId as never },
         transcriptSubdir,
       })) {
         agentMessages.push(message)

@@ -56,7 +56,7 @@ export function PreviewQuestionView({
   onRespondToClaude,
   onFinishPlanInterview
 }: Props): React.ReactNode {
-  const isInPlanMode = useAppState(s => s.toolPermissionContext.mode) === 'plan';
+  const isInPlanMode = useAppState((s: { toolPermissionContext: { mode: string } }) => s.toolPermissionContext.mode) === 'plan';
   const [isFooterFocused, setIsFooterFocused] = useState(false);
   const [footerIndex, setFooterIndex] = useState(0);
   const [isInNotesInput, setIsInNotesInput] = useState(false);

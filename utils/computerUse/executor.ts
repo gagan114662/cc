@@ -64,7 +64,7 @@ function computeTargetDims(
 ): [number, number] {
   const physW = Math.round(logicalW * scaleFactor)
   const physH = Math.round(logicalH * scaleFactor)
-  return targetImageSize(physW, physH, API_RESIZE_PARAMS)
+  return targetImageSize(physW, physH, API_RESIZE_PARAMS) as [number, number]
 }
 
 async function readClipboardViaPbpaste(): Promise<string> {

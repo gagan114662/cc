@@ -11,7 +11,7 @@ type Props = {
   }) => void;
 };
 type OverrideMode = 'open' | 'closed';
-export function SandboxOverridesTab(t0) {
+export function SandboxOverridesTab(t0: Props) {
   const $ = _c(5);
   const {
     onComplete
@@ -60,7 +60,7 @@ export function SandboxOverridesTab(t0) {
 // Split so useTabHeaderFocus() only runs when the Select renders. Calling it
 // above the early returns registers a down-arrow opt-in even when we return
 // static text — pressing ↓ then blurs the header with no way back.
-function OverridesSelect(t0) {
+function OverridesSelect(t0: any) {
   const $ = _c(25);
   const {
     onComplete,
@@ -116,7 +116,7 @@ function OverridesSelect(t0) {
   const options = t6;
   let t7;
   if ($[9] !== onComplete) {
-    t7 = async function handleSelect(value) {
+    t7 = async function handleSelect(value: unknown) {
       const mode = value as OverrideMode;
       await SandboxManager.setSandboxSettings({
         allowUnsandboxedCommands: mode === "open"

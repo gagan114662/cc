@@ -680,7 +680,7 @@ export async function performPostCreationSetup(
       .then(m =>
         m
           .installPrepareCommitMsgHook(worktreePath, worktreeHooksDir)
-          .catch(error => {
+          .catch((error: unknown) => {
             logForDebugging(
               `Failed to install attribution hook in worktree: ${error}`,
             )

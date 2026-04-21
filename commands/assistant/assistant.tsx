@@ -52,7 +52,7 @@ export function NewInstallWizard({
           { label: 'Enable assistant mode', value: 'install' },
           { label: 'Cancel', value: 'cancel' },
         ]}
-        onChange={value => {
+        onChange={(value: string) => {
           if (value === 'cancel') {
             onCancel()
             return
@@ -74,10 +74,9 @@ export async function call(
       onInstalled={dir =>
         onDone(
           `Assistant mode enabled. Local settings were updated and the assistant workspace is ready at ${dir}.`,
-          { display: 'system' },
         )
       }
-      onCancel={() => onDone(undefined, { display: 'skip' })}
+      onCancel={() => onDone(undefined)}
       onError={message => onDone(`Assistant installation failed: ${message}`)}
     />
   )

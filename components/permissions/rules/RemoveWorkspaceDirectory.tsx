@@ -13,7 +13,7 @@ type Props = {
   permissionContext: ToolPermissionContext;
   setPermissionContext: (context: ToolPermissionContext) => void;
 };
-export function RemoveWorkspaceDirectory(t0) {
+export function RemoveWorkspaceDirectory(t0: Props) {
   const $ = _c(19);
   const {
     directoryPath,
@@ -44,7 +44,7 @@ export function RemoveWorkspaceDirectory(t0) {
   const handleRemove = t1;
   let t2;
   if ($[5] !== handleRemove || $[6] !== onCancel) {
-    t2 = value => {
+    t2 = (value: string) => {
       if (value === "yes") {
         handleRemove();
       } else {

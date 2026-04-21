@@ -18,14 +18,14 @@ export type CliHighlight = {
 // faulted in.
 let cliHighlightPromise: Promise<CliHighlight | null> | undefined
 
-let loadedGetLanguage: typeof import('highlight.js').getLanguage | undefined
+let loadedGetLanguage: ((name: string) => unknown) | undefined
 
 async function loadCliHighlight(): Promise<CliHighlight | null> {
   try {
     const cliHighlight = await import('cli-highlight')
     // cache hit — cli-highlight already loaded highlight.js
     const highlightJs = await import('highlight.js')
-    loadedGetLanguage = highlightJs.getLanguage
+    loadedGetLanguage = (highlightJs as unknown as { getLanguage: (name: string) => unknown }).getLanguage
     return {
       highlight: cliHighlight.highlight,
       supportsLanguage: cliHighlight.supportsLanguage,
@@ -50,5 +50,5 @@ export async function getLanguageName(file_path: string): Promise<string> {
   await getCliHighlightPromise()
   const ext = extname(file_path).slice(1)
   if (!ext) return 'unknown'
-  return loadedGetLanguage?.(ext)?.name ?? 'unknown'
+  return (loadedGetLanguage?.(ext) as { name?: string } | undefined)?.name ?? 'unknown'
 }

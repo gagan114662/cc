@@ -59,7 +59,7 @@ function buildNestedTree(errors: ValidationError[]): TreeNode {
 /**
  * Groups and displays validation errors using treeify with deduplication
  */
-export function ValidationErrorsList(t0) {
+export function ValidationErrorsList(t0: any) {
   const $ = _c(9);
   const {
     errors
@@ -81,7 +81,7 @@ export function ValidationErrorsList(t0) {
       fileErrors.sort(_temp2);
       const errorTree = buildNestedTree(fileErrors);
       const suggestionPairs = new Map();
-      fileErrors.forEach(error_0 => {
+      fileErrors.forEach((error_0: any) => {
         if (error_0.suggestion || error_0.docLink) {
           const key = `${error_0.suggestion || ""}|${error_0.docLink || ""}`;
           if (!suggestionPairs.has(key)) {
@@ -125,10 +125,10 @@ export function ValidationErrorsList(t0) {
   }
   return t3;
 }
-function _temp3(pair, index) {
+function _temp3(pair: any, index: number) {
   return <Box key={`suggestion-pair-${index}`} flexDirection="column" marginBottom={1}>{pair.suggestion && <Text dimColor={true} wrap="wrap">{pair.suggestion}</Text>}{pair.docLink && <Text dimColor={true} wrap="wrap">Learn more: {pair.docLink}</Text>}</Box>;
 }
-function _temp2(a, b) {
+function _temp2(a: any, b: any) {
   if (!a.path && b.path) {
     return -1;
   }
@@ -137,7 +137,7 @@ function _temp2(a, b) {
   }
   return (a.path || "").localeCompare(b.path || "");
 }
-function _temp(acc, error) {
+function _temp(acc: any, error: any) {
   const file = error.file || "(file not specified)";
   if (!acc[file]) {
     acc[file] = [];

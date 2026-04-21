@@ -53,7 +53,7 @@ export function MCPRemoteServerMenu({
   } = useTerminalSize();
   const [isAuthenticating, setIsAuthenticating] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
-  const mcp = useAppState(s => s.mcp);
+  const mcp = useAppState((s: import('../../state/AppState.js').AppState) => s.mcp);
   const setAppState = useSetAppState();
   const [authorizationUrl, setAuthorizationUrl] = React.useState<string | null>(null);
   const [isReconnecting, setIsReconnecting] = useState(false);
@@ -119,7 +119,7 @@ export function MCPRemoteServerMenu({
     await clearServerCache(server.name, {
       ...server.config,
       scope: server.scope
-    });
+    } as never);
     setAppState(prev => {
       const newClients = prev.mcp.clients.map(c => c.name === server.name ? {
         ...c,
@@ -266,12 +266,12 @@ export function MCPRemoteServerMenu({
       // Revoke existing tokens if re-authenticating, but preserve step-up
       // auth state so the next OAuth flow can reuse cached scope/discovery.
       if (server.isAuthenticated && server.config) {
-        await revokeServerTokens(server.name, server.config, {
+        await revokeServerTokens(server.name, server.config as never, {
           preserveStepUpState: true
         });
       }
       if (server.config) {
-        await performMCPOAuthFlow(server.name, server.config, setAuthorizationUrl, controller.signal, {
+        await performMCPOAuthFlow(server.name, server.config as never, setAuthorizationUrl, controller.signal, {
           onWaitingForCallback: submit => {
             setManualCallbackSubmit(() => submit);
           }
@@ -307,14 +307,14 @@ export function MCPRemoteServerMenu({
     if (server.config.type === 'claudeai-proxy') return;
     if (server.config) {
       // First revoke the authentication tokens and clear all auth state
-      await revokeServerTokens(server.name, server.config);
+      await revokeServerTokens(server.name, server.config as never);
       logEvent('tengu_mcp_auth_config_clear', {});
 
       // Disconnect the client and clear the cache
       await clearServerCache(server.name, {
         ...server.config,
         scope: server.scope
-      });
+      } as never);
 
       // Update app state to remove the disconnected server's tools, commands, and resources
       setAppState(prev_0 => {
@@ -597,7 +597,7 @@ export function MCPRemoteServerMenu({
           </Box>}
 
         {menuOptions.length > 0 && <Box marginTop={1}>
-            <Select options={menuOptions} onChange={async value_0 => {
+            <Select options={menuOptions} onChange={async (value_0: string) => {
           switch (value_0) {
             case 'tools':
               onViewTools();

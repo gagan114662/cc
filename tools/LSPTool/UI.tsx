@@ -58,7 +58,7 @@ const OPERATION_LABELS: Record<Input['operation'], {
 /**
  * Reusable component for LSP result summaries with collapsed/expanded views
  */
-function LSPResultSummary(t0) {
+function LSPResultSummary(t0: { operation: Input['operation']; resultCount: number; fileCount?: number; content: string; verbose: boolean }) {
   const $ = _c(24);
   const {
     operation,
@@ -94,7 +94,7 @@ function LSPResultSummary(t0) {
   const primaryText = t2;
   let t3;
   if ($[7] !== fileCount) {
-    t3 = fileCount > 1 ? <Text>{" "}across <Text bold={true}>{fileCount} </Text>files</Text> : null;
+    t3 = (fileCount ?? 0) > 1 ? <Text>{" "}across <Text bold={true}>{fileCount} </Text>files</Text> : null;
     $[7] = fileCount;
     $[8] = t3;
   } else {

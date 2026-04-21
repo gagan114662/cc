@@ -9,22 +9,22 @@ import { Dialog } from './design-system/Dialog.js';
 type Props = {
   onAccept(): void;
 };
-export function BypassPermissionsModeDialog(t0) {
+export function BypassPermissionsModeDialog(t0: Props) {
   const $ = _c(7);
   const {
     onAccept
   } = t0;
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as React.DependencyList;
   }
   React.useEffect(_temp, t1);
   let t2;
   if ($[1] !== onAccept) {
-    t2 = function onChange(value) {
+    t2 = function onChange(value: unknown) {
       bb3: switch (value) {
         case "accept":
           {

@@ -259,7 +259,7 @@ export function resolvePluginLspEnvironment(
 
   // Resolve args
   if (resolved.args) {
-    resolved.args = resolved.args.map(arg => resolveValue(arg))
+    resolved.args = resolved.args.map((arg: string) => resolveValue(arg))
   }
 
   // Resolve environment variables and add CLAUDE_PLUGIN_ROOT / CLAUDE_PLUGIN_DATA
@@ -306,9 +306,9 @@ export function addPluginScopeToLspServers(
     const scopedName = `plugin:${pluginName}:${name}`
     scopedServers[scopedName] = {
       ...config,
-      scope: 'dynamic', // Use dynamic scope for plugin servers
+      scope: 'dynamic',
       source: pluginName,
-    }
+    } as unknown as ScopedLspServerConfig
   }
 
   return scopedServers

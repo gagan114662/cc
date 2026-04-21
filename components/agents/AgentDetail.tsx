@@ -18,7 +18,7 @@ type Props = {
   allAgents?: AgentDefinition[];
   onBack: () => void;
 };
-export function AgentDetail(t0) {
+export function AgentDetail(t0: Props) {
   const $ = _c(48);
   const {
     agent,
@@ -56,7 +56,7 @@ export function AgentDetail(t0) {
   useKeybinding("confirm:no", onBack, t3);
   let t4;
   if ($[5] !== onBack) {
-    t4 = e => {
+    t4 = (e: KeyboardEvent) => {
       if (e.key === "return") {
         e.preventDefault();
         onBack();

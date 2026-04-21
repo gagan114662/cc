@@ -14,7 +14,7 @@ type Props = {
   serverNames: string[];
   onDone(): void;
 };
-export function MCPServerMultiselectDialog(t0) {
+export function MCPServerMultiselectDialog(t0: Props) {
   const $ = _c(21);
   const {
     serverNames,
@@ -22,7 +22,7 @@ export function MCPServerMultiselectDialog(t0) {
   } = t0;
   let t1;
   if ($[0] !== onDone || $[1] !== serverNames) {
-    t1 = function onSubmit(selectedServers) {
+    t1 = function onSubmit(selectedServers: string[]) {
       const currentSettings = getSettings_DEPRECATED() || {};
       const enabledServers = currentSettings.enabledMcpjsonServers || [];
       const disabledServers = currentSettings.disabledMcpjsonServers || [];
@@ -124,7 +124,7 @@ export function MCPServerMultiselectDialog(t0) {
   }
   return t9;
 }
-function _temp(server_0) {
+function _temp(server_0: any) {
   return {
     label: server_0,
     value: server_0

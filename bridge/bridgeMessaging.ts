@@ -405,7 +405,6 @@ export function makeResultMessage(sessionId: string): SDKResultSuccess {
     is_error: false,
     num_turns: 0,
     result: '',
-    stop_reason: null,
     total_cost_usd: 0,
     usage: { ...EMPTY_USAGE },
     modelUsage: {},

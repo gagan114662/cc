@@ -121,6 +121,7 @@ import { usePromptInputPlaceholder } from './usePromptInputPlaceholder.js';
 import { useShowFastIconHint } from './useShowFastIconHint.js';
 import { useSwarmBanner } from './useSwarmBanner.js';
 import { isNonSpacePrintable, isVimModeEnabled } from './utils.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 type Props = {
   debug: boolean;
   ideSelection: IDESelection | undefined;
@@ -285,27 +286,27 @@ function PromptInput({
   }
   const store = useAppStateStore();
   const setAppState = useSetAppState();
-  const tasks = useAppState(s => s.tasks);
-  const replBridgeConnected = useAppState(s => s.replBridgeConnected);
-  const replBridgeExplicit = useAppState(s => s.replBridgeExplicit);
-  const replBridgeReconnecting = useAppState(s => s.replBridgeReconnecting);
+  const tasks = useAppState((s: AppState) => s.tasks);
+  const replBridgeConnected = useAppState((s: AppState) => s.replBridgeConnected);
+  const replBridgeExplicit = useAppState((s: AppState) => s.replBridgeExplicit);
+  const replBridgeReconnecting = useAppState((s: AppState) => s.replBridgeReconnecting);
   // Must match BridgeStatusIndicator's render condition (PromptInputFooter.tsx) —
   // the pill returns null for implicit-and-not-reconnecting, so nav must too,
   // otherwise bridge becomes an invisible selection stop.
   const bridgeFooterVisible = replBridgeConnected && (replBridgeExplicit || replBridgeReconnecting);
   // Tmux pill (ant-only) — visible when there's an active tungsten session
-  const hasTungstenSession = useAppState(s => "external" === 'ant' && s.tungstenActiveSession !== undefined);
-  const tmuxFooterVisible = "external" === 'ant' && hasTungstenSession;
+  const hasTungstenSession = useAppState((s: AppState) => USER_TYPE === 'ant' && s.tungstenActiveSession !== undefined);
+  const tmuxFooterVisible = USER_TYPE === 'ant' && hasTungstenSession;
   // WebBrowser pill — visible when a browser is open
-  const bagelFooterVisible = useAppState(s => false);
-  const teamContext = useAppState(s => s.teamContext);
+  const bagelFooterVisible = useAppState((s: AppState) => false);
+  const teamContext = useAppState((s: AppState) => s.teamContext);
   const queuedCommands = useCommandQueue();
-  const promptSuggestionState = useAppState(s => s.promptSuggestion);
-  const speculation = useAppState(s => s.speculation);
-  const speculationSessionTimeSavedMs = useAppState(s => s.speculationSessionTimeSavedMs);
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId);
-  const viewSelectionMode = useAppState(s => s.viewSelectionMode);
-  const showSpinnerTree = useAppState(s => s.expandedView) === 'teammates';
+  const promptSuggestionState = useAppState((s: AppState) => s.promptSuggestion);
+  const speculation = useAppState((s: AppState) => s.speculation);
+  const speculationSessionTimeSavedMs = useAppState((s: AppState) => s.speculationSessionTimeSavedMs);
+  const viewingAgentTaskId = useAppState((s: AppState) => s.viewingAgentTaskId);
+  const viewSelectionMode = useAppState((s: AppState) => s.viewSelectionMode);
+  const showSpinnerTree = useAppState((s: AppState) => s.expandedView) === 'teammates';
   const {
     companion: _companion,
     companionMuted
@@ -321,12 +322,12 @@ function PromptInput({
   // its own marginTop, so the gap stays even without ours.
   const briefOwnsGap = feature('KAIROS') || feature('KAIROS_BRIEF') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s => s.isBriefOnly) && !viewingAgentTaskId : false;
-  const mainLoopModel_ = useAppState(s => s.mainLoopModel);
-  const mainLoopModelForSession = useAppState(s => s.mainLoopModelForSession);
-  const thinkingEnabled = useAppState(s => s.thinkingEnabled);
-  const isFastMode = useAppState(s => isFastModeEnabled() ? s.fastMode : false);
-  const effortValue = useAppState(s => s.effortValue);
+  useAppState((s: AppState) => s.isBriefOnly) && !viewingAgentTaskId : false;
+  const mainLoopModel_ = useAppState((s: AppState) => s.mainLoopModel);
+  const mainLoopModelForSession = useAppState((s: AppState) => s.mainLoopModelForSession);
+  const thinkingEnabled = useAppState((s: AppState) => s.thinkingEnabled);
+  const isFastMode = useAppState((s: AppState) => isFastModeEnabled() ? s.fastMode : false);
+  const effortValue = useAppState((s: AppState) => s.effortValue);
   const viewedTeammate = getViewedTeammateTask(store.getState());
   const viewingAgentName = viewedTeammate?.identity.agentName;
   // identity.color is typed as `string | undefined` (not AgentColorName) because
@@ -377,7 +378,7 @@ function PromptInput({
   // -1 sentinel: tasks pill is selected but no specific agent row is selected yet.
   // First ↓ selects the pill, second ↓ moves to row 0. Prevents double-select
   // of pill + row when both bg tasks (pill) and forked agents (rows) are visible.
-  const coordinatorTaskIndex = useAppState(s => s.coordinatorTaskIndex);
+  const coordinatorTaskIndex = useAppState((s: AppState) => s.coordinatorTaskIndex);
   const setCoordinatorTaskIndex = useCallback((v: number | ((prev: number) => number)) => setAppState(prev => {
     const next = typeof v === 'function' ? v(prev.coordinatorTaskIndex) : v;
     if (next === prev.coordinatorTaskIndex) return prev;
@@ -391,7 +392,7 @@ function PromptInput({
   // exist. When only local_agent tasks are running (coordinator/fork mode), the
   // pill is absent, so the -1 sentinel would leave nothing visually selected.
   // In that case, skip -1 and treat 0 as the minimum selectable index.
-  const hasBgTaskPill = useMemo(() => Object.values(tasks).some(t => isBackgroundTask(t) && !("external" === 'ant' && isPanelAgentTask(t))), [tasks]);
+  const hasBgTaskPill = useMemo(() => Object.values(tasks).some(t => isBackgroundTask(t) && !(USER_TYPE === 'ant' && isPanelAgentTask(t))), [tasks]);
   const minCoordinatorIndex = hasBgTaskPill ? -1 : 0;
   // Clamp index when tasks complete and the list shrinks beneath the cursor
   useEffect(() => {
@@ -455,7 +456,7 @@ function PromptInput({
   // Panel shows retained-completed agents too (getVisibleAgentTasks), so the
   // pill must stay navigable whenever the panel has rows — not just when
   // something is running.
-  const tasksFooterVisible = (runningTaskCount > 0 || "external" === 'ant' && coordinatorTaskCount > 0) && !shouldHideTasksFooter(tasks, showSpinnerTree);
+  const tasksFooterVisible = (runningTaskCount > 0 || USER_TYPE === 'ant' && coordinatorTaskCount > 0) && !shouldHideTasksFooter(tasks, showSpinnerTree);
   const teamsFooterVisible = cachedTeams.length > 0;
   const footerItems = useMemo(() => [tasksFooterVisible && 'tasks', tmuxFooterVisible && 'tmux', bagelFooterVisible && 'bagel', teamsFooterVisible && 'teams', bridgeFooterVisible && 'bridge', companionFooterVisible && 'companion'].filter(Boolean) as FooterItem[], [tasksFooterVisible, tmuxFooterVisible, bagelFooterVisible, teamsFooterVisible, bridgeFooterVisible, companionFooterVisible]);
 
@@ -463,7 +464,7 @@ function PromptInput({
   // disconnected, task finished). The derivation makes the UI correct
   // immediately; the useEffect below clears the raw state so it doesn't
   // resurrect when the same pill reappears (new task starts → focus stolen).
-  const rawFooterSelection = useAppState(s => s.footerSelection);
+  const rawFooterSelection = useAppState((s: AppState) => s.footerSelection);
   const footerItemSelected = rawFooterSelection && footerItems.includes(rawFooterSelection) ? rawFooterSelection : null;
   useEffect(() => {
     if (rawFooterSelection && !footerItemSelected) {
@@ -517,8 +518,8 @@ function PromptInput({
   });
   const displayedValue = useMemo(() => isSearchingHistory && historyMatch ? getValueFromInput(typeof historyMatch === 'string' ? historyMatch : historyMatch.display) : input, [isSearchingHistory, historyMatch, input]);
   const thinkTriggers = useMemo(() => findThinkingTriggerPositions(displayedValue), [displayedValue]);
-  const ultraplanSessionUrl = useAppState(s => s.ultraplanSessionUrl);
-  const ultraplanLaunching = useAppState(s => s.ultraplanLaunching);
+  const ultraplanSessionUrl = useAppState((s: AppState) => s.ultraplanSessionUrl);
+  const ultraplanLaunching = useAppState((s: AppState) => s.ultraplanLaunching);
   const ultraplanTriggers = useMemo(() => feature('ULTRAPLAN') && !ultraplanSessionUrl && !ultraplanLaunching ? findUltraplanTriggerPositions(displayedValue) : [], [displayedValue, ultraplanSessionUrl, ultraplanLaunching]);
   const ultrareviewTriggers = useMemo(() => isUltrareviewEnabled() ? findUltrareviewTriggerPositions(displayedValue) : [], [displayedValue]);
   const btwTriggers = useMemo(() => findBtwTriggerPositions(displayedValue), [displayedValue]);
@@ -1742,7 +1743,7 @@ function PromptInput({
   useKeybindings({
     'footer:up': () => {
       // ↑ scrolls within the coordinator task list before leaving the pill
-      if (tasksSelected && "external" === 'ant' && coordinatorTaskCount > 0 && coordinatorTaskIndex > minCoordinatorIndex) {
+      if (tasksSelected && USER_TYPE === 'ant' && coordinatorTaskCount > 0 && coordinatorTaskIndex > minCoordinatorIndex) {
         setCoordinatorTaskIndex(prev => prev - 1);
         return;
       }
@@ -1750,7 +1751,7 @@ function PromptInput({
     },
     'footer:down': () => {
       // ↓ scrolls within the coordinator task list, never leaves the pill
-      if (tasksSelected && "external" === 'ant' && coordinatorTaskCount > 0) {
+      if (tasksSelected && USER_TYPE === 'ant' && coordinatorTaskCount > 0) {
         if (coordinatorTaskIndex < coordinatorTaskCount - 1) {
           setCoordinatorTaskIndex(prev => prev + 1);
         }
@@ -1813,7 +1814,7 @@ function PromptInput({
           }
           break;
         case 'tmux':
-          if ("external" === 'ant') {
+          if (USER_TYPE === 'ant') {
             setAppState(prev => prev.tungstenPanelAutoHidden ? {
               ...prev,
               tungstenPanelAutoHidden: false
@@ -1983,7 +1984,7 @@ function PromptInput({
   useBuddyNotification();
   const companionSpeaking = feature('BUDDY') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
-  useAppState(s => s.companionReaction !== undefined) : false;
+  useAppState((s: AppState) => s.companionReaction !== undefined) : false;
   const {
     columns,
     rows
@@ -2307,7 +2308,8 @@ function getInitialPasteId(messages: Message[]): number {
       // Check image paste IDs
       if (message.imagePasteIds) {
         for (const id of message.imagePasteIds) {
-          if (id > maxId) maxId = id;
+          const n = Number(id);
+          if (n > maxId) maxId = n;
         }
       }
       // Check text paste references in message content

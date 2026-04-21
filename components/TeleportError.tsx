@@ -18,14 +18,14 @@ type TeleportErrorProps = {
 // a new object in checkErrors' deps and caused the mount effect to
 // re-fire on every render.
 const EMPTY_ERRORS_TO_IGNORE: ReadonlySet<TeleportLocalErrorType> = new Set();
-export function TeleportError(t0) {
+export function TeleportError(t0: TeleportErrorProps) {
   const $ = _c(18);
   const {
     onComplete,
     errorsToIgnore: t1
   } = t0;
   const errorsToIgnore = t1 === undefined ? EMPTY_ERRORS_TO_IGNORE : t1;
-  const [currentError, setCurrentError] = useState(null);
+  const [currentError, setCurrentError] = useState<any>(null);
   const [isLoggingIn, setIsLoggingIn] = useState(false);
   let t2;
   if ($[0] !== errorsToIgnore || $[1] !== onComplete) {
@@ -91,7 +91,7 @@ export function TeleportError(t0) {
   const handleLoginWithClaudeAI = t6;
   let t7;
   if ($[9] === Symbol.for("react.memo_cache_sentinel")) {
-    t7 = value => {
+    t7 = (value: any) => {
       if (value === "login") {
         handleLoginWithClaudeAI();
       } else {

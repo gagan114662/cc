@@ -18,7 +18,7 @@ type FileReadResult = {
   oldContent: string;
   fileExists: boolean;
 };
-export function SedEditPermissionRequest(t0) {
+export function SedEditPermissionRequest(t0: SedEditPermissionRequestProps) {
   const $ = _c(9);
   let props;
   let sedInfo;
@@ -67,7 +67,7 @@ export function SedEditPermissionRequest(t0) {
   }
   return t2;
 }
-function _temp(e) {
+function _temp(e: any): FileReadResult {
   if (!isENOENT(e)) {
     throw e;
   }
@@ -76,7 +76,7 @@ function _temp(e) {
     fileExists: false
   };
 }
-function SedEditPermissionRequestInner(t0) {
+function SedEditPermissionRequestInner(t0: SedEditPermissionRequestProps & { contentPromise: Promise<FileReadResult> }) {
   const $ = _c(35);
   let contentPromise;
   let props;
@@ -102,7 +102,7 @@ function SedEditPermissionRequestInner(t0) {
   const {
     oldContent,
     fileExists
-  } = use(contentPromise);
+  } = use(contentPromise) as { oldContent: string; fileExists: boolean };
   let t1;
   if ($[4] !== oldContent || $[5] !== sedInfo) {
     t1 = applySedSubstitution(oldContent, sedInfo);
@@ -116,12 +116,12 @@ function SedEditPermissionRequestInner(t0) {
   let t2;
   bb0: {
     if (oldContent === newContent) {
-      let t3;
+      let t3: unknown[];
       if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
         t3 = [];
         $[7] = t3;
       } else {
-        t3 = $[7];
+        t3 = $[7] as unknown[];
       }
       t2 = t3;
       break bb0;
@@ -153,7 +153,7 @@ function SedEditPermissionRequestInner(t0) {
   const noChangesMessage = t3;
   let t4;
   if ($[11] !== filePath || $[12] !== newContent) {
-    t4 = input => {
+    t4 = (input: any) => {
       const parsed = BashTool.inputSchema.parse(input);
       return {
         ...parsed,

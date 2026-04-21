@@ -20,7 +20,7 @@ interface TeleportResumeWrapperProps {
  * Wrapper component that manages the full teleport resume flow,
  * including session selection, loading state, and error handling
  */
-export function TeleportResumeWrapper(t0) {
+export function TeleportResumeWrapper(t0: TeleportResumeWrapperProps) {
   const $ = _c(25);
   const {
     onComplete,
@@ -55,7 +55,7 @@ export function TeleportResumeWrapper(t0) {
   useEffect(t2, t3);
   let t4;
   if ($[3] !== error || $[4] !== onComplete || $[5] !== onError || $[6] !== resumeSession) {
-    t4 = async session => {
+    t4 = async (session: unknown) => {
       const result = await resumeSession(session);
       if (result) {
         onComplete(result);

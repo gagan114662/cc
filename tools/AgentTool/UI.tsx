@@ -30,6 +30,7 @@ import type { outputSchema, Progress, RemoteLaunchedOutput } from './AgentTool.j
 import { inputSchema } from './AgentTool.js';
 import { getAgentColor } from './agentColorManager.js';
 import { GENERAL_PURPOSE_AGENT } from './built-in/generalPurposeAgent.js';
+import { USER_TYPE } from '../../utils/buildConstants.js'
 const MAX_PROGRESS_MESSAGES_TO_SHOW = 3;
 
 /**
@@ -99,7 +100,7 @@ type ProcessedMessage = {
  */
 function processProgressMessages(messages: ProgressMessage<Progress>[], tools: Tools, isAgentRunning: boolean): ProcessedMessage[] {
   // Only process for ants
-  if ("external" !== 'ant') {
+  if (USER_TYPE !== 'ant') {
     return messages.filter((m): m is ProgressMessage<AgentToolProgress> => hasProgressMessage(m.data) && m.data.message.type !== 'user').map(m => ({
       type: 'original',
       message: m
@@ -181,7 +182,7 @@ function processProgressMessages(messages: ProgressMessage<Progress>[], tools: T
 const ESTIMATED_LINES_PER_TOOL = 9;
 const TERMINAL_BUFFER_LINES = 7;
 type Output = z.input<ReturnType<typeof outputSchema>>;
-export function AgentPromptDisplay(t0) {
+export function AgentPromptDisplay(t0: { prompt: string; dim?: boolean; theme?: string }) {
   const $ = _c(3);
   const {
     prompt,
@@ -205,7 +206,7 @@ export function AgentPromptDisplay(t0) {
   }
   return t3;
 }
-export function AgentResponseDisplay(t0) {
+export function AgentResponseDisplay(t0: { content: Array<{ text: string }>; theme?: string }) {
   const $ = _c(5);
   const {
     content
@@ -235,7 +236,7 @@ export function AgentResponseDisplay(t0) {
   }
   return t3;
 }
-function _temp(block, index) {
+function _temp(block: { text: string }, index: number) {
   return <Box key={index} paddingLeft={2} marginTop={index === 0 ? 0 : 1}><Markdown>{block.text}</Markdown></Box>;
 }
 type VerboseAgentTranscriptProps = {
@@ -243,7 +244,7 @@ type VerboseAgentTranscriptProps = {
   tools: Tools;
   verbose: boolean;
 };
-function VerboseAgentTranscript(t0) {
+function VerboseAgentTranscript(t0: VerboseAgentTranscriptProps) {
   const $ = _c(15);
   const {
     progressMessages,
@@ -252,7 +253,7 @@ function VerboseAgentTranscript(t0) {
   } = t0;
   let t1;
   if ($[0] !== progressMessages) {
-    t1 = buildSubagentLookups(progressMessages.filter(_temp2).map(_temp3));
+    t1 = buildSubagentLookups(progressMessages.filter(_temp2).map(_temp3 as never));
     $[0] = progressMessages;
     $[1] = t1;
   } else {
@@ -267,7 +268,7 @@ function VerboseAgentTranscript(t0) {
     const filteredMessages = progressMessages.filter(_temp4);
     let t3;
     if ($[8] !== agentLookups || $[9] !== inProgressToolUseIDs || $[10] !== tools || $[11] !== verbose) {
-      t3 = progressMessage => <MessageResponse key={progressMessage.uuid} height={1}><MessageComponent message={progressMessage.data.message} lookups={agentLookups} addMargin={false} tools={tools} commands={[]} verbose={verbose} inProgressToolUseIDs={inProgressToolUseIDs} progressMessagesForMessage={[]} shouldAnimate={false} shouldShowDot={false} isTranscriptMode={false} isStatic={true} /></MessageResponse>;
+      t3 = (progressMessage: ProgressMessage<AgentToolProgress>) => <MessageResponse key={progressMessage.uuid} height={1}><MessageComponent message={progressMessage.data.message} lookups={agentLookups} addMargin={false} tools={tools} commands={[]} verbose={verbose} inProgressToolUseIDs={inProgressToolUseIDs} progressMessagesForMessage={[]} shouldAnimate={false} shouldShowDot={false} isTranscriptMode={false} isStatic={true} /></MessageResponse>;
       $[8] = agentLookups;
       $[9] = inProgressToolUseIDs;
       $[10] = tools;
@@ -296,7 +297,7 @@ function VerboseAgentTranscript(t0) {
   }
   return t3;
 }
-function _temp4(pm_1) {
+function _temp4(pm_1: ProgressMessage<Progress>) {
   if (!hasProgressMessage(pm_1.data)) {
     return false;
   }
@@ -306,10 +307,10 @@ function _temp4(pm_1) {
   }
   return true;
 }
-function _temp3(pm_0) {
+function _temp3(pm_0: ProgressMessage<AgentToolProgress>) {
   return pm_0.data;
 }
-function _temp2(pm) {
+function _temp2(pm: ProgressMessage<Progress>) {
   return hasProgressMessage(pm.data);
 }
 export function renderToolResultMessage(data: Output, progressMessagesForMessage: ProgressMessage<Progress>[], {
@@ -382,10 +383,10 @@ export function renderToolResultMessage(data: Output, progressMessagesForMessage
       inference_geo: null,
       iterations: null,
       speed: null
-    }
+    } as never
   });
   return <Box flexDirection="column">
-      {"external" === 'ant' && <MessageResponse>
+      {USER_TYPE === 'ant' && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>
@@ -474,7 +475,7 @@ export function renderToolUseProgressMessage(progressMessages: ProgressMessage<P
         return false;
       }
       const message = msg.data.message;
-      return message.message.content.some(content => content.type === 'tool_use');
+      return message.message.content.some((content: { type: string }) => content.type === 'tool_use');
     });
     const latestAssistant = progressMessages.findLast((msg): msg is ProgressMessage<AgentToolProgress> => hasProgressMessage(msg.data) && msg.data.message.type === 'assistant');
     let tokens = null;
@@ -522,7 +523,7 @@ export function renderToolUseProgressMessage(progressMessages: ProgressMessage<P
     if (!hasProgressMessage(data)) {
       return false;
     }
-    return data.message.message.content.some(content => content.type === 'tool_use');
+    return data.message.message.content.some((content: { type: string }) => content.type === 'tool_use');
   });
   const firstData = progressMessages[0]?.data;
   const prompt = firstData && hasProgressMessage(firstData) ? firstData.prompt : undefined;
@@ -591,7 +592,7 @@ export function renderToolUseRejectedMessage(_input: {
   const firstData = progressMessagesForMessage[0]?.data;
   const agentId = firstData && hasProgressMessage(firstData) ? firstData.agentId : undefined;
   return <>
-      {"external" === 'ant' && agentId && <MessageResponse>
+      {USER_TYPE === 'ant' && agentId && <MessageResponse>
           <Text color="warning">
             [ANT-ONLY] API calls: {getDisplayPath(getDumpPromptsPath(agentId))}
           </Text>
@@ -633,7 +634,7 @@ function calculateAgentStats(progressMessages: ProgressMessage<Progress>[]): {
       return false;
     }
     const message = msg.data.message;
-    return message.type === 'user' && message.message.content.some(content => content.type === 'tool_result');
+    return message.type === 'user' && message.message.content.some((content: { type: string }) => content.type === 'tool_result');
   });
   const latestAssistant = progressMessages.findLast((msg): msg is ProgressMessage<AgentToolProgress> => hasProgressMessage(msg.data) && msg.data.message.type === 'assistant');
   let tokens = null;
@@ -833,10 +834,10 @@ export function extractLastToolInfo(progressMessages: ProgressMessage<Progress>[
       return false;
     }
     const message = msg.data.message;
-    return message.type === 'user' && message.message.content.some(c => c.type === 'tool_result');
+    return message.type === 'user' && message.message.content.some((c: { type: string }) => c.type === 'tool_result');
   });
   if (lastToolResult?.data.message.type === 'user') {
-    const toolResultBlock = lastToolResult.data.message.message.content.find(c => c.type === 'tool_result');
+    const toolResultBlock = lastToolResult.data.message.message.content.find((c: { type: string }) => c.type === 'tool_result');
     if (toolResultBlock?.type === 'tool_result') {
       // Look up the corresponding tool_use — already indexed above
       const toolUseBlock = toolUseByID.get(toolResultBlock.tool_use_id);

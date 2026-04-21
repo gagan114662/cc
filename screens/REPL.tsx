@@ -1,4 +1,5 @@
 import { c as _c } from "react/compiler-runtime";
+import { USER_TYPE } from '../utils/buildConstants.js'
 // biome-ignore-all assist/source/organizeImports: ANT-ONLY import markers must not be reordered
 import { feature } from 'bun:bundle';
 import { spawnSync } from 'child_process';
@@ -104,13 +105,13 @@ const VoiceKeybindingHandler: typeof import('../hooks/useVoiceIntegration.js').V
 // Frustration detection is ant-only (dogfooding). Conditional require so external
 // builds eliminate the module entirely (including its two O(n) useMemos that run
 // on every messages change, plus the GrowthBook fetch).
-const useFrustrationDetection: typeof import('../components/FeedbackSurvey/useFrustrationDetection.js').useFrustrationDetection = "external" === 'ant' ? require('../components/FeedbackSurvey/useFrustrationDetection.js').useFrustrationDetection : () => ({
+const useFrustrationDetection: typeof import('../components/FeedbackSurvey/useFrustrationDetection.js').useFrustrationDetection = USER_TYPE === 'ant' ? require('../components/FeedbackSurvey/useFrustrationDetection.js').useFrustrationDetection : () => ({
   state: 'closed',
   handleTranscriptSelect: () => {}
 });
 // Ant-only org warning. Conditional require so the org UUID list is
 // eliminated from external builds (one UUID is on excluded-strings).
-const useAntOrgWarningNotification: typeof import('../hooks/notifs/useAntOrgWarningNotification.js').useAntOrgWarningNotification = "external" === 'ant' ? require('../hooks/notifs/useAntOrgWarningNotification.js').useAntOrgWarningNotification : () => {};
+const useAntOrgWarningNotification: typeof import('../hooks/notifs/useAntOrgWarningNotification.js').useAntOrgWarningNotification = USER_TYPE === 'ant' ? require('../hooks/notifs/useAntOrgWarningNotification.js').useAntOrgWarningNotification : () => {};
 // Dead code elimination: conditional import for coordinator mode
 const getCoordinatorUserContext: (mcpClients: ReadonlyArray<{
   name: string;
@@ -121,6 +122,7 @@ const getCoordinatorUserContext: (mcpClients: ReadonlyArray<{
 import useCanUseTool from '../hooks/useCanUseTool.js';
 import type { ToolPermissionContext, Tool } from '../Tool.js';
 import { applyPermissionUpdate, applyPermissionUpdates, persistPermissionUpdate } from '../utils/permissions/PermissionUpdate.js';
+import type { PermissionBehavior } from '../types/permissions.js';
 import { buildPermissionUpdates } from '../components/permissions/ExitPlanModePermissionRequest/ExitPlanModePermissionRequest.js';
 import { stripDangerousPermissionsForAutoMode } from '../utils/permissions/permissionSetup.js';
 import { getScratchpadDir, isScratchpadEnabled } from '../utils/permissions/filesystem.js';
@@ -158,7 +160,7 @@ import { useTasksV2WithCollapseEffect } from '../hooks/useTasksV2.js';
 import { maybeMarkProjectOnboardingComplete } from '../projectOnboardingState.js';
 import type { MCPServerConnection } from '../services/mcp/types.js';
 import type { ScopedMcpServerConfig } from '../services/mcp/types.js';
-import { randomUUID, type UUID } from 'crypto';
+import { randomUUID, type UUID } from '../types/uuid.js';
 import { processSessionStartHooks } from '../utils/sessionStart.js';
 import { executeSessionEndHooks, getSessionEndHookTimeoutMs } from '../utils/hooks.js';
 import { type IDESelection, useIdeSelection } from '../hooks/useIdeSelection.js';
@@ -168,6 +170,8 @@ import { resolveAgentTools } from '../tools/AgentTool/agentToolUtils.js';
 import { resumeAgentBackground } from '../tools/AgentTool/resumeAgent.js';
 import { useMainLoopModel } from '../hooks/useMainLoopModel.js';
 import { useAppState, useSetAppState, useAppStateStore } from '../state/AppState.js';
+import type { AppState } from '../state/AppStateStore.js';
+import type { ElicitResult } from '@modelcontextprotocol/sdk/types.js';
 import type { ContentBlockParam, ImageBlockParam } from '@anthropic-ai/sdk/resources/messages.mjs';
 import type { ProcessUserInputContext } from '../utils/processUserInput/processUserInput.js';
 import type { PastedContent } from '../utils/config.js';
@@ -215,12 +219,12 @@ import { diagnosticTracker } from '../services/diagnosticTracking.js';
 import { handleSpeculationAccept, type ActiveSpeculationState } from '../services/PromptSuggestion/speculation.js';
 import { IdeOnboardingDialog } from '../components/IdeOnboardingDialog.js';
 import { EffortCallout, shouldShowEffortCallout } from '../components/EffortCallout.js';
-import type { EffortValue } from '../utils/effort.js';
+import type { EffortLevel, EffortValue } from '../utils/effort.js';
 import { RemoteCallout } from '../components/RemoteCallout.js';
 /* eslint-disable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
-const AntModelSwitchCallout = "external" === 'ant' ? require('../components/AntModelSwitchCallout.js').AntModelSwitchCallout : null;
-const shouldShowAntModelSwitch = "external" === 'ant' ? require('../components/AntModelSwitchCallout.js').shouldShowModelSwitchCallout : (): boolean => false;
-const UndercoverAutoCallout = "external" === 'ant' ? require('../components/UndercoverAutoCallout.js').UndercoverAutoCallout : null;
+const AntModelSwitchCallout = USER_TYPE === 'ant' ? require('../components/AntModelSwitchCallout.js').AntModelSwitchCallout : null;
+const shouldShowAntModelSwitch = USER_TYPE === 'ant' ? require('../components/AntModelSwitchCallout.js').shouldShowModelSwitchCallout : (): boolean => false;
+const UndercoverAutoCallout = USER_TYPE === 'ant' ? require('../components/UndercoverAutoCallout.js').UndercoverAutoCallout : null;
 /* eslint-enable custom-rules/no-process-env-top-level, @typescript-eslint/no-require-imports */
 import { activityManager } from '../utils/activityManager.js';
 import { createAbortController } from '../utils/abortController.js';
@@ -288,6 +292,13 @@ import { setClipboard } from '../ink/termio/osc.js';
 import type { ScrollBoxHandle } from '../ink/components/ScrollBox.js';
 import { createAttachmentMessage, getQueuedCommandAttachments } from '../utils/attachments.js';
 
+// Decompiled-source stubs: these symbols are referenced but not yet ported.
+// Declare as `any` to silence TS until the corresponding modules land.
+declare const fireCompanionObserver: (...args: unknown[]) => unknown;
+declare const launchUltraplan: (...args: unknown[]) => Promise<string>;
+declare const UltraplanChoiceDialog: React.ComponentType<any>;
+declare const UltraplanLaunchDialog: React.ComponentType<any>;
+
 // Stable empty array for hooks that accept MCPServerConnection[] — avoids
 // creating a new [] literal on every render in remote mode, which would
 // cause useEffect dependency changes and infinite re-render loops.
@@ -318,7 +329,13 @@ function median(values: number[]): number {
  * Small component to display transcript mode footer with dynamic keybinding.
  * Must be rendered inside KeybindingSetup to access keybinding context.
  */
-function TranscriptModeFooter(t0) {
+function TranscriptModeFooter(t0: {
+  showAllInTranscript: boolean;
+  virtualScroll: boolean;
+  searchBadge?: { current: number; count: number } | null | undefined | false | '';
+  suppressShowAll?: boolean;
+  status?: string | undefined;
+}) {
   const $ = _c(9);
   const {
     showAllInTranscript,
@@ -481,7 +498,12 @@ const TITLE_ANIMATION_INTERVAL_MS = 960;
  * entire REPL tree. Before extraction, the tick was ~1 REPL render/sec for
  * the duration of every turn, dragging PromptInput and friends along.
  */
-function AnimatedTerminalTitle(t0) {
+function AnimatedTerminalTitle(t0: {
+  isAnimating: boolean;
+  title: string;
+  disabled: boolean;
+  noPrefix: boolean;
+}) {
   const $ = _c(6);
   const {
     isAnimating,
@@ -517,10 +539,10 @@ function AnimatedTerminalTitle(t0) {
   useTerminalTitle(disabled ? null : noPrefix ? title : `${prefix} ${title}`);
   return null;
 }
-function _temp2(setFrame_0) {
+function _temp2(setFrame_0: React.Dispatch<React.SetStateAction<number>>) {
   return setFrame_0(_temp);
 }
-function _temp(f) {
+function _temp(f: number) {
   return (f + 1) % TITLE_ANIMATION_FRAMES.length;
 }
 export type Props = {
@@ -601,7 +623,7 @@ export function REPL({
   // Env-var gates hoisted to mount-time — isEnvTruthy does toLowerCase+trim+
   // includes, and these were on the render path (hot during PageUp spam).
   const titleDisabled = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_TERMINAL_TITLE), []);
-  const moreRightEnabled = useMemo(() => "external" === 'ant' && isEnvTruthy(process.env.CLAUDE_MORERIGHT), []);
+  const moreRightEnabled = useMemo(() => USER_TYPE === 'ant' && isEnvTruthy(process.env.CLAUDE_MORERIGHT), []);
   const disableVirtualScroll = useMemo(() => isEnvTruthy(process.env.CLAUDE_CODE_DISABLE_VIRTUAL_SCROLL), []);
   const disableMessageActions = feature('MESSAGE_ACTIONS') ?
   // biome-ignore lint/correctness/useHookAtTopLevel: feature() is a compile-time constant
@@ -615,28 +637,28 @@ export function REPL({
 
   // Agent definition is state so /resume can update it mid-session
   const [mainThreadAgentDefinition, setMainThreadAgentDefinition] = useState(initialMainThreadAgentDefinition);
-  const toolPermissionContext = useAppState(s => s.toolPermissionContext);
-  const verbose = useAppState(s => s.verbose);
-  const mcp = useAppState(s => s.mcp);
-  const plugins = useAppState(s => s.plugins);
-  const agentDefinitions = useAppState(s => s.agentDefinitions);
-  const fileHistory = useAppState(s => s.fileHistory);
-  const initialMessage = useAppState(s => s.initialMessage);
+  const toolPermissionContext = useAppState((s: AppState) => s.toolPermissionContext);
+  const verbose = useAppState((s: AppState) => s.verbose);
+  const mcp = useAppState((s: AppState) => s.mcp);
+  const plugins = useAppState((s: AppState) => s.plugins);
+  const agentDefinitions = useAppState((s: AppState) => s.agentDefinitions);
+  const fileHistory = useAppState((s: AppState) => s.fileHistory);
+  const initialMessage = useAppState((s: AppState) => s.initialMessage);
   const queuedCommands = useCommandQueue();
   // feature() is a build-time constant — dead code elimination removes the hook
   // call entirely in external builds, so this is safe despite looking conditional.
   // These fields contain excluded strings that must not appear in external builds.
-  const spinnerTip = useAppState(s => s.spinnerTip);
-  const showExpandedTodos = useAppState(s => s.expandedView) === 'tasks';
-  const pendingWorkerRequest = useAppState(s => s.pendingWorkerRequest);
-  const pendingSandboxRequest = useAppState(s => s.pendingSandboxRequest);
-  const teamContext = useAppState(s => s.teamContext);
-  const tasks = useAppState(s => s.tasks);
-  const workerSandboxPermissions = useAppState(s => s.workerSandboxPermissions);
-  const elicitation = useAppState(s => s.elicitation);
-  const ultraplanPendingChoice = useAppState(s => s.ultraplanPendingChoice);
-  const ultraplanLaunchPending = useAppState(s => s.ultraplanLaunchPending);
-  const viewingAgentTaskId = useAppState(s => s.viewingAgentTaskId);
+  const spinnerTip = useAppState((s: AppState) => s.spinnerTip);
+  const showExpandedTodos = useAppState((s: AppState) => s.expandedView) === 'tasks';
+  const pendingWorkerRequest = useAppState((s: AppState) => s.pendingWorkerRequest);
+  const pendingSandboxRequest = useAppState((s: AppState) => s.pendingSandboxRequest);
+  const teamContext = useAppState((s: AppState) => s.teamContext);
+  const tasks = useAppState((s: AppState) => s.tasks);
+  const workerSandboxPermissions = useAppState((s: AppState) => s.workerSandboxPermissions);
+  const elicitation = useAppState((s: AppState) => s.elicitation);
+  const ultraplanPendingChoice = useAppState((s: AppState) => s.ultraplanPendingChoice);
+  const ultraplanLaunchPending = useAppState((s: AppState) => s.ultraplanLaunchPending);
+  const viewingAgentTaskId = useAppState((s: AppState) => s.viewingAgentTaskId);
   const setAppState = useSetAppState();
 
   // Bootstrap: retained local_agent that hasn't loaded disk yet → read
@@ -692,7 +714,7 @@ export function REPL({
   // the AppState mirror that triggers the re-render. Without this, toggling
   // /brief mid-session leaves the stale tool list (no SendUserMessage) and
   // the model emits plain text the brief filter hides.
-  const isBriefOnly = useAppState(s => s.isBriefOnly);
+  const isBriefOnly = useAppState((s: AppState) => s.isBriefOnly);
   const localTools = useMemo(() => getTools(toolPermissionContext), [toolPermissionContext, proactiveActive, isBriefOnly]);
   useKickOffCheckAndDisableBypassPermissionsIfNeeded();
   useKickOffCheckAndDisableAutoModeIfNeeded();
@@ -733,13 +755,13 @@ export function REPL({
   const [showIdeOnboarding, setShowIdeOnboarding] = useState(false);
   // Dead code elimination: model switch callout state (ant-only)
   const [showModelSwitchCallout, setShowModelSwitchCallout] = useState(() => {
-    if ("external" === 'ant') {
+    if (USER_TYPE === 'ant') {
       return shouldShowAntModelSwitch();
     }
     return false;
   });
   const [showEffortCallout, setShowEffortCallout] = useState(() => shouldShowEffortCallout(mainLoopModel));
-  const showRemoteCallout = useAppState(s => s.showRemoteCallout);
+  const showRemoteCallout = useAppState((s: AppState) => s.showRemoteCallout);
   const [showDesktopUpsellStartup, setShowDesktopUpsellStartup] = useState(() => shouldShowDesktopUpsellStartup());
   // notifications
   useModelMigrationNotifications();
@@ -1012,7 +1034,7 @@ export function REPL({
   }, []);
   const [showUndercoverCallout, setShowUndercoverCallout] = useState(false);
   useEffect(() => {
-    if ("external" === 'ant') {
+    if (USER_TYPE === 'ant') {
       void (async () => {
         // Wait for repo classification to settle (memoized, no-op if primed).
         const {
@@ -1124,7 +1146,7 @@ export function REPL({
   // Session title (set via /rename or restored on resume) wins over
   // the agent name, which wins over the Haiku-extracted topic;
   // all fall back to the product name.
-  const terminalTitleFromRename = useAppState(s => s.settings.terminalTitleFromRename) !== false;
+  const terminalTitleFromRename = useAppState((s: AppState) => s.settings.terminalTitleFromRename) !== false;
   const sessionTitle = terminalTitleFromRename ? getCurrentSessionTitle(getSessionId()) : undefined;
   const [haikuTitle, setHaikuTitle] = useState<string>();
   // Gates the one-shot Haiku call that generates the tab title. Seeded true
@@ -1459,7 +1481,7 @@ export function REPL({
   // throttle batches rapid updates). Cleared on message arrival (messages.ts)
   // so displayedMessages switches from deferredMessages to messages atomically.
   const [streamingText, setStreamingText] = useState<string | null>(null);
-  const reducedMotion = useAppState(s => s.settings.prefersReducedMotion) ?? false;
+  const reducedMotion = useAppState((s: AppState) => s.settings.prefersReducedMotion) ?? false;
   const showStreamingText = !reducedMotion && !hasCursorUpViewportYankBug();
   const onStreamingText = useCallback((f: (current: string | null) => string | null) => {
     if (!showStreamingText) return;
@@ -2041,10 +2063,10 @@ export function REPL({
     if (allowDialogsWithAnimation && showIdeOnboarding) return 'ide-onboarding';
 
     // Model switch callout (ant-only, eliminated from external builds)
-    if ("external" === 'ant' && allowDialogsWithAnimation && showModelSwitchCallout) return 'model-switch';
+    if (USER_TYPE === 'ant' && allowDialogsWithAnimation && showModelSwitchCallout) return 'model-switch';
 
     // Undercover auto-enable explainer (ant-only, eliminated from external builds)
-    if ("external" === 'ant' && allowDialogsWithAnimation && showUndercoverCallout) return 'undercover-callout';
+    if (USER_TYPE === 'ant' && allowDialogsWithAnimation && showUndercoverCallout) return 'undercover-callout';
 
     // Effort callout (shown once for Opus 4.6 users when effort is enabled)
     if (allowDialogsWithAnimation && showEffortCallout) return 'effort-callout';
@@ -2482,7 +2504,7 @@ export function REPL({
       dynamicSkillDirTriggers: new Set<string>(),
       discoveredSkillNames: discoveredSkillNamesRef.current,
       setResponseLength,
-      pushApiMetricsEntry: "external" === 'ant' ? (ttftMs: number) => {
+      pushApiMetricsEntry: USER_TYPE === 'ant' ? (ttftMs: number) => {
         const now = Date.now();
         const baseline = responseLengthRef.current;
         apiMetricsRef.current.push({
@@ -2645,7 +2667,7 @@ export function REPL({
       setResponseLength(length => length + newContent.length);
     }, setStreamMode, setStreamingToolUses, tombstonedMessage => {
       setMessages(oldMessages => oldMessages.filter(m => m !== tombstonedMessage));
-      void removeTranscriptMessage(tombstonedMessage.uuid);
+      if (tombstonedMessage.uuid) void removeTranscriptMessage(tombstonedMessage.uuid);
     }, setStreamingThinking, metrics => {
       const now = Date.now();
       const baseline = responseLengthRef.current;
@@ -2802,7 +2824,7 @@ export function REPL({
       onQueryEvent(event);
     }
     if (feature('BUDDY')) {
-      void fireCompanionObserver(messagesRef.current, reaction => setAppState(prev => prev.companionReaction === reaction ? prev : {
+      void fireCompanionObserver(messagesRef.current, (reaction: string) => setAppState(prev => prev.companionReaction === reaction ? prev : {
         ...prev,
         companionReaction: reaction
       }));
@@ -2811,7 +2833,7 @@ export function REPL({
 
     // Capture ant-only API metrics before resetLoadingState clears the ref.
     // For multi-request turns (tool use loops), compute P50 across all requests.
-    if ("external" === 'ant' && apiMetricsRef.current.length > 0) {
+    if (USER_TYPE === 'ant' && apiMetricsRef.current.length > 0) {
       const entries = apiMetricsRef.current;
       const ttfts = entries.map(e => e.ttftMs);
       // Compute per-request OTPS using only active streaming time and
@@ -2939,7 +2961,7 @@ export function REPL({
         // minutes — wiping the session made the pill disappear entirely, forcing
         // the user to re-invoke Tmux just to peek. Skip on abort so the panel
         // stays open for inspection (matches the turn-duration guard below).
-        if ("external" === 'ant' && !abortController.signal.aborted) {
+        if (USER_TYPE === 'ant' && !abortController.signal.aborted) {
           setAppState(prev => {
             if (prev.tungstenActiveSession === undefined) return prev;
             if (prev.tungstenPanelAutoHidden === true) return prev;
@@ -3062,7 +3084,7 @@ export function REPL({
       }
 
       // Atomically: clear initial message, set permission mode and rules, and store plan for verification
-      const shouldStorePlanForVerification = initialMsg.message.planContent && "external" === 'ant' && isEnvTruthy(undefined);
+      const shouldStorePlanForVerification = initialMsg.message.planContent && USER_TYPE === 'ant' && isEnvTruthy(undefined);
       setAppState(prev => {
         // Build and apply permission updates (mode + allowedPrompts rules)
         let updatedToolPermissionContext = initialMsg.mode ? applyPermissionUpdates(prev.toolPermissionContext, buildPermissionUpdates(initialMsg.mode, initialMsg.allowedPrompts)) : prev.toolPermissionContext;
@@ -3420,7 +3442,7 @@ export function REPL({
       // Build content blocks when there are pasted attachments (images)
       const pastedValues = Object.values(pastedContents);
       const imageContents = pastedValues.filter(c => c.type === 'image');
-      const imagePasteIds = imageContents.length > 0 ? imageContents.map(c => c.id) : undefined;
+      const imagePasteIds = imageContents.length > 0 ? imageContents.map(c => String(c.id)) : undefined;
       let messageContent: string | ContentBlockParam[] = input.trim();
       let remoteContent: RemoteMessageContent = input.trim();
       if (pastedValues.length > 0) {
@@ -3595,7 +3617,7 @@ export function REPL({
 
   // Handler for when user presses 1 on survey thanks screen to share details
   const handleSurveyRequestFeedback = useCallback(() => {
-    const command = "external" === 'ant' ? '/issue' : '/feedback';
+    const command = USER_TYPE === 'ant' ? '/issue' : '/feedback';
     onSubmit(command, {
       setCursorOffset: () => {},
       clearBuffer: () => {},
@@ -3724,7 +3746,8 @@ export function REPL({
         const newPastedContents: Record<number, PastedContent> = {};
         imageBlocks.forEach((block, index) => {
           if (block.source.type === 'base64') {
-            const id = message.imagePasteIds?.[index] ?? index + 1;
+            const rawId = message.imagePasteIds?.[index];
+            const id = typeof rawId === 'string' ? Number(rawId) : (rawId as number | undefined) ?? index + 1;
             newPastedContents[id] = {
               id,
               type: 'image',
@@ -3750,7 +3773,7 @@ export function REPL({
   // 24-char prefix: deriveUUID preserves first 24, renderable uuid prefix-matches raw source.
   const findRawIndex = (uuid: string) => {
     const prefix = uuid.slice(0, 24);
-    return messages.findIndex(m => m.uuid.slice(0, 24) === prefix);
+    return messages.findIndex(m => m.uuid?.slice(0, 24) === prefix);
   };
   const messageActionCaps: MessageActionCaps = {
     copy: text =>
@@ -4063,7 +4086,7 @@ export function REPL({
   // - Workers receive permission responses via mailbox messages
   // - Leaders receive permission requests via mailbox messages
 
-  if ("external" === 'ant') {
+  if (USER_TYPE === 'ant') {
     // Tasks mode: watch for tasks and auto-process them
     // eslint-disable-next-line react-hooks/rules-of-hooks
     // biome-ignore lint/correctness/useHookAtTopLevel: conditional for dead code elimination in external builds
@@ -4172,7 +4195,7 @@ export function REPL({
 
     // Fall back to default behavior
     const hookType = currentHooks[0]?.data.hookEvent === 'SubagentStop' ? 'subagent stop' : 'stop';
-    if ("external" === 'ant') {
+    if (USER_TYPE === 'ant') {
       const cmd = currentHooks[completedCount]?.data.command;
       const label = cmd ? ` '${truncateToWidth(cmd, 40)}'` : '';
       return total === 1 ? `running ${hookType} hook${label}` : `running ${hookType} hook${label}\u2026 ${completedCount}/${total}`;
@@ -4581,7 +4604,7 @@ export function REPL({
               {toolJSX && !(toolJSX.isLocalJSXCommand && toolJSX.isImmediate) && !toolJsxCentered && <Box flexDirection="column" width="100%">
                     {toolJSX.jsx}
                   </Box>}
-              {"external" === 'ant' && <TungstenLiveMonitor />}
+              {USER_TYPE === 'ant' && <TungstenLiveMonitor />}
               {feature('WEB_BROWSER_TOOL') ? WebBrowserPanelModule && <WebBrowserPanelModule.WebBrowserPanel /> : null}
               <Box flexGrow={1} />
               {showSpinner && <SpinnerWithVerb mode={streamMode} spinnerTip={spinnerTip} responseLengthRef={responseLengthRef} apiMetricsRef={apiMetricsRef} overrideMessage={spinnerMessage} spinnerSuffix={stopHookSpinnerSuffix} verbose={verbose} loadingStartTimeRef={loadingStartTimeRef} totalPausedMsRef={totalPausedMsRef} pauseStartTimeRef={pauseStartTimeRef} overrideColor={spinnerColor} overrideShimmerColor={spinnerShimmerColor} hasActiveTools={inProgressToolUseIDs.size > 0} leaderIsIdle={!isLoading} />}
@@ -4624,7 +4647,7 @@ export function REPL({
                   toolName: WEB_FETCH_TOOL_NAME,
                   ruleContent: `domain:${approvedHost}`
                 }],
-                behavior: (allow ? 'allow' : 'deny'),
+                behavior: (allow ? 'allow' : 'deny') as PermissionBehavior,
                 destination: 'localSettings' as const
               };
               setAppState(prev => ({
@@ -4655,7 +4678,7 @@ export function REPL({
               sandboxBridgeCleanupRef.current.delete(approvedHost);
             }
           }} />}
-                {focusedInputDialog === 'prompt' && <PromptDialog key={promptQueue[0].request.prompt} title={promptQueue[0].title} toolInputSummary={promptQueue[0].toolInputSummary} request={promptQueue[0].request} onRespond={selectedKey => {
+                {focusedInputDialog === 'prompt' && <PromptDialog key={promptQueue[0].request.prompt} title={promptQueue[0].title} toolInputSummary={promptQueue[0].toolInputSummary} request={promptQueue[0].request} onRespond={(selectedKey: string) => {
             const item = promptQueue[0];
             if (!item) return;
             item.resolve({
@@ -4718,7 +4741,7 @@ export function REPL({
               }
             }));
           }} />}
-                {focusedInputDialog === 'elicitation' && <ElicitationDialog key={elicitation.queue[0]!.serverName + ':' + String(elicitation.queue[0]!.requestId)} event={elicitation.queue[0]!} onResponse={(action, content) => {
+                {focusedInputDialog === 'elicitation' && <ElicitationDialog key={elicitation.queue[0]!.serverName + ':' + String(elicitation.queue[0]!.requestId)} event={elicitation.queue[0]!} onResponse={(action: ElicitResult['action'], content?: ElicitResult['content']) => {
             const currentRequest = elicitation.queue[0];
             if (!currentRequest) return;
             // Call respond callback to resolve Promise
@@ -4736,7 +4759,7 @@ export function REPL({
                 }
               }));
             }
-          }} onWaitingDismiss={action => {
+          }} onWaitingDismiss={(action: 'dismiss' | 'retry' | 'cancel') => {
             const currentRequest = elicitation.queue[0];
             // Remove from queue
             setAppState(prev => ({
@@ -4756,7 +4779,7 @@ export function REPL({
             }));
             logEvent('tengu_cost_threshold_acknowledged', {});
           }} />}
-                {focusedInputDialog === 'idle-return' && idleReturnPending && <IdleReturnDialog idleMinutes={idleReturnPending.idleMinutes} totalInputTokens={getTotalInputTokens()} onDone={async action => {
+                {focusedInputDialog === 'idle-return' && idleReturnPending && <IdleReturnDialog idleMinutes={idleReturnPending.idleMinutes} totalInputTokens={getTotalInputTokens()} onDone={async (action: 'continue' | 'clear' | 'dismiss' | 'never') => {
             const pending = idleReturnPending;
             setIdleReturnPending(null);
             logEvent('tengu_idle_return_action', {
@@ -4804,7 +4827,7 @@ export function REPL({
             });
           }} />}
                 {focusedInputDialog === 'ide-onboarding' && <IdeOnboardingDialog onDone={() => setShowIdeOnboarding(false)} installationStatus={ideInstallationStatus} />}
-                {"external" === 'ant' && focusedInputDialog === 'model-switch' && AntModelSwitchCallout && <AntModelSwitchCallout onDone={(selection: string, modelAlias?: string) => {
+                {USER_TYPE === 'ant' && focusedInputDialog === 'model-switch' && AntModelSwitchCallout && <AntModelSwitchCallout onDone={(selection: string, modelAlias?: string) => {
             setShowModelSwitchCallout(false);
             if (selection === 'switch' && modelAlias) {
               setAppState(prev => ({
@@ -4814,8 +4837,8 @@ export function REPL({
               }));
             }
           }} />}
-                {"external" === 'ant' && focusedInputDialog === 'undercover-callout' && UndercoverAutoCallout && <UndercoverAutoCallout onDone={() => setShowUndercoverCallout(false)} />}
-                {focusedInputDialog === 'effort-callout' && <EffortCallout model={mainLoopModel} onDone={selection => {
+                {USER_TYPE === 'ant' && focusedInputDialog === 'undercover-callout' && UndercoverAutoCallout && <UndercoverAutoCallout onDone={() => setShowUndercoverCallout(false)} />}
+                {focusedInputDialog === 'effort-callout' && <EffortCallout model={mainLoopModel} onDone={(selection: EffortLevel | undefined | 'dismiss') => {
             setShowEffortCallout(false);
             if (selection !== 'dismiss') {
               setAppState(prev => ({
@@ -4824,7 +4847,7 @@ export function REPL({
               }));
             }
           }} />}
-                {focusedInputDialog === 'remote-callout' && <RemoteCallout onDone={selection => {
+                {focusedInputDialog === 'remote-callout' && <RemoteCallout onDone={(selection: 'enable' | 'dismiss') => {
             setAppState(prev => {
               if (!prev.showRemoteCallout) return prev;
               return {
@@ -4849,7 +4872,7 @@ export function REPL({
 
                 {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-choice' && ultraplanPendingChoice && <UltraplanChoiceDialog plan={ultraplanPendingChoice.plan} sessionId={ultraplanPendingChoice.sessionId} taskId={ultraplanPendingChoice.taskId} setMessages={setMessages} readFileState={readFileState.current} getAppState={() => store.getState()} setConversationId={setConversationId} /> : null}
 
-                {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-launch' && ultraplanLaunchPending && <UltraplanLaunchDialog onChoice={(choice, opts) => {
+                {feature('ULTRAPLAN') ? focusedInputDialog === 'ultraplan-launch' && ultraplanLaunchPending && <UltraplanLaunchDialog onChoice={(choice: 'cancel' | 'foreground' | 'background', opts: { disconnectedBridge?: unknown }) => {
             const blurb = ultraplanLaunchPending.blurb;
             setAppState(prev => prev.ultraplanLaunchPending ? {
               ...prev,
@@ -4897,7 +4920,7 @@ export function REPL({
                       {/* Frustration-triggered transcript sharing prompt */}
                       {frustrationDetection.state !== 'closed' && <FeedbackSurvey state={frustrationDetection.state} lastResponse={null} handleSelect={() => {}} handleTranscriptSelect={frustrationDetection.handleTranscriptSelect} inputValue={inputValue} setInputValue={setInputValue} />}
                       {/* Skill improvement survey - appears when improvements detected (ant-only) */}
-                      {"external" === 'ant' && skillImprovementSurvey.suggestion && <SkillImprovementSurvey isOpen={skillImprovementSurvey.isOpen} skillName={skillImprovementSurvey.suggestion.skillName} updates={skillImprovementSurvey.suggestion.updates} handleSelect={skillImprovementSurvey.handleSelect} inputValue={inputValue} setInputValue={setInputValue} />}
+                      {USER_TYPE === 'ant' && skillImprovementSurvey.suggestion && <SkillImprovementSurvey isOpen={skillImprovementSurvey.isOpen} skillName={skillImprovementSurvey.suggestion.skillName} updates={skillImprovementSurvey.suggestion.updates} handleSelect={skillImprovementSurvey.handleSelect} inputValue={inputValue} setInputValue={setInputValue} />}
                       {showIssueFlagBanner && <IssueFlagBanner />}
                       {}
                       <PromptInput debug={debug} ideSelection={ideSelection} hasSuppressedDialogs={!!hasSuppressedDialogs} isLocalJSXCommandActive={isShowingLocalJSXCommand} getToolUseContext={getToolUseContext} toolPermissionContext={toolPermissionContext} setToolPermissionContext={setToolPermissionContext} apiKeyStatus={apiKeyStatus} commands={commands} agents={agentDefinitions.activeAgents} isLoading={isLoading} onExit={handleExit} verbose={verbose} messages={messages} onAutoUpdaterResult={setAutoUpdaterResult} autoUpdaterResult={autoUpdaterResult} input={inputValue} onInputChange={setInputValue} mode={inputMode} onModeChange={setInputMode} stashedPrompt={stashedPrompt} setStashedPrompt={setStashedPrompt} submitCount={submitCount} onShowMessageSelector={handleShowMessageSelector} onMessageActionsEnter={
@@ -4990,7 +5013,7 @@ export function REPL({
             setIsMessageSelectorVisible(false);
             setMessageSelectorPreselect(undefined);
           }} />}
-                {"external" === 'ant' && <DevBar />}
+                {USER_TYPE === 'ant' && <DevBar />}
               </Box>
               {feature('BUDDY') && !(companionNarrow && isFullscreenEnvEnabled()) && companionVisible ? <CompanionSprite /> : null}
             </Box>} />

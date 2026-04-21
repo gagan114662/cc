@@ -63,8 +63,8 @@ export function Passes({
         setIsAvailable(true);
 
         // Store the referral link if available
-        if (eligibilityData.referral_code_details?.referral_link) {
-          setReferralLink(eligibilityData.referral_code_details.referral_link);
+        if ((eligibilityData.referral_code_details as any)?.referral_link) {
+          setReferralLink((eligibilityData.referral_code_details as any).referral_link);
         }
 
         // Store referrer reward info for v1 campaign messaging

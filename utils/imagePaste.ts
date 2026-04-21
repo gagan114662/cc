@@ -106,7 +106,7 @@ export async function hasImageInClipboard(): Promise<boolean> {
     // as an unhandled rejection in useClipboardImageHint's setTimeout.
     try {
       const { getNativeModule } = await import('image-processor-napi')
-      const hasImage = getNativeModule()?.hasClipboardImage
+      const hasImage = getNativeModule()?.hasClipboardImage as (() => boolean) | undefined
       if (hasImage) {
         return hasImage()
       }
@@ -135,7 +135,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
   ) {
     try {
       const { getNativeModule } = await import('image-processor-napi')
-      const readClipboard = getNativeModule()?.readClipboardImage
+      const readClipboard = getNativeModule()?.readClipboardImage as ((w: number, h: number) => { base64: string; mediaType: string; width: number; height: number; png?: unknown; originalWidth?: number; originalHeight?: number } | null) | undefined
       if (!readClipboard) {
         throw new Error('native clipboard reader unavailable')
       }
@@ -148,7 +148,7 @@ export async function getImageFromClipboard(): Promise<ImageWithDimensions | nul
       // limit — for that edge case, run through the same size-cap that
       // the osascript path uses (degrades to JPEG if needed). Cheap if
       // already under: just a sharp metadata read.
-      const buffer: Buffer = native.png
+      const buffer: Buffer = native.png as Buffer
       if (buffer.length > IMAGE_TARGET_RAW_SIZE) {
         const resized = await maybeResizeAndDownsampleImageBuffer(
           buffer,

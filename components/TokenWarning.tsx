@@ -10,6 +10,7 @@ import { getUpgradeMessage } from '../utils/model/contextWindowUpgradeCheck.js';
 type Props = {
   tokenUsage: number;
   model: string;
+  upgradeMessage?: unknown;
 };
 
 /**
@@ -18,7 +19,7 @@ type Props = {
  * (hooks-in-conditionals would violate React rules). The parent only
  * renders this when feature('CONTEXT_COLLAPSE') + isContextCollapseEnabled().
  */
-function CollapseLabel(t0) {
+function CollapseLabel(t0: Props) {
   const $ = _c(8);
   const {
     upgradeMessage
@@ -45,7 +46,7 @@ function CollapseLabel(t0) {
   } else {
     t2 = $[1];
   }
-  const snapshot = useSyncExternalStore(subscribe, t2);
+  const snapshot = useSyncExternalStore(subscribe, t2) as string;
   let t3;
   if ($[2] !== snapshot) {
     t3 = snapshot.split("|").map(Number);
@@ -84,7 +85,7 @@ function CollapseLabel(t0) {
   }
   return t5;
 }
-export function TokenWarning(t0) {
+export function TokenWarning(t0: any) {
   const $ = _c(13);
   const {
     tokenUsage,
@@ -156,7 +157,7 @@ export function TokenWarning(t0) {
   if (collapseMode && feature("CONTEXT_COLLAPSE")) {
     let t4;
     if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
-      t4 = <Box flexDirection="row"><CollapseLabel upgradeMessage={upgradeMessage} /></Box>;
+      t4 = <Box flexDirection="row">{(() => { const CL = CollapseLabel as unknown as React.ComponentType<{ upgradeMessage: unknown }>; return <CL upgradeMessage={upgradeMessage} />; })()}</Box>;
       $[8] = t4;
     } else {
       t4 = $[8];

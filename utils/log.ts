@@ -268,14 +268,14 @@ export async function getErrorLogByIndex(
 async function loadLogList(path: string): Promise<LogOption[]> {
   let files: Awaited<ReturnType<typeof readdir>>
   try {
-    files = await readdir(path, { withFileTypes: true })
+    files = (await readdir(path, { withFileTypes: true })) as never
   } catch {
     logError(new Error(`No logs found at ${path}`))
     return []
   }
   const logData = await Promise.all(
     files.map(async (file, i) => {
-      const fullPath = join(path, file.name)
+      const fullPath = join(path, file.name as unknown as string)
       const content = await readFile(fullPath, { encoding: 'utf8' })
       const messages = jsonParse(content) as SerializedMessage[]
       const firstMessage = messages[0]

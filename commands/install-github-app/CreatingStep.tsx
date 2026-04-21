@@ -10,7 +10,7 @@ interface CreatingStepProps {
   skipWorkflow?: boolean;
   selectedWorkflows: Workflow[];
 }
-export function CreatingStep(t0) {
+export function CreatingStep(t0: CreatingStepProps) {
   const $ = _c(10);
   const {
     currentWorkflowInstallStep,
@@ -43,7 +43,7 @@ export function CreatingStep(t0) {
   }
   let t4;
   if ($[7] !== currentWorkflowInstallStep || $[8] !== progressSteps) {
-    t4 = <><Box flexDirection="column" borderStyle="round" paddingX={1}>{t3}{progressSteps.map((stepText, index) => {
+    t4 = <><Box flexDirection="column" borderStyle="round" paddingX={1}>{t3}{progressSteps.map((stepText: string, index: number) => {
           let status = "pending";
           if (index < currentWorkflowInstallStep) {
             status = "completed";

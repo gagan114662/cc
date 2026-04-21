@@ -34,7 +34,7 @@ function getIcon(itemId: string): string {
 function isUnifiedSuggestion(itemId: string): boolean {
   return itemId.startsWith('file-') || itemId.startsWith('mcp-resource-') || itemId.startsWith('agent-');
 }
-const SuggestionItemRow = memo(function SuggestionItemRow(t0) {
+const SuggestionItemRow = memo(function SuggestionItemRow(t0: { item: SuggestionItem; maxColumnWidth: number; isSelected: boolean }) {
   const $ = _c(36);
   const {
     item,
@@ -210,7 +210,7 @@ type Props = {
    */
   overlay?: boolean;
 };
-export function PromptInputFooterSuggestions(t0) {
+export function PromptInputFooterSuggestions(t0: Props) {
   const $ = _c(22);
   const {
     suggestions,
@@ -248,7 +248,7 @@ export function PromptInputFooterSuggestions(t0) {
     t3 = overlay ? undefined : "flex-end";
     let t5;
     if ($[13] !== maxColumnWidth || $[14] !== selectedSuggestion || $[15] !== suggestions) {
-      t5 = item_0 => <SuggestionItemRow key={item_0.id} item={item_0} maxColumnWidth={maxColumnWidth} isSelected={item_0.id === suggestions[selectedSuggestion]?.id} />;
+      t5 = (item_0: SuggestionItem) => <SuggestionItemRow key={item_0.id} item={item_0} maxColumnWidth={maxColumnWidth} isSelected={item_0.id === suggestions[selectedSuggestion]?.id} />;
       $[13] = maxColumnWidth;
       $[14] = selectedSuggestion;
       $[15] = suggestions;
@@ -286,7 +286,7 @@ export function PromptInputFooterSuggestions(t0) {
   }
   return t5;
 }
-function _temp(item) {
+function _temp(item: SuggestionItem) {
   return stringWidth(item.displayText);
 }
 export default memo(PromptInputFooterSuggestions);

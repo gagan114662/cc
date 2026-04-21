@@ -2,11 +2,9 @@ import type {
   BetaContentBlock,
   BetaContentBlockParam,
   BetaImageBlockParam,
-  BetaJSONOutputFormat,
   BetaMessage,
   BetaMessageDeltaUsage,
   BetaMessageStreamParams,
-  BetaOutputConfig,
   BetaRawMessageStreamEvent,
   BetaRequestDocumentBlock,
   BetaStopReason,
@@ -17,6 +15,12 @@ import type {
   BetaUsage,
   BetaMessageParam as MessageParam,
 } from '@anthropic-ai/sdk/resources/beta/messages/messages.mjs'
+// Structured-output config/format — present in runtime API, not yet typed
+// in the installed @anthropic-ai/sdk version. See types/anthropicBetaShim.ts.
+import type {
+  BetaJSONOutputFormat,
+  BetaOutputConfig,
+} from '../../types/anthropicBetaShim.js'
 import type { TextBlockParam } from '@anthropic-ai/sdk/resources/index.mjs'
 import type { Stream } from '@anthropic-ai/sdk/streaming.mjs'
 import { randomUUID } from 'crypto'
@@ -972,7 +976,7 @@ export function stripExcessMediaItems(
   toRemove -= limit
   if (toRemove <= 0) return messages
 
-  return messages.map(msg => {
+  return messages.map((msg): UserMessage | AssistantMessage => {
     if (toRemove <= 0) return msg
     const content = msg.message.content
     if (!Array.isArray(content)) return msg
@@ -1007,10 +1011,10 @@ export function stripExcessMediaItems(
 
     return before === toRemove
       ? msg
-      : {
+      : ({
           ...msg,
           message: { ...msg.message, content: stripped },
-        }
+        } as UserMessage | AssistantMessage)
   })
 }
 
@@ -1610,7 +1614,7 @@ async function* queryModel(
         // thinking without a budget.
         thinking = {
           type: 'adaptive',
-        } satisfies BetaMessageStreamParams['thinking']
+        } as unknown as BetaMessageStreamParams['thinking']
       } else {
         // For models that do not support adaptive thinking, use the default
         // thinking budget unless explicitly specified.
@@ -1642,7 +1646,7 @@ async function* queryModel(
     // Fast mode: header is latched session-stable (cache-safe), but
     // `speed='fast'` stays dynamic so cooldown still suppresses the actual
     // fast-mode request without changing the cache key.
-    let speed: BetaMessageStreamParams['speed']
+    let speed: 'fast' | undefined
     const isFastModeForRetry =
       isFastModeEnabled() &&
       isFastModeAvailable() &&
@@ -1740,7 +1744,7 @@ async function* queryModel(
     const logMessagesLength = queryParams.messages.length
     const logBetas = useBetas ? (queryParams.betas ?? []) : []
     const logThinkingType = queryParams.thinking?.type ?? 'disabled'
-    const logEffortValue = queryParams.output_config?.effort
+    const logEffortValue = queryParams.output_config?.effort as ('low' | 'medium' | 'high' | 'max') | null | undefined
     void options.getToolPermissionContext().then(permissionContext => {
       logAPIQuery({
         model: options.model,
@@ -2129,7 +2133,7 @@ async function* queryModel(
                     feature('CONNECTOR_TEXT') &&
                     contentBlock.type === 'connector_text'
                   ) {
-                    contentBlock.signature = delta.signature
+                    ;(contentBlock as { signature?: string }).signature = delta.signature
                     break
                   }
                   if (contentBlock.type !== 'thinking') {
@@ -2222,7 +2226,7 @@ async function* queryModel(
             ) {
               research = (part as unknown as Record<string, unknown>).research
               for (const msg of newMessages) {
-                msg.research = research
+                (msg as unknown as { research?: unknown }).research = research
               }
             }
 
@@ -2276,7 +2280,7 @@ async function* queryModel(
               })
             }
 
-            if (stopReason === 'model_context_window_exceeded') {
+            if ((stopReason as string) === 'model_context_window_exceeded') {
               logEvent('tengu_context_window_exceeded', {
                 max_tokens: maxOutputTokens,
                 output_tokens: usage.output_tokens,
@@ -2981,8 +2985,12 @@ export function updateUsage(
         }
       : {}),
     inference_geo: usage.inference_geo,
-    iterations: partUsage.iterations ?? usage.iterations,
-    speed: (partUsage as BetaUsage).speed ?? usage.speed,
+    iterations:
+      (partUsage as unknown as { iterations?: number }).iterations ??
+      (usage as unknown as { iterations?: number }).iterations,
+    speed:
+      (partUsage as unknown as { speed?: string }).speed ??
+      (usage as unknown as { speed?: string }).speed,
   }
 }
 
