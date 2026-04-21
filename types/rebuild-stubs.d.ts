@@ -73,10 +73,11 @@ declare module '@ant/computer-use-mcp/types' {
     [key: string]: unknown
   }
   export type Logger = {
-    debug: (...args: unknown[]) => void
-    info: (...args: unknown[]) => void
-    warn: (...args: unknown[]) => void
-    error: (...args: unknown[]) => void
+    silly?: (message: string, ...args: unknown[]) => void
+    debug: (message: string, ...args: unknown[]) => void
+    info: (message: string, ...args: unknown[]) => void
+    warn: (message: string, ...args: unknown[]) => void
+    error: (message: string, ...args: unknown[]) => void
   }
 }
 
