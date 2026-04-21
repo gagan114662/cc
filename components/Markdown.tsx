@@ -136,16 +136,17 @@ function MarkdownBody(t0: StreamingProps) {
     let nonTableContent = "";
     const flushNonTableContent = function flushNonTableContent() {
       if (nonTableContent) {
-        elements.push(<Ansi key={elements.length} dimColor={dimColor}>{nonTableContent.trim()}</Ansi>);
+        const AnsiAny = Ansi as unknown as React.ComponentType<{ key?: unknown; dimColor?: boolean; children?: React.ReactNode }>;
+        elements.push(<AnsiAny key={elements.length} dimColor={dimColor}>{nonTableContent.trim()}</AnsiAny>);
         nonTableContent = "";
       }
     };
     for (const token of tokens) {
       if (token.type === "table") {
         flushNonTableContent();
-        elements.push(<MarkdownTable key={elements.length} token={token as Tokens.Table} highlight={highlight} />);
+        elements.push(<MarkdownTable key={elements.length} token={token as Tokens.Table} highlight={highlight as never} />);
       } else {
-        nonTableContent = nonTableContent + formatToken(token, theme, 0, null, null, highlight);
+        nonTableContent = nonTableContent + formatToken(token, theme, 0, null, null, highlight as never);
         nonTableContent;
       }
     }
@@ -171,6 +172,8 @@ function MarkdownBody(t0: StreamingProps) {
 }
 type StreamingProps = {
   children: string;
+  dimColor?: boolean;
+  highlight?: unknown;
 };
 
 /**
