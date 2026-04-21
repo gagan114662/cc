@@ -289,7 +289,7 @@ export type AppState = DeepImmutable<{
     // Which display CU targets. Written back by the package's
     // `autoTargetDisplay` resolver via `onResolvedDisplayUpdated`. Persisted
     // across resume so clicks stay on the display the model last saw.
-    selectedDisplayId?: number
+    selectedDisplayId?: string
     // True when the model explicitly picked a display via `switch_display`.
     // Makes `handleScreenshot` skip the resolver chase chain and honor
     // `selectedDisplayId` directly. Cleared on resolver writeback (pinned

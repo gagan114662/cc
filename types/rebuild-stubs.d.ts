@@ -1,8 +1,14 @@
 declare module '@ant/computer-use-mcp' {
-  export const DEFAULT_GRANT_FLAGS: string[]
+  export const DEFAULT_GRANT_FLAGS: {
+    clipboardRead: boolean
+    clipboardWrite: boolean
+    systemKeyCombos: boolean
+  }
   export const API_RESIZE_PARAMS: Record<string, unknown>
   export function targetImageSize(...args: unknown[]): unknown
-  export function bindSessionContext<T>(context: T): T
+  export function bindSessionContext(
+    ...args: unknown[]
+  ): (name: string, args: unknown) => Promise<CuCallToolResult & { telemetry?: { error_kind?: string; [key: string]: unknown } }>
   export function buildComputerUseTools(...args: unknown[]): unknown[]
   export function createComputerUseMcpServer(...args: unknown[]): {
     setRequestHandler: (...handlerArgs: unknown[]) => void
@@ -18,7 +24,16 @@ declare module '@ant/computer-use-mcp' {
   export type InstalledApp = Record<string, unknown>
   export type ResolvePrepareCaptureResult = Record<string, unknown>
   export type RunningApp = Record<string, unknown>
-  export type ScreenshotDims = Record<string, unknown>
+  export type ScreenshotDims = {
+    width: number
+    height: number
+    displayWidth: number
+    displayHeight: number
+    displayId?: number
+    originX?: number
+    originY?: number
+    [key: string]: unknown
+  }
   export type ScreenshotResult = Record<string, unknown>
 }
 

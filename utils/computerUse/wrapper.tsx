@@ -83,11 +83,11 @@ export function buildSessionContext(): ComputerUseSessionContext {
     // `runPermissionDialog` wires that from the per-call ref's abortController.
     onPermissionRequest: (req: CuPermissionRequest, _dialogSignal: unknown) => runPermissionDialog(req),
     // Package does the merge (dedupe + truthy-only flags). We just persist.
-    onAllowedAppsChanged: (apps: Array<{ bundleId: string }>, flags: typeof DEFAULT_GRANT_FLAGS) => tuc().setAppState(prev => {
+    onAllowedAppsChanged: (apps: Array<{ bundleId: string; displayName: string; grantedAt: number }>, flags: typeof DEFAULT_GRANT_FLAGS) => tuc().setAppState(prev => {
       const cu = prev.computerUseMcpState;
       const prevApps = cu?.allowedApps;
       const prevFlags = cu?.grantFlags;
-      const sameApps = prevApps?.length === apps.length && apps.every((a: { bundleId: string }, i: number) => prevApps[i]?.bundleId === a.bundleId);
+      const sameApps = prevApps?.length === apps.length && apps.every((a, i: number) => prevApps[i]?.bundleId === a.bundleId);
       const sameFlags = prevFlags?.clipboardRead === flags.clipboardRead && prevFlags?.clipboardWrite === flags.clipboardWrite && prevFlags?.systemKeyCombos === flags.systemKeyCombos;
       return sameApps && sameFlags ? prev : {
         ...prev,
@@ -119,7 +119,7 @@ export function buildSessionContext(): ComputerUseSessionContext {
     // was true, onDisplayResolvedForApps re-sets the key in the same tick.
     onResolvedDisplayUpdated: (id: string | undefined) => tuc().setAppState(prev => {
       const cu = prev.computerUseMcpState;
-      if (cu?.selectedDisplayId === id && !cu.displayPinnedByModel && cu.displayResolvedForApps === undefined) {
+      if (cu?.selectedDisplayId === id && !cu?.displayPinnedByModel && cu?.displayResolvedForApps === undefined) {
         return prev;
       }
       return {
@@ -255,8 +255,9 @@ export function getComputerUseMCPToolOverrides(toolName: string): ComputerUseMCP
       telemetry,
       ...result
     } = await dispatch(toolName, args);
-    if (telemetry?.error_kind) {
-      logForDebugging(`[Computer Use MCP] ${toolName} error_kind=${telemetry.error_kind}`);
+    const tele = telemetry as { error_kind?: string } | undefined;
+    if (tele?.error_kind) {
+      logForDebugging(`[Computer Use MCP] ${toolName} error_kind=${tele.error_kind}`);
     }
 
     // MCP content blocks → Anthropic API blocks. CU only produces text and
@@ -320,7 +321,8 @@ async function runPermissionDialog(req: CuPermissionRequest): Promise<CuPermissi
       signal.addEventListener('abort', onAbort);
       setToolJSX({
         jsx: React.createElement(ComputerUseApproval, {
-          request: req,
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          request: req as any,
           onDone: (resp: CuPermissionResponse) => {
             signal.removeEventListener('abort', onAbort);
             resolve(resp);
