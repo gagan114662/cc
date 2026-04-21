@@ -72,6 +72,6 @@ export type ServerInfo =
 export type MCPViewState =
   | { type: 'list'; defaultTab?: string }
   | { type: 'server-menu'; server: ServerInfo }
-  | { type: 'tool-list'; server: ServerInfo }
-  | { type: 'tool-detail'; server: ServerInfo; toolIndex: number }
-  | { type: 'agent-server'; agentServer: AgentMcpServerInfo }
+  | { type: 'server-tools'; server: ServerInfo }
+  | { type: 'server-tool-detail'; server: ServerInfo; toolIndex: number }
+  | { type: 'agent-server-menu'; agentServer: AgentMcpServerInfo }
