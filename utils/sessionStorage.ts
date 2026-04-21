@@ -1046,6 +1046,7 @@ class Project {
             message.type === 'user' ? (getPromptId() ?? undefined) : undefined,
           agentId,
           ...message,
+          uuid: message.uuid ?? crypto.randomUUID(),
           // Session-stamp fields MUST come after the spread. On --fork-session
           // and --resume, messages arrive as SerializedMessage (carries source
           // sessionId/cwd/etc. because removeExtraFields only strips parentUuid
@@ -1223,7 +1224,7 @@ class Project {
         // All other entry types have been handled above
         const isAgentSidechain =
           entry.isSidechain && entry.agentId !== undefined
-        const targetFile = isAgentSidechain
+        const targetFile = isAgentSidechain && entry.agentId !== undefined
           ? getAgentTranscriptPath(asAgentId(entry.agentId))
           : sessionFile
 

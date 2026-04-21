@@ -103,7 +103,7 @@ export type SystemCompactBoundaryMessage = SystemMessageBase & {
   subtype: 'compact_boundary'
   content: string
   compactMetadata: CompactMetadata
-  logicalParentUuid?: string
+  logicalParentUuid?: string | null
 }
 
 export type MicrocompactMetadata = {
@@ -119,7 +119,7 @@ export type SystemMicrocompactBoundaryMessage = SystemMessageBase & {
   content?: string
   compactMetadata?: CompactMetadata
   microcompactMetadata?: MicrocompactMetadata
-  logicalParentUuid?: string
+  logicalParentUuid?: string | null
 }
 
 export type SystemAPIErrorMessage = SystemMessageBase & {
