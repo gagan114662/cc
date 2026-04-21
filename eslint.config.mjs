@@ -85,24 +85,6 @@ export default [
       'n/no-missing-import': 'off',
       'n/no-unpublished-import': 'off',
       'n/no-unsupported-features/node-builtins': 'off',
-      // React Compiler emits code that trips these core rules (memoization
-      // sentinels as constant conditions, empty else branches, etc.). The
-      // emitted code is machine-generated and correct by construction.
-      'no-empty': 'off',
-      'no-constant-condition': 'off',
-      'no-constant-binary-expression': 'off',
-      'no-prototype-builtins': 'off',
-      'no-useless-escape': 'off',
-      'no-cond-assign': 'off',
-      'no-case-declarations': 'off',
-      'no-control-regex': 'off',
-      'no-fallthrough': 'off',
-      'no-sparse-arrays': 'off',
-      'no-irregular-whitespace': 'off',
-      'no-misleading-character-class': 'off',
-      'no-async-promise-executor': 'off',
-      'no-unsafe-finally': 'off',
-      'no-unreachable': 'off',
 
       // Hot rules requested for the pre-launch hardening pass.
       // Start as 'warn' so a single rollout doesn't nuke CI — flip to
@@ -147,6 +129,32 @@ export default [
     files: ['test/**/*.{ts,tsx}', '**/*.test.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-floating-promises': 'off',
+    },
+  },
+  // React Compiler output lives in .tsx files (verified: 264 .tsx files
+  // contain `react.memo_cache_sentinel`, 0 .ts files do). The compiler emits
+  // memoization sentinels that look like constant conditions, empty else
+  // branches, and other shapes that trip eslint core rules but are correct
+  // by construction. Scope the disables here so hand-written .ts source is
+  // still strictly linted.
+  {
+    files: ['**/*.tsx'],
+    rules: {
+      'no-empty': 'off',
+      'no-constant-condition': 'off',
+      'no-constant-binary-expression': 'off',
+      'no-prototype-builtins': 'off',
+      'no-useless-escape': 'off',
+      'no-cond-assign': 'off',
+      'no-case-declarations': 'off',
+      'no-control-regex': 'off',
+      'no-fallthrough': 'off',
+      'no-sparse-arrays': 'off',
+      'no-irregular-whitespace': 'off',
+      'no-misleading-character-class': 'off',
+      'no-async-promise-executor': 'off',
+      'no-unsafe-finally': 'off',
+      'no-unreachable': 'off',
     },
   },
 ]
