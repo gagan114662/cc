@@ -35,6 +35,18 @@ export type ModelUsage = {
 // Re-export utility types that can't be expressed as Zod schemas
 export type { NonNullableUsage } from './sdkUtilityTypes.js'
 
+// Widen SDKAssistantMessageError to include 'max_output_tokens' — the local
+// schema in coreSchemas.ts includes it, but the upstream SDK package's
+// generated type does not. Explicit named export shadows the `export *` above.
+export type SDKAssistantMessageError =
+  | 'authentication_failed'
+  | 'billing_error'
+  | 'rate_limit'
+  | 'invalid_request'
+  | 'server_error'
+  | 'unknown'
+  | 'max_output_tokens'
+
 // Override SDKUserMessage / SDKUserMessageReplay so `uuid` and `session_id`
 // accept plain strings (the upstream UUID brand forces every callsite to
 // cast). Field shapes mirror the upstream union.

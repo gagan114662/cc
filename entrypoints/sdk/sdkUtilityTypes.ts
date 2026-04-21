@@ -12,4 +12,8 @@ import type { BetaUsage as Usage } from '@anthropic-ai/sdk/resources/beta/messag
 
 export type NonNullableUsage = {
   [K in keyof Usage]: NonNullable<Usage[K]>
+} & {
+  inference_geo?: string
+  iterations?: number
+  speed?: string
 }

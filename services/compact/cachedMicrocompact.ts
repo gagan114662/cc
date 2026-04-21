@@ -1,7 +1,6 @@
 export type CacheEditsBlock = {
   type: 'cache_edits'
-  toolUseIds: string[]
-  deletedToolIds: string[]
+  edits: { type: 'delete'; cache_reference: string }[]
 }
 
 export type PinnedCacheEdits = {
@@ -33,7 +32,20 @@ export function resetCachedMCState(state: CachedMCState): void {
 export function buildCacheEditsBlock(toolUseIds: string[]): CacheEditsBlock {
   return {
     type: 'cache_edits',
-    toolUseIds,
-    deletedToolIds: [],
+    edits: toolUseIds.map(id => ({ type: 'delete', cache_reference: id })),
   }
 }
+
+export function isCachedMicrocompactEnabled(): boolean {
+  return false
+}
+
+export function isModelSupportedForCacheEditing(_model: string): boolean {
+  return false
+}
+
+export function getCachedMCConfig(): { supportedModels: string[] } {
+  return { supportedModels: [] }
+}
+
+export type CachedMCEditsBlock = CacheEditsBlock
