@@ -28,20 +28,20 @@ export function RemoteEnvironmentDialog(t0: Props) {
   const {
     onDone
   } = t0;
-  const [loadingState, setLoadingState] = useState("loading");
-  let t1;
+  const [loadingState, setLoadingState] = useState<LoadingState>("loading");
+  let t1: unknown[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as unknown[];
   }
   const [environments, setEnvironments] = useState(t1);
   const [selectedEnvironment, setSelectedEnvironment] = useState<any>(null);
   const [selectedEnvironmentSource, setSelectedEnvironmentSource] = useState<any>(null);
   const [error, setError] = useState<any>(null);
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => {
       let cancelled = false;
@@ -88,7 +88,7 @@ export function RemoteEnvironmentDialog(t0: Props) {
         return;
       }
       setLoadingState("updating");
-      const selectedEnv = environments.find((env: any) => env.environment_id === value);
+      const selectedEnv = environments.find((env: any) => env.environment_id === value) as { environment_id: string; name: string } | undefined;
       if (!selectedEnv) {
         onDone("Error: Selected environment not found");
         return;
