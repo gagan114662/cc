@@ -260,10 +260,11 @@ function StopHookSummaryMessage(t0: { message: SystemStopHookSummaryMessage; add
   const {
     hookCount,
     hookInfos,
-    hookErrors,
+    hookErrors = [],
     preventedContinuation,
     stopReason
   } = message;
+  const HOOK_TIMING_DISPLAY_THRESHOLD_MS = 1000;
   const {
     columns
   } = useTerminalSize();
@@ -455,7 +456,7 @@ function SystemTextMessageInner(t0: { content: React.ReactNode; addMargin: boole
   const t3 = columns - 10;
   let t4;
   if ($[4] !== content) {
-    t4 = content.trim();
+    t4 = String(content ?? '').trim();
     $[4] = content;
     $[5] = t4;
   } else {
@@ -539,8 +540,8 @@ function TurnDurationMessage(t0: { message: SystemTurnDurationMessage; addMargin
       t4 = "";
       break bb0;
     }
-    const tokens = message.budgetTokens;
-    const limit = message.budgetLimit;
+    const tokens = message.budgetTokens ?? 0;
+    const limit = message.budgetLimit ?? 0;
     let t5;
     if ($[5] !== limit || $[6] !== tokens) {
       t5 = tokens >= limit ? `${formatNumber(tokens)} used (${formatNumber(limit)} min ${figures.tick})` : `${formatNumber(tokens)} / ${formatNumber(limit)} (${Math.round(tokens / limit * 100)}%)`;
@@ -551,7 +552,7 @@ function TurnDurationMessage(t0: { message: SystemTurnDurationMessage; addMargin
       t5 = $[7];
     }
     const usage = t5;
-    const nudges = message.budgetNudges > 0 ? ` \u00B7 ${message.budgetNudges} ${message.budgetNudges === 1 ? "nudge" : "nudges"}` : "";
+    const nudges = (message.budgetNudges ?? 0) > 0 ? ` \u00B7 ${message.budgetNudges} ${message.budgetNudges === 1 ? "nudge" : "nudges"}` : "";
     t4 = `${showTurnDuration ? " \xB7 " : ""}${usage}${nudges}`;
   }
   const budgetSuffix = t4;
@@ -605,7 +606,7 @@ function MemorySavedMessage(t0: { message: SystemMemorySavedMessage; addMargin: 
   } = message;
   let t1;
   if ($[0] !== message) {
-    t1 = feature("TEAMMEM") ? teamMemSaved.teamMemSavedPart(message) : null;
+    t1 = feature("TEAMMEM") ? teamMemSaved!.teamMemSavedPart(message) : null;
     $[0] = message;
     $[1] = t1;
   } else {
@@ -633,7 +634,7 @@ function MemorySavedMessage(t0: { message: SystemMemorySavedMessage; addMargin: 
   } else {
     t6 = $[5];
   }
-  const t7 = message.verb ?? "Saved";
+  const t7 = (message as { verb?: string }).verb ?? "Saved";
   const t8 = parts.join(" \xB7 ");
   let t9;
   if ($[6] !== t7 || $[7] !== t8) {
@@ -791,7 +792,7 @@ function BridgeStatusMessage(t0: { message: SystemBridgeStatusMessage; addMargin
   }
   let t4;
   if ($[2] !== message.url) {
-    t4 = <Link url={message.url}>{message.url}</Link>;
+    t4 = <Link url={message.url ?? ''}>{message.url}</Link>;
     $[2] = message.url;
     $[3] = t4;
   } else {
