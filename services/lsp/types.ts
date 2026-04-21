@@ -13,6 +13,12 @@ export type ScopedLspServerConfig = {
   rootUri?: string
   extensions: string[]
   initializationOptions?: unknown
+  workspaceFolder?: string
+  startupTimeout?: number
+  shutdownTimeout?: number
+  restartOnCrash?: boolean
+  maxRestarts?: number
+  extensionToLanguage?: Record<string, string>
 }
 
 // Inline LSP server config as authored in plugin manifests (pre-scoping).

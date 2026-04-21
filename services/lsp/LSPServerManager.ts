@@ -283,7 +283,7 @@ export function createLSPServerManager(): LSPServerManager {
 
     // Get language ID from server's extensionToLanguage mapping
     const ext = path.extname(filePath).toLowerCase()
-    const languageId = server.config.extensionToLanguage[ext] || 'plaintext'
+    const languageId = server.config.extensionToLanguage?.[ext] || 'plaintext'
 
     try {
       await server.sendNotification('textDocument/didOpen', {
