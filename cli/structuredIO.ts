@@ -345,13 +345,14 @@ export class StructuredIO {
         // Silently ignore keep-alive messages
         return undefined
       }
-      if (message.type === 'update_environment_variables') {
+      if ((message.type as string) === 'update_environment_variables') {
         // Apply environment variable updates directly to process.env.
         // Used by bridge session runner for auth token refresh
         // (CLAUDE_CODE_SESSION_ACCESS_TOKEN) which must be readable
         // by the REPL process itself, not just child Bash commands.
-        const keys = Object.keys(message.variables)
-        for (const [key, value] of Object.entries(message.variables)) {
+        const variables = (message as unknown as { variables: Record<string, string> }).variables
+        const keys = Object.keys(variables)
+        for (const [key, value] of Object.entries(variables)) {
           process.env[key] = value
         }
         logForDebugging(
@@ -672,7 +673,7 @@ export class StructuredIO {
             {
               subtype: 'hook_callback',
               callback_id: callbackId,
-              input,
+              input: input as never,
               tool_use_id: toolUseID || undefined,
             },
             hookJSONOutputSchema(),
@@ -703,14 +704,14 @@ export class StructuredIO {
     try {
       const result = await this.sendRequest<ElicitResult>(
         {
-          subtype: 'elicitation',
+          subtype: 'elicitation' as never,
           mcp_server_name: serverName,
           message,
           mode,
           url,
           elicitation_id: elicitationId,
           requested_schema: requestedSchema,
-        },
+        } as never,
         SDKControlElicitationResponseSchema(),
         signal,
       )
@@ -741,7 +742,7 @@ export class StructuredIO {
             input: { host: hostPattern.host },
             tool_use_id: randomUUID(),
             description: `Allow network connection to ${hostPattern.host}?`,
-          },
+          } as never,
           permissionToolOutputSchema(),
         )
         return result.behavior === 'allow'
@@ -818,11 +819,11 @@ async function executePermissionRequestHooksForSDK(
         // Apply permission updates if provided by hook ("always allow")
         const permissionUpdates = decision.updatedPermissions ?? []
         if (permissionUpdates.length > 0) {
-          persistPermissionUpdates(permissionUpdates)
+          persistPermissionUpdates(permissionUpdates as never)
           const currentAppState = toolUseContext.getAppState()
           const updatedContext = applyPermissionUpdates(
             currentAppState.toolPermissionContext,
-            permissionUpdates,
+            permissionUpdates as never,
           )
           // Update permission context via setAppState
           toolUseContext.setAppState(prev => {
