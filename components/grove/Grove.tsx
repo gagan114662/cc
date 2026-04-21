@@ -362,17 +362,17 @@ export function PrivacySettingsDialog(t0: PrivacySettingsDialogProps) {
     onDone
   } = t0;
   const [groveEnabled, setGroveEnabled] = useState(settings.grove_enabled);
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = [];
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as React.DependencyList;
   }
   React.useEffect(_temp2, t1);
   let t2;
   if ($[1] !== domainExcluded || $[2] !== groveEnabled) {
-    t2 = async (input: unknown, key: unknown) => {
+    t2 = async (input: unknown, key: { tab?: boolean; return?: boolean }) => {
       if (!domainExcluded && (key.tab || key.return || input === " ")) {
         const newValue = !groveEnabled;
         setGroveEnabled(newValue);

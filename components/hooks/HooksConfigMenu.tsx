@@ -258,11 +258,11 @@ export function HooksConfigMenu(t0: Props) {
   const hooksDisabled_1 = settings_1?.disableAllHooks === true;
   let t20;
   if ($[33] !== hooksByEventAndMatcher) {
-    const byEvent = {};
+    const byEvent: Record<string, number> = {};
     let total = 0;
     for (const [event_0, matchers] of Object.entries(hooksByEventAndMatcher)) {
-      const eventCount = Object.values(matchers).reduce(_temp5, 0);
-      byEvent[event_0 as HookEvent] = eventCount;
+      const eventCount = Object.values(matchers as object).reduce(_temp5 as never, 0) as number;
+      byEvent[event_0] = eventCount;
       total = total + eventCount;
     }
     t20 = {
@@ -558,7 +558,7 @@ export function HooksConfigMenu(t0: Props) {
 function _temp6() {
   return <Text>Esc to close</Text>;
 }
-function _temp5(sum: any, hooks: unknown) {
+function _temp5(sum: any, hooks: any) {
   return sum + hooks.length;
 }
 function _temp4(tool: any) {

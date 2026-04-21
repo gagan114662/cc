@@ -405,7 +405,7 @@ export function MCPListPanel(t0: any) {
   }
   let t24;
   if ($[54] !== agentServers || $[55] !== renderAgentServerItem) {
-    t24 = agentServers.length > 0 && <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true}>Agent MCPs</Text></Box>{[...new Set(agentServers.flatMap(_temp6))].map(agentName => <Box key={agentName} flexDirection="column" marginTop={1}><Box paddingLeft={2}><Text dimColor={true}>@{agentName}</Text></Box>{agentServers.filter((s_3: any) => s_3.sourceAgents.includes(agentName)).map((agentServer_2: any) => renderAgentServerItem(agentServer_2))}</Box>)}</Box>;
+    t24 = agentServers.length > 0 && <Box flexDirection="column" marginBottom={1}><Box paddingLeft={2}><Text bold={true}>Agent MCPs</Text></Box>{[...new Set(agentServers.flatMap(_temp6))].map((agentName: unknown) => <Box key={agentName as string} flexDirection="column" marginTop={1}><Box paddingLeft={2}><Text dimColor={true}>@{agentName as string}</Text></Box>{agentServers.filter((s_3: any) => s_3.sourceAgents.includes(agentName)).map((agentServer_2: any) => renderAgentServerItem(agentServer_2))}</Box>)}</Box>;
     $[54] = agentServers;
     $[55] = renderAgentServerItem;
     $[56] = t24;
@@ -489,10 +489,10 @@ function _temp6(s_2: any) {
 function _temp5(s_1: any) {
   return s_1.client.type === "failed";
 }
-function _temp4(a_0: any, b_0: unknown) {
+function _temp4(a_0: any, b_0: any) {
   return a_0.name.localeCompare(b_0.name);
 }
-function _temp3(a: any, b: unknown) {
+function _temp3(a: any, b: any) {
   return a.name.localeCompare(b.name);
 }
 function _temp2(s_0: any) {
