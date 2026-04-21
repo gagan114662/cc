@@ -63,7 +63,7 @@ function AskUserQuestionWithHighlight(props: PermissionRequestProps) {
   const highlight = use(t0);
   let t1;
   if ($[1] !== highlight || $[2] !== props) {
-    t1 = <AskUserQuestionPermissionRequestBody {...props} highlight={highlight} />;
+    t1 = <AskUserQuestionPermissionRequestBody {...props} highlight={highlight as never} />;
     $[1] = highlight;
     $[2] = props;
     $[3] = t1;
@@ -183,8 +183,8 @@ function AskUserQuestionPermissionRequestBody(t0: PermissionRequestProps & { hig
         filename: filename || "Pasted image",
         dimensions
       };
-      cacheImagePath(newContent);
-      storeImage(newContent);
+      cacheImagePath(newContent as never);
+      storeImage(newContent as never);
       setPastedContentsByQuestion((prev: Record<string, Record<number, PastedContent>>) => ({
         ...prev,
         [questionText]: {
@@ -219,7 +219,7 @@ function AskUserQuestionPermissionRequestBody(t0: PermissionRequestProps & { hig
   const onRemoveImage = t8;
   let t9;
   if ($[18] !== pastedContentsByQuestion) {
-    t9 = Object.values(pastedContentsByQuestion).flatMap(_temp2).filter(_temp3);
+    t9 = Object.values(pastedContentsByQuestion).flatMap(_temp2 as never).filter(_temp3 as never);
     $[18] = pastedContentsByQuestion;
     $[19] = t9;
   } else {
@@ -428,11 +428,11 @@ Questions asked and answers provided:\n${questionsWithAnswers_0}`;
         answer_2 = label.join(", ");
       } else {
         if (textInput) {
-          const questionImages = Object.values(pastedContentsByQuestion[questionText_1] ?? {}).filter(_temp5);
+          const questionImages = Object.values(pastedContentsByQuestion[questionText_1] ?? {}).filter(_temp5 as never);
           answer_2 = questionImages.length > 0 ? `${textInput} (Image attached)` : textInput;
         } else {
           if (label === "__other__") {
-            const questionImages_0 = Object.values(pastedContentsByQuestion[questionText_1] ?? {}).filter(_temp6);
+            const questionImages_0 = Object.values(pastedContentsByQuestion[questionText_1] ?? {}).filter(_temp6 as never);
             answer_2 = questionImages_0.length > 0 ? "(Image attached)" : label;
           } else {
             answer_2 = label;

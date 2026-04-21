@@ -160,7 +160,7 @@ export function QuestionView(t0: Props) {
   }
   const handleKeyDown = t6;
   let handleOpenEditor;
-  let questionText;
+  let questionText: string = '';
   let t7;
   if ($[12] !== onUpdateQuestionState || $[13] !== question || $[14] !== questionStates) {
     const textOptions = question.options.map(_temp2);

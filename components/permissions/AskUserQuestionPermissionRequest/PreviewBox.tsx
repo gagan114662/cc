@@ -72,7 +72,7 @@ function PreviewBoxWithHighlight(props: PreviewBoxProps) {
   const highlight = use(t0);
   let t1;
   if ($[1] !== highlight || $[2] !== props) {
-    t1 = <PreviewBoxBody {...props} highlight={highlight} />;
+    t1 = <PreviewBoxBody {...props} highlight={highlight as never} />;
     $[1] = highlight;
     $[2] = props;
     $[3] = t1;
