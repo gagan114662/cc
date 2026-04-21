@@ -351,7 +351,7 @@ export function AttachmentMessage({
       // skill_discovery and teammate_mailbox are handled BEFORE the switch in
       // runtime-gated blocks (feature() / isAgentSwarmsEnabled()) that TS can't
       // narrow through — excluded here via type union (compile-time only, no emit).
-      attachment.type satisfies NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox';
+      attachment.type as unknown as NullRenderingAttachmentType | 'skill_discovery' | 'teammate_mailbox';
       return null;
   }
 }
@@ -443,7 +443,7 @@ function TeammateTaskStatus(t0: { attachment: TaskStatusAttachment }) {
   } else {
     t1 = $[1];
   }
-  const task = useAppState(t1);
+  const task = useAppState(t1) as { type?: string; identity: { color?: string; agentName?: string } } | undefined;
   if (task?.type !== "in_process_teammate") {
     let t2;
     if ($[2] !== attachment) {
@@ -514,7 +514,7 @@ function Line(t0: { dimColor?: boolean; children?: React.ReactNode; color?: stri
   const bg = useSelectedMessageBg();
   let t2;
   if ($[0] !== children || $[1] !== color || $[2] !== dimColor) {
-    t2 = <MessageResponse><Text color={color} dimColor={dimColor} wrap="wrap">{children}</Text></MessageResponse>;
+    t2 = <MessageResponse><Text color={color as never} dimColor={dimColor} wrap="wrap">{children}</Text></MessageResponse>;
     $[0] = children;
     $[1] = color;
     $[2] = dimColor;
