@@ -211,7 +211,7 @@ export function ToolSelector(t0: Props) {
     t8 = $[19];
   }
   const handleConfirm = t8;
-  let buckets;
+  let buckets: { readOnly: Tool[]; edit: Tool[]; execution: Tool[]; mcp: Tool[]; other: Tool[] };
   if ($[20] !== customAgentTools) {
     const toolBuckets = getToolBuckets();
     buckets = {
@@ -321,7 +321,7 @@ export function ToolSelector(t0: Props) {
       if (bucketTools_0.length === 0) {
         return;
       }
-      const selected_0 = count(bucketTools_0, t_8 => selectedSet.has(t_8.name));
+      const selected_0 = count(bucketTools_0, (t_8: Tool) => selectedSet.has(t_8.name));
       const isFullySelected = selected_0 === bucketTools_0.length;
       navigableItems.push({
         id,
