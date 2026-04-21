@@ -12,3 +12,12 @@ export function getJobClassification(..._args: unknown[]): unknown {
 export async function runClassifier(..._args: unknown[]): Promise<unknown> {
   throw new Error('runClassifier: not implemented in external build')
 }
+
+// Used by query/stopHooks.ts to write per-turn classification state to
+// process.env.CLAUDE_JOB_DIR. Phantom stub — real impl runs the classifier
+// then persists the result.
+export async function classifyAndWriteState(
+  ..._args: unknown[]
+): Promise<unknown> {
+  throw new Error('classifyAndWriteState: not implemented in external build')
+}

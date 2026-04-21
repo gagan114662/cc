@@ -175,12 +175,14 @@ export type SystemScheduledTaskFireMessage = SystemMessageBase & {
 export type StopHookInfo = {
   hookName?: string
   hookLabel?: string
-  durationMs: number
+  durationMs?: number
   stdout?: string
   stderr?: string
   exitCode?: number
   success?: boolean
   error?: string
+  command?: string
+  promptText?: string
 }
 
 export type SystemPermissionRetryMessage = SystemMessageBase & {
