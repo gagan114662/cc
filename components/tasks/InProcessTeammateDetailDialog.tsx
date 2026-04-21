@@ -206,7 +206,7 @@ export function InProcessTeammateDetailDialog(t0: Props) {
   }
   let t17;
   if ($[42] !== teammate.progress || $[43] !== teammate.status || $[44] !== theme) {
-    t17 = teammate.status === "running" && teammate.progress?.recentActivities && teammate.progress.recentActivities.length > 0 && <Box flexDirection="column"><Text bold={true} dimColor={true}>Progress</Text>{teammate.progress.recentActivities.map((activity_0: typeof teammate.progress.recentActivities[number], i: number) => <Text key={i} dimColor={i < teammate.progress.recentActivities.length - 1} wrap="truncate-end">{i === teammate.progress.recentActivities.length - 1 ? "\u203A " : "  "}{renderToolActivity(activity_0, tools, theme)}</Text>)}</Box>;
+    t17 = teammate.status === "running" && teammate.progress?.recentActivities && teammate.progress.recentActivities.length > 0 && <Box flexDirection="column"><Text bold={true} dimColor={true}>Progress</Text>{teammate.progress!.recentActivities!.map((activity_0: typeof teammate.progress.recentActivities[number], i: number) => <Text key={i} dimColor={i < teammate.progress!.recentActivities!.length - 1} wrap="truncate-end">{i === teammate.progress!.recentActivities!.length - 1 ? "\u203A " : "  "}{renderToolActivity(activity_0, tools, theme)}</Text>)}</Box>;
     $[42] = teammate.progress;
     $[43] = teammate.status;
     $[44] = theme;

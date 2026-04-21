@@ -9,6 +9,7 @@ import { enterTeammateView, exitTeammateView } from 'src/state/teammateViewHelpe
 import { isPanelAgentTask } from 'src/tasks/LocalAgentTask/LocalAgentTask.js';
 import { getPillLabel, pillNeedsCta } from 'src/tasks/pillLabel.js';
 import { type BackgroundTaskState, isBackgroundTask, type TaskState } from 'src/tasks/types.js';
+import type { InProcessTeammateTaskState } from 'src/tasks/InProcessTeammateTask/types.js';
 import { calculateHorizontalScrollWindow } from 'src/utils/horizontalScroll.js';
 import { Box, Text } from '../../ink.js';
 import { AGENT_COLOR_TO_THEME_COLOR, AGENT_COLORS, type AgentColorName } from '../../tools/AgentTool/agentColorManager.js';
@@ -410,7 +411,7 @@ function SummaryPill(t0: { selected: boolean; onClick?: (taskId?: string) => voi
   }
   let t5;
   if ($[5] !== label || $[6] !== onClick) {
-    t5 = <Box onClick={onClick} onMouseEnter={t3} onMouseLeave={t4}>{label}</Box>;
+    t5 = <Box onClick={onClick as never} onMouseEnter={t3} onMouseLeave={t4}>{label}</Box>;
     $[5] = label;
     $[6] = onClick;
     $[7] = t5;

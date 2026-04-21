@@ -386,12 +386,16 @@ export function BackgroundTasksDialog({
             display: 'system'
           });
         } : undefined} key={`teammate-${task_0.id}`} />;
-      case 'local_workflow':
+      case 'local_workflow': {
         if (!WorkflowDetailDialog) return null;
-        return <WorkflowDetailDialog workflow={task_0} onDone={onDone} onKill={task_0.status === 'running' && killWorkflowTask ? () => killWorkflowTask(task_0.id, setAppState) : undefined} onSkipAgent={task_0.status === 'running' && skipWorkflowAgent ? (agentId: string) => skipWorkflowAgent(task_0.id, agentId, setAppState) : undefined} onRetryAgent={task_0.status === 'running' && retryWorkflowAgent ? (agentId_0: string) => retryWorkflowAgent(task_0.id, agentId_0, setAppState) : undefined} onBack={goBackToList} key={`workflow-${task_0.id}`} />;
-      case 'monitor_mcp':
+        const WD = WorkflowDetailDialog as unknown as React.ComponentType<Record<string, unknown>>;
+        return <WD workflow={task_0} onDone={onDone} onKill={task_0.status === 'running' && killWorkflowTask ? () => killWorkflowTask(task_0.id, setAppState) : undefined} onSkipAgent={task_0.status === 'running' && skipWorkflowAgent ? (agentId: string) => skipWorkflowAgent(task_0.id, agentId, setAppState) : undefined} onRetryAgent={task_0.status === 'running' && retryWorkflowAgent ? (agentId_0: string) => retryWorkflowAgent(task_0.id, agentId_0, setAppState) : undefined} onBack={goBackToList} key={`workflow-${task_0.id}`} />;
+      }
+      case 'monitor_mcp': {
         if (!MonitorMcpDetailDialog) return null;
-        return <MonitorMcpDetailDialog task={task_0} onKill={task_0.status === 'running' && killMonitorMcp ? () => killMonitorMcp(task_0.id, setAppState) : undefined} onBack={goBackToList} key={`monitor-mcp-${task_0.id}`} />;
+        const MD = MonitorMcpDetailDialog as unknown as React.ComponentType<Record<string, unknown>>;
+        return <MD task={task_0} onKill={task_0.status === 'running' && killMonitorMcp ? () => killMonitorMcp(task_0.id, setAppState) : undefined} onBack={goBackToList} key={`monitor-mcp-${task_0.id}`} />;
+      }
       case 'dream':
         return <DreamDetailDialog task={task_0} onDone={() => onDone('Background tasks dialog dismissed', {
           display: 'system'
@@ -580,9 +584,9 @@ function Item(t0: { item: ListItem; isSelected: boolean }) {
   }
   const t5 = isSelected && !useGreyPointer ? "suggestion" : undefined;
   let t6;
-  if ($[4] !== item.task || $[5] !== item.type || $[6] !== maxActivityWidth) {
-    t6 = item.type === "leader" ? <Text>@{TEAM_LEAD_NAME}</Text> : <BackgroundTaskComponent task={item.task} maxActivityWidth={maxActivityWidth} />;
-    $[4] = item.task;
+  if ($[4] !== (item as { task?: unknown }).task || $[5] !== item.type || $[6] !== maxActivityWidth) {
+    t6 = item.type === "leader" ? <Text>@{TEAM_LEAD_NAME}</Text> : <BackgroundTaskComponent task={(item as unknown as { task: never }).task} maxActivityWidth={maxActivityWidth} />;
+    $[4] = (item as { task?: unknown }).task;
     $[5] = item.type;
     $[6] = maxActivityWidth;
     $[7] = t6;
