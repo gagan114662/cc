@@ -28,12 +28,12 @@ export function MCPToolListView(t0: Props) {
   let t1;
   bb0: {
     if (server.client.type !== "connected") {
-      let t2;
+      let t2: unknown[];
       if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
         t2 = [];
         $[0] = t2;
       } else {
-        t2 = $[0];
+        t2 = $[0] as unknown[];
       }
       t1 = t2;
       break bb0;
@@ -121,7 +121,7 @@ export function MCPToolListView(t0: Props) {
   }
   let t8;
   if ($[16] !== onBack || $[17] !== t3 || $[18] !== t6 || $[19] !== t7) {
-    t8 = <Dialog title={t3} subtitle={t6} onCancel={onBack} inputGuide={_temp2}>{t7}</Dialog>;
+    t8 = <Dialog title={t3} subtitle={t6} onCancel={onBack} inputGuide={_temp2 as never}>{t7}</Dialog>;
     $[16] = onBack;
     $[17] = t3;
     $[18] = t6;

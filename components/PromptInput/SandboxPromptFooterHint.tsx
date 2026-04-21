@@ -7,10 +7,10 @@ import { SandboxManager } from '../../utils/sandbox/sandbox-adapter.js';
 export function SandboxPromptFooterHint() {
   const $ = _c(6);
   const [recentViolationCount, setRecentViolationCount] = useState(0);
-  const timerRef = useRef(null);
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detailsShortcut = useShortcutDisplay("app:toggleTranscript", "Global", "ctrl+o");
   let t0;
-  let t1;
+  let t1: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t0 = () => {
       if (!SandboxManager.isSandboxingEnabled()) {
@@ -42,7 +42,7 @@ export function SandboxPromptFooterHint() {
     $[1] = t1;
   } else {
     t0 = $[0];
-    t1 = $[1];
+    t1 = $[1] as React.DependencyList;
   }
   useEffect(t0, t1);
   if (!SandboxManager.isSandboxingEnabled() || recentViolationCount === 0) {

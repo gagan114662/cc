@@ -10,6 +10,7 @@ import { getUpgradeMessage } from '../utils/model/contextWindowUpgradeCheck.js';
 type Props = {
   tokenUsage: number;
   model: string;
+  upgradeMessage?: unknown;
 };
 
 /**
@@ -45,7 +46,7 @@ function CollapseLabel(t0: Props) {
   } else {
     t2 = $[1];
   }
-  const snapshot = useSyncExternalStore(subscribe, t2);
+  const snapshot = useSyncExternalStore(subscribe, t2) as string;
   let t3;
   if ($[2] !== snapshot) {
     t3 = snapshot.split("|").map(Number);
@@ -156,7 +157,7 @@ export function TokenWarning(t0: any) {
   if (collapseMode && feature("CONTEXT_COLLAPSE")) {
     let t4;
     if ($[8] === Symbol.for("react.memo_cache_sentinel")) {
-      t4 = <Box flexDirection="row"><CollapseLabel upgradeMessage={upgradeMessage} /></Box>;
+      t4 = <Box flexDirection="row">{(() => { const CL = CollapseLabel as unknown as React.ComponentType<{ upgradeMessage: unknown }>; return <CL upgradeMessage={upgradeMessage} />; })()}</Box>;
       $[8] = t4;
     } else {
       t4 = $[8];

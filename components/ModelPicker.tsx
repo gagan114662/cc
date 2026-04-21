@@ -223,7 +223,7 @@ export function ModelPicker(t0: Props) {
   useKeybindings(t12, t13);
   let t14;
   if ($[35] !== effort || $[36] !== hasToggledEffort || $[37] !== onSelect || $[38] !== setAppState || $[39] !== skipSettingsWrite) {
-    t14 = function handleSelect(value_0: unknown) {
+    t14 = function handleSelect(value_0: string) {
       logEvent("tengu_model_command_menu_effort", {
         effort: effort as AnalyticsMetadata_I_VERIFIED_THIS_IS_NOT_CODE_OR_FILEPATHS
       });

@@ -41,7 +41,7 @@ export function MCPServerDesktopImportDialog(t0: Props) {
   }
   const [existingServers, setExistingServers] = useState(t2);
   let t3;
-  let t4;
+  let t4: React.DependencyList;
   if ($[3] === Symbol.for("react.memo_cache_sentinel")) {
     t3 = () => {
       getAllMcpConfigs().then(t5 => {
@@ -51,12 +51,12 @@ export function MCPServerDesktopImportDialog(t0: Props) {
         return setExistingServers(servers_0);
       });
     };
-    t4 = [];
+    t4 = [] as React.DependencyList;
     $[3] = t3;
     $[4] = t4;
   } else {
     t3 = $[3];
-    t4 = $[4];
+    t4 = $[4] as React.DependencyList;
   }
   useEffect(t3, t4);
   let t5;
@@ -69,7 +69,7 @@ export function MCPServerDesktopImportDialog(t0: Props) {
     t5 = $[7];
   }
   const collisions = t5;
-  const onSubmit = async function onSubmit(selectedServers: unknown) {
+  const onSubmit = async function onSubmit(selectedServers: string[]) {
     let importedCount = 0;
     for (const serverName of selectedServers) {
       const serverConfig = servers[serverName];

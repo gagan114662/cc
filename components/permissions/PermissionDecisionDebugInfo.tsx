@@ -347,14 +347,14 @@ export function PermissionDecisionDebugInfo(t0: Props) {
     permissionResult,
     toolName
   } = t0;
-  const toolPermissionContext = useAppState(_temp4);
+  const toolPermissionContext = useAppState(_temp4 as never);
   const decisionReason = permissionResult.decisionReason;
   const suggestions = "suggestions" in permissionResult ? permissionResult.suggestions : undefined;
   let t1;
   if ($[0] !== suggestions || $[1] !== toolName || $[2] !== toolPermissionContext) {
     bb0: {
       const sandboxAutoAllowEnabled = SandboxManager.isSandboxingEnabled() && SandboxManager.isAutoAllowBashIfSandboxedEnabled();
-      const all = detectUnreachableRules(toolPermissionContext, {
+      const all = detectUnreachableRules(toolPermissionContext as never, {
         sandboxAutoAllowEnabled
       });
       const suggestedRules = extractRules(suggestions);
@@ -400,10 +400,10 @@ export function PermissionDecisionDebugInfo(t0: Props) {
     t3 = $[8];
   }
   let t4;
-  if ($[9] !== permissionResult.behavior || $[10] !== permissionResult.message) {
-    t4 = permissionResult.behavior !== "allow" && <Box flexDirection="row"><Box justifyContent="flex-end" minWidth={10}><Text dimColor={true}>Message </Text></Box><Text>{permissionResult.message}</Text></Box>;
+  if ($[9] !== permissionResult.behavior || $[10] !== (permissionResult as { message?: string }).message) {
+    t4 = permissionResult.behavior !== "allow" && <Box flexDirection="row"><Box justifyContent="flex-end" minWidth={10}><Text dimColor={true}>Message </Text></Box><Text>{(permissionResult as { message?: string }).message}</Text></Box>;
     $[9] = permissionResult.behavior;
-    $[10] = permissionResult.message;
+    $[10] = (permissionResult as { message?: string }).message;
     $[11] = t4;
   } else {
     t4 = $[11];

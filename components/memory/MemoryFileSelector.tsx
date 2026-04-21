@@ -124,12 +124,12 @@ export function MemoryFileSelector(t0: Props) {
       t1 = $[0];
     }
     folderOptions.push(t1);
-    if (feature("TEAMMEM") && teamMemPaths.isTeamMemoryEnabled()) {
+    if (feature("TEAMMEM") && teamMemPaths!.isTeamMemoryEnabled()) {
       let t2;
       if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
         t2 = {
           label: "Open team memory folder",
-          value: `${OPEN_FOLDER_PREFIX}${teamMemPaths.getTeamMemPath()}`,
+          value: `${OPEN_FOLDER_PREFIX}${teamMemPaths!.getTeamMemPath()}`,
           description: ""
         };
         $[1] = t2;
@@ -280,7 +280,7 @@ export function MemoryFileSelector(t0: Props) {
   let t10;
   if ($[23] !== lastToggleIndex) {
     t10 = () => {
-      setFocusedToggle(prev => prev !== null && prev < lastToggleIndex ? prev + 1 : null);
+      setFocusedToggle((prev: number | null) => prev !== null && prev < lastToggleIndex ? prev + 1 : null);
     };
     $[23] = lastToggleIndex;
     $[24] = t10;
