@@ -217,7 +217,7 @@ export function LogSelector(t0: LogSelectorProps) {
   const [focusedIndex, setFocusedIndex] = React.useState(1);
   const [viewMode, setViewMode] = React.useState("list");
   const [previewLog, setPreviewLog] = React.useState<any>(null);
-  const prevFocusedIdRef = React.useRef(null);
+  const prevFocusedIdRef = React.useRef<string | null>(null);
   const [selectedTagIndex, setSelectedTagIndex] = React.useState(0);
   let t8;
   if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
@@ -230,7 +230,7 @@ export function LogSelector(t0: LogSelectorProps) {
   }
   const [agenticSearchState, setAgenticSearchState] = React.useState(t8);
   const [isAgenticSearchOptionFocused, setIsAgenticSearchOptionFocused] = React.useState(false);
-  const agenticSearchAbortRef = React.useRef(null);
+  const agenticSearchAbortRef = React.useRef<AbortController | null>(null);
   const t9 = viewMode === "search" && agenticSearchState.status !== "searching";
   let t10;
   let t11;
@@ -565,12 +565,12 @@ export function LogSelector(t0: LogSelectorProps) {
   let t29;
   bb2: {
     if (!isResumeWithRenameEnabled) {
-      let t30;
+      let t30: unknown[];
       if ($[65] === Symbol.for("react.memo_cache_sentinel")) {
         t30 = [];
         $[65] = t30;
       } else {
-        t30 = $[65];
+        t30 = $[65] as unknown[];
       }
       t29 = t30;
       break bb2;
@@ -654,12 +654,12 @@ export function LogSelector(t0: LogSelectorProps) {
   let t30;
   bb3: {
     if (isResumeWithRenameEnabled) {
-      let t31;
+      let t31: unknown[];
       if ($[72] === Symbol.for("react.memo_cache_sentinel")) {
         t31 = [];
         $[72] = t31;
       } else {
-        t31 = $[72];
+        t31 = $[72] as unknown[];
       }
       t30 = t31;
       break bb3;
@@ -804,7 +804,7 @@ export function LogSelector(t0: LogSelectorProps) {
       });
       ;
       try {
-        const results_0 = await onAgenticSearch(searchQuery, logs, abortController.signal);
+        const results_0 = await onAgenticSearch!(searchQuery, logs, abortController.signal);
         if (abortController.signal.aborted) {
           return;
         }
@@ -818,13 +818,13 @@ export function LogSelector(t0: LogSelectorProps) {
           results_count: results_0.length
         });
       } catch (t36) {
-        const error = t36;
+        const error: unknown = t36;
         if (abortController.signal.aborted) {
           return;
         }
         setAgenticSearchState({
           status: "error",
-          message: error instanceof Error ? error.message : "Search failed"
+          message: error instanceof Error ? (error as Error).message : "Search failed"
         });
         logEvent("tengu_agentic_search_error", {
           query_length: searchQuery.length
@@ -868,7 +868,7 @@ export function LogSelector(t0: LogSelectorProps) {
   }
   React.useEffect(t36, t37);
   let t38;
-  let t39;
+  let t39: unknown[];
   if ($[105] === Symbol.for("react.memo_cache_sentinel")) {
     t38 = () => () => {
       agenticSearchAbortRef.current?.abort();
@@ -878,7 +878,7 @@ export function LogSelector(t0: LogSelectorProps) {
     $[106] = t39;
   } else {
     t38 = $[105];
-    t39 = $[106];
+    t39 = $[106] as unknown[];
   }
   React.useEffect(t38, t39);
   const prevAgenticStatusRef = React.useRef(agenticSearchState.status);
@@ -1458,7 +1458,7 @@ function _temp7(r_0: any) {
 function _temp6(log_6: any) {
   return log_6.messages[0]?.uuid;
 }
-function _temp5(fuseIndex_0: any, debouncedDeepSearchQuery_0: unknown, setDeepSearchResults_0: unknown, setIsSearching_0: unknown) {
+function _temp5(fuseIndex_0: any, debouncedDeepSearchQuery_0: unknown, setDeepSearchResults_0: any, setIsSearching_0: any) {
   const results = fuseIndex_0.search(debouncedDeepSearchQuery_0);
   results.sort(_temp3);
   setDeepSearchResults_0({
@@ -1474,7 +1474,7 @@ function _temp4(r: any) {
     searchableText: r.item.searchableText
   };
 }
-function _temp3(a: any, b: unknown) {
+function _temp3(a: any, b: any) {
   const aTime = new Date(a.item.log.modified).getTime();
   const bTime = new Date(b.item.log.modified).getTime();
   const timeDiff = bTime - aTime;
@@ -1502,7 +1502,7 @@ function _temp2(log_1: any) {
   }
   return false;
 }
-function _temp(log: any) {
+function _temp(log: any): [any, string] {
   return [log, buildSearchableText(log)];
 }
 function extractSearchableText(message: SerializedMessage): string {
