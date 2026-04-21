@@ -33,6 +33,8 @@ export type McpOAuthClientConfig = {
 export type SecureStorageData = {
   mcpOAuth?: Record<string, McpOAuthTokenData | undefined>
   mcpOAuthClientConfig?: Record<string, McpOAuthClientConfig | undefined>
+  mcpXaaIdp?: Record<string, { idToken: string; expiresAt: number } | undefined>
+  mcpXaaIdpConfig?: Record<string, { clientSecret: string } | undefined>
   pluginSecrets?: Record<string, Record<string, unknown> | undefined>
   // Stored Claude.ai OAuth tokens. Loose-typed here (avoids importing
   // services/oauth/types.ts to keep this module dependency-light); callers
