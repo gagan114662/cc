@@ -118,12 +118,12 @@ function BridgeToggle(t0: { onDone: LocalJSXCommandOnDone; name?: string }) {
   } else {
     t1 = $[6];
   }
-  let t2;
+  let t2: React.DependencyList;
   if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = [];
     $[7] = t2;
   } else {
-    t2 = $[7];
+    t2 = $[7] as React.DependencyList;
   }
   useEffect(t1, t2);
   if (showDisconnectDialog) {
@@ -175,7 +175,7 @@ function BridgeDisconnectDialog(t0: { onDone: LocalJSXCommandOnDone }) {
         setQrText("");
         return;
       }
-      qrToString(displayUrl, {
+      (qrToString as (data: string, opts: unknown) => Promise<string>)(displayUrl, {
         type: "utf8",
         errorCorrectionLevel: "L",
         small: true

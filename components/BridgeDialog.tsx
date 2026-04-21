@@ -46,7 +46,7 @@ export function BridgeDialog(t0: Props) {
   }
   const repoName = t1;
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => {
       getBranch().then(setBranchName).catch(_temp1);
@@ -56,7 +56,7 @@ export function BridgeDialog(t0: Props) {
     $[2] = t3;
   } else {
     t2 = $[1];
-    t3 = $[2];
+    t3 = $[2] as React.DependencyList;
   }
   useEffect(t2, t3);
   const displayUrl = sessionActive ? sessionUrl : connectUrl;
@@ -68,7 +68,7 @@ export function BridgeDialog(t0: Props) {
         setQrText("");
         return;
       }
-      qrToString(displayUrl, {
+      (qrToString as (data: string, opts: unknown) => Promise<string>)(displayUrl, {
         type: "utf8",
         errorCorrectionLevel: "L",
         small: true

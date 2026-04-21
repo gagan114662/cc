@@ -18,7 +18,7 @@ export function ClaudeInChromeOnboarding(t0: Props) {
   } = t0;
   const [isExtensionInstalled, setIsExtensionInstalled] = React.useState(false);
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       logEvent("tengu_claude_in_chrome_onboarding_shown", {});
@@ -30,12 +30,12 @@ export function ClaudeInChromeOnboarding(t0: Props) {
     $[1] = t2;
   } else {
     t1 = $[0];
-    t2 = $[1];
+    t2 = $[1] as React.DependencyList;
   }
   React.useEffect(t1, t2);
   let t3;
   if ($[2] !== onDone) {
-    t3 = (_input: any, key: unknown) => {
+    t3 = (_input: any, key: { return?: boolean }) => {
       if (key.return) {
         onDone();
       }
