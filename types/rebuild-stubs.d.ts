@@ -23,12 +23,40 @@ declare module '@ant/computer-use-mcp' {
 }
 
 declare module '@ant/computer-use-mcp/types' {
-  export const DEFAULT_GRANT_FLAGS: string[]
+  export const DEFAULT_GRANT_FLAGS: Record<string, boolean>
   export type CoordinateMode = string
   export type ComputerUseHostAdapter = Record<string, unknown>
   export type CuSubGates = Record<string, unknown>
-  export type CuPermissionRequest = Record<string, unknown>
-  export type CuPermissionResponse = Record<string, unknown>
+  export type CuPermissionRequest = {
+    tccState?: {
+      accessibility?: boolean
+      screenRecording?: boolean
+    }
+    apps: Array<{
+      bundleId?: string
+      name?: string
+      title?: string
+      pid?: number
+      requestedName?: string
+      alreadyGranted?: boolean
+      resolved?: {
+        bundleId: string
+        displayName: string
+        [key: string]: unknown
+      }
+      [key: string]: unknown
+    }>
+    reason?: string
+    requestedFlags?: Record<string, unknown>
+    willHide?: Array<{ bundleId?: string; [key: string]: unknown }>
+    [key: string]: unknown
+  }
+  export type CuPermissionResponse = {
+    granted: unknown[]
+    denied: unknown[]
+    flags: Record<string, boolean>
+    [key: string]: unknown
+  }
   export type Logger = {
     debug: (...args: unknown[]) => void
     info: (...args: unknown[]) => void
