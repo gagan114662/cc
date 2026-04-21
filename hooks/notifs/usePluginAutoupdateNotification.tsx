@@ -16,16 +16,16 @@ export function usePluginAutoupdateNotification() {
   const {
     addNotification
   } = useNotifications();
-  let t0;
+  let t0: unknown[];
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t0 = [];
     $[0] = t0;
   } else {
-    t0 = $[0];
+    t0 = $[0] as unknown[];
   }
   const [updatedPlugins, setUpdatedPlugins] = useState(t0);
   let t1;
-  let t2;
+  let t2: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = () => {
       if (getIsRemoteMode()) {
@@ -42,7 +42,7 @@ export function usePluginAutoupdateNotification() {
     $[2] = t2;
   } else {
     t1 = $[1];
-    t2 = $[2];
+    t2 = $[2] as React.DependencyList;
   }
   useEffect(t1, t2);
   let t3;
@@ -55,7 +55,7 @@ export function usePluginAutoupdateNotification() {
       if (updatedPlugins.length === 0) {
         return;
       }
-      const pluginNames = updatedPlugins.map(_temp);
+      const pluginNames = updatedPlugins.map(_temp as never);
       const displayNames = pluginNames.length <= 2 ? pluginNames.join(" and ") : `${pluginNames.length} plugins`;
       addNotification({
         key: "plugin-autoupdate-restart",

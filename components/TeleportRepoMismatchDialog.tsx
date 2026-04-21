@@ -30,18 +30,19 @@ export function TeleportRepoMismatchDialog(t0: Props) {
         onCancel();
         return;
       }
+      const path = value as string;
       setValidating(true);
       setErrorMessage(null);
-      const isValid = await validateRepoAtPath(value, targetRepo);
+      const isValid = await validateRepoAtPath(path, targetRepo);
       if (isValid) {
-        onSelectPath(value);
+        onSelectPath(path);
         return;
       }
-      removePathFromRepo(targetRepo, value);
-      const updatedPaths = availablePaths.filter((p: any) => p !== value);
+      removePathFromRepo(targetRepo, path);
+      const updatedPaths = availablePaths.filter((p: any) => p !== path);
       setAvailablePaths(updatedPaths);
       setValidating(false);
-      setErrorMessage(`${getDisplayPath(value)} no longer contains the correct repository. Select another path.`);
+      setErrorMessage(`${getDisplayPath(path)} no longer contains the correct repository. Select another path.`);
     };
     $[0] = availablePaths;
     $[1] = onCancel;

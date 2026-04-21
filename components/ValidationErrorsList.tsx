@@ -128,7 +128,7 @@ export function ValidationErrorsList(t0: any) {
 function _temp3(pair: any, index: number) {
   return <Box key={`suggestion-pair-${index}`} flexDirection="column" marginBottom={1}>{pair.suggestion && <Text dimColor={true} wrap="wrap">{pair.suggestion}</Text>}{pair.docLink && <Text dimColor={true} wrap="wrap">Learn more: {pair.docLink}</Text>}</Box>;
 }
-function _temp2(a: any, b: unknown) {
+function _temp2(a: any, b: any) {
   if (!a.path && b.path) {
     return -1;
   }
@@ -137,7 +137,7 @@ function _temp2(a: any, b: unknown) {
   }
   return (a.path || "").localeCompare(b.path || "");
 }
-function _temp(acc: any, error: unknown) {
+function _temp(acc: any, error: any) {
   const file = error.file || "(file not specified)";
   if (!acc[file]) {
     acc[file] = [];
