@@ -53,7 +53,7 @@ export function usePostCompactSurvey(messages: unknown, isLoading: unknown, t0: 
     t4 = $[2];
   }
   const seenCompactBoundaries = useRef(t4);
-  const pendingCompactBoundaryUuid = useRef(null);
+  const pendingCompactBoundaryUuid = useRef<string | null>(null);
   const onOpen = _temp;
   const onSelect = _temp2;
   let t5;
@@ -93,7 +93,7 @@ export function usePostCompactSurvey(messages: unknown, isLoading: unknown, t0: 
   useEffect(t6, t7);
   let t8;
   if ($[7] !== messages) {
-    t8 = new Set(messages.filter(_temp3).map(_temp4));
+    t8 = new Set((messages as Message[]).filter(_temp3).map(_temp4));
     $[7] = messages;
     $[8] = t8;
   } else {
@@ -123,7 +123,7 @@ export function usePostCompactSurvey(messages: unknown, isLoading: unknown, t0: 
         return;
       }
       if (pendingCompactBoundaryUuid.current !== null) {
-        if (hasMessageAfterBoundary(messages, pendingCompactBoundaryUuid.current)) {
+        if (hasMessageAfterBoundary(messages as Message[], pendingCompactBoundaryUuid.current)) {
           pendingCompactBoundaryUuid.current = null;
           if (Math.random() < SURVEY_PROBABILITY) {
             open();
@@ -131,10 +131,10 @@ export function usePostCompactSurvey(messages: unknown, isLoading: unknown, t0: 
           return;
         }
       }
-      const newBoundaries = Array.from(currentCompactBoundaries).filter(uuid => !seenCompactBoundaries.current.has(uuid));
+      const newBoundaries = Array.from(currentCompactBoundaries as Set<string>).filter((uuid: string) => !seenCompactBoundaries.current.has(uuid));
       if (newBoundaries.length > 0) {
-        seenCompactBoundaries.current = new Set(currentCompactBoundaries);
-        pendingCompactBoundaryUuid.current = newBoundaries[newBoundaries.length - 1];
+        seenCompactBoundaries.current = new Set(currentCompactBoundaries as Set<string>);
+        pendingCompactBoundaryUuid.current = (newBoundaries[newBoundaries.length - 1] ?? null) as string | null;
       }
     };
     t10 = [enabled, currentCompactBoundaries, state, isLoading, hasActivePrompt, gateEnabled, messages, open];
@@ -186,7 +186,7 @@ function _temp2(appearanceId_0: any, selected: unknown) {
   logOTelEvent("feedback_survey", {
     event_type: "responded",
     appearance_id: appearanceId_0,
-    response: selected,
+    response: selected as string | undefined,
     survey_type: "post_compact"
   });
 }

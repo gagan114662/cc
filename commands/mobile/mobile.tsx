@@ -26,8 +26,8 @@ function MobileQRCode(t0: Props) {
   const {
     onDone
   } = t0;
-  const [platform, setPlatform] = useState("ios");
-  let t1;
+  const [platform, setPlatform] = useState<'ios' | 'android'>("ios");
+  let t1: Record<'ios' | 'android', string>;
   if ($[0] === Symbol.for("react.memo_cache_sentinel")) {
     t1 = {
       ios: "",
@@ -35,7 +35,7 @@ function MobileQRCode(t0: Props) {
     };
     $[0] = t1;
   } else {
-    t1 = $[0];
+    t1 = $[0] as Record<'ios' | 'android', string>;
   }
   const [qrCodes, setQrCodes] = useState(t1);
   const {
@@ -43,7 +43,7 @@ function MobileQRCode(t0: Props) {
   } = PLATFORMS[platform];
   const qrCode = qrCodes[platform];
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[1] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => {
       const generateQRCodes = async function generateQRCodes() {
@@ -66,7 +66,7 @@ function MobileQRCode(t0: Props) {
     $[2] = t3;
   } else {
     t2 = $[1];
-    t3 = $[2];
+    t3 = $[2] as React.DependencyList;
   }
   useEffect(t2, t3);
   let t4;
