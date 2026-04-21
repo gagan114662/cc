@@ -72,9 +72,9 @@ function Button(t0: Props): React.ReactNode {
   const [isFocused, setIsFocused] = useState(false);
   const [isHovered, setIsHovered] = useState(false);
   const [isActive, setIsActive] = useState(false);
-  const activeTimer = useRef(null);
+  const activeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   let t2;
-  let t3;
+  let t3: React.DependencyList;
   if ($[7] === Symbol.for("react.memo_cache_sentinel")) {
     t2 = () => () => {
       if (activeTimer.current) {
@@ -86,7 +86,7 @@ function Button(t0: Props): React.ReactNode {
     $[8] = t3;
   } else {
     t2 = $[7];
-    t3 = $[8];
+    t3 = $[8] as React.DependencyList;
   }
   useEffect(t2, t3);
   let t4;

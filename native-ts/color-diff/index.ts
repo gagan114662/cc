@@ -429,9 +429,9 @@ function detectLanguage(
   // Filename-based lookup (handles Dockerfile, Makefile, CMakeLists.txt, etc.)
   const stem = base.split('.')[0] ?? ''
   const byName = FILENAME_LANGS[base] ?? FILENAME_LANGS[stem]
-  if (byName && hljs().getLanguage(byName)) return byName
+  if (byName && (hljs() as unknown as { getLanguage: (name: string) => unknown }).getLanguage(byName)) return byName
   if (ext) {
-    const lang = hljs().getLanguage(ext)
+    const lang = (hljs() as unknown as { getLanguage: (name: string) => unknown }).getLanguage(ext)
     if (lang) return ext
   }
   // Shebang / first-line detection (strip UTF-8 BOM)
@@ -513,7 +513,7 @@ function highlightLine(
   }
   let result
   try {
-    result = hljs().highlight(code, {
+    result = (hljs() as unknown as { highlight: (code: string, opts: { language: string; ignoreIllegals: boolean }) => { emitter: unknown } }).highlight(code, {
       language: state.lang,
       ignoreIllegals: true,
     })
@@ -526,7 +526,7 @@ function highlightLine(
       loggedEmitterShapeError = true
       logError(
         new Error(
-          `color-diff: hljs emitter shape mismatch (keys: ${Object.keys(result.emitter).join(',')}). Syntax highlighting disabled.`,
+          `color-diff: hljs emitter shape mismatch (keys: ${Object.keys(result.emitter as object).join(',')}). Syntax highlighting disabled.`,
         ),
       )
     }

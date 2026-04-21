@@ -101,8 +101,8 @@ export function useDirectConnect({
         const permissionResult: PermissionAskDecision = {
           behavior: 'ask',
           message:
-            request.description ?? `${request.tool_name} requires permission`,
-          suggestions: request.permission_suggestions,
+            (request as { description?: string }).description ?? `${request.tool_name} requires permission`,
+          suggestions: request.permission_suggestions as never,
           blockedPath: request.blocked_path,
         }
 
@@ -110,7 +110,7 @@ export function useDirectConnect({
           assistantMessage: syntheticMessage,
           tool,
           description:
-            request.description ?? `${request.tool_name} requires permission`,
+            (request as { description?: string }).description ?? `${request.tool_name} requires permission`,
           input: request.input,
           toolUseContext: {} as ToolUseConfirm['toolUseContext'],
           toolUseID: request.tool_use_id,

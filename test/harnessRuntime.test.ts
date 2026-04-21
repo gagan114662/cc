@@ -104,7 +104,7 @@ describe('harness runtime', () => {
     const previousClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR
     process.env.CLAUDE_CONFIG_DIR = claudeConfigDir
     const config = getDefaultHarnessConfig()
-    await writeHarnessConfig(config, repoRoot)
+    await writeHarnessConfig(config as never, repoRoot)
 
     const dedupeKey = createStableId('pr-review-on-push', 'github', 12, 'abc123')
     await mkdir(path.join(repoRoot, '.claude', 'harness'), { recursive: true })
@@ -281,7 +281,7 @@ describe('harness runtime', () => {
       },
       jobs: getDefaultHarnessConfig().jobs.filter(job => job.id === 'red-main-repair'),
     }
-    await writeHarnessConfig(config, repoRoot)
+    await writeHarnessConfig(config as never, repoRoot)
 
     const claudeConfigDir = await mkdtemp(path.join(os.tmpdir(), 'cc-harness-home-'))
     const previousClaudeConfigDir = process.env.CLAUDE_CONFIG_DIR
@@ -300,14 +300,14 @@ describe('harness runtime', () => {
     try {
       const deps: Partial<HarnessDependencies> = {
         commandRunner: runner,
-        workerExecutor: async () => ({
+        workerExecutor: (async () => ({
           success: true,
           stdout: 'repaired main',
           stderr: '',
           summary: 'repaired default branch',
           humanTouchCount: 0,
           outputPath: path.join(repoRoot, '.claude', 'harness', 'runs', 'manual.log'),
-        }),
+        })) as never,
         now: () => new Date('2026-04-18T09:00:00.000Z'),
         sleep: async () => {},
       }
@@ -419,7 +419,7 @@ describe('harness runtime', () => {
         job => job.id === 'review-comment-follow-up' || job.id === 'red-main-repair',
       ),
     }
-    await writeHarnessConfig(config, repoRoot)
+    await writeHarnessConfig(config as never, repoRoot)
 
     const runner: ShellCommandRunner = async () => ({
       stdout: JSON.stringify([]),
