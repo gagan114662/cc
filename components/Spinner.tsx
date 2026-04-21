@@ -220,8 +220,10 @@ function SpinnerWithVerbInner({
   // doesn't trigger re-renders; we pick up updates on the parent's ~25x/turn
   // re-render cadence, same as the old ApiMetricsLine did.
   let ttftText: string | null = null;
-  if (("external" as string) === 'ant' && apiMetricsRef?.current && apiMetricsRef.current.length > 0) {
-    ttftText = computeTtftText(apiMetricsRef.current);
+  const apiMetricsRef: { current: unknown[] } | undefined = undefined;
+  const computeTtftText = (_arr: unknown[]): string | null => null;
+  if (("external" as string) === 'ant' && apiMetricsRef && (apiMetricsRef as { current: unknown[] }).current && (apiMetricsRef as { current: unknown[] }).current.length > 0) {
+    ttftText = computeTtftText((apiMetricsRef as { current: unknown[] }).current);
   }
 
   // When leader is idle but teammates are running (and we're viewing the leader),
@@ -441,7 +443,7 @@ function BriefSpinner(t0: BriefSpinnerProps) {
 // working/idle/disconnected. See BriefSpinner's comment for the
 // Notifications overlay coupling.
 function _temp6(s_0: any) {
-  return count(Object.values(s_0.tasks), isBackgroundTask) + s_0.remoteBackgroundTaskCount;
+  return count(Object.values(s_0.tasks) as never, isBackgroundTask) + s_0.remoteBackgroundTaskCount;
 }
 function _temp5(s: any) {
   return s.remoteConnectionStatus;
@@ -500,7 +502,7 @@ export function BriefIdleStatus() {
   return t2;
 }
 function _temp8(s_0: any) {
-  return count(Object.values(s_0.tasks), isBackgroundTask) + s_0.remoteBackgroundTaskCount;
+  return count(Object.values(s_0.tasks) as never, isBackgroundTask) + s_0.remoteBackgroundTaskCount;
 }
 function _temp7(s: any) {
   return s.remoteConnectionStatus;
