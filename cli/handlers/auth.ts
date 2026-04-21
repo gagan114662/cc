@@ -56,16 +56,16 @@ export async function installOAuthTokens(tokens: OAuthTokens): Promise<void> {
     tokens.profile ?? (await getOauthProfileFromOauthToken(tokens.accessToken))
   if (profile) {
     storeOAuthAccountInfo({
-      accountUuid: profile.account.uuid,
-      emailAddress: profile.account.email,
-      organizationUuid: profile.organization.uuid,
-      displayName: profile.account.display_name || undefined,
+      accountUuid: profile.account?.uuid ?? '',
+      emailAddress: profile.account?.email ?? '',
+      organizationUuid: profile.organization?.uuid,
+      displayName: profile.account?.display_name || undefined,
       hasExtraUsageEnabled:
-        profile.organization.has_extra_usage_enabled ?? undefined,
-      billingType: profile.organization.billing_type ?? undefined,
+        profile.organization?.has_extra_usage_enabled ?? undefined,
+      billingType: profile.organization?.billing_type ?? undefined,
       subscriptionCreatedAt:
-        profile.organization.subscription_created_at ?? undefined,
-      accountCreatedAt: profile.account.created_at,
+        profile.organization?.subscription_created_at ?? undefined,
+      accountCreatedAt: profile.account?.created_at,
     })
   } else if (tokens.tokenAccount) {
     // Fallback to token exchange account data when profile endpoint fails
