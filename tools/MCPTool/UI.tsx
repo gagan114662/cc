@@ -65,7 +65,7 @@ export function renderToolUseProgressMessage(progressMessagesForMessage: Progres
     progress,
     total,
     progressMessage
-  } = lastProgress.data;
+  } = lastProgress.data as { progress?: number; total?: number; progressMessage?: string };
   if (progress === undefined) {
     return <MessageResponse height={1}>
         <Text dimColor>Running…</Text>

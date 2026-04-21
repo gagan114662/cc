@@ -1038,7 +1038,7 @@ async ({ workflow, state, github, docs }) => {
 
     try {
       const result = await executeForkedWorkflow({
-        command,
+        command: command as never,
         commandName: command.name,
         args: 'browser-only audit',
         context: makeCodeModeContext(makeGitHubDocsCapabilities()),
@@ -1219,7 +1219,7 @@ async ({ workflow, state, browser, github, docs, discovery }) => {
 
     try {
       await executeForkedWorkflow({
-        command,
+        command: command as never,
         commandName: command.name,
         args: 'segment-one',
         context: makeCodeModeContext(),
@@ -1266,7 +1266,7 @@ async ({ args, state, workflow, workspace }) => {
       expect(firstSharedPersisted.userState.sharedPathSeen).toBe(sharedStatePath)
 
       await executeForkedWorkflow({
-        command,
+        command: command as never,
         commandName: command.name,
         args: 'segment-two',
         context: makeCodeModeContext(),
