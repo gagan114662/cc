@@ -256,7 +256,7 @@ function ChordInterceptor(t0: ChordInterceptorProps) {
       }
       const contexts = [...handlerContexts, ...activeContexts, "Global"];
       const wasInChord = pendingChordRef.current !== null;
-      const result = resolveKeyWithChordState(input, key, contexts, bindings, pendingChordRef.current);
+      const result = resolveKeyWithChordState(input, key, contexts as never, bindings, pendingChordRef.current);
       bb23: switch (result.type) {
         case "chord_started":
           {

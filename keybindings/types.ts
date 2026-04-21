@@ -17,6 +17,8 @@ export type KeybindingContextName =
   | 'ModelPicker'
   | 'Select'
   | 'Plugin'
+  | 'Scroll'
+  | 'MessageActions'
 
 export type ParsedKeystroke = {
   key: string
