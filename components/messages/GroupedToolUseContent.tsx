@@ -17,7 +17,7 @@ export function GroupedToolUseContent({
   inProgressToolUseIDs,
   shouldAnimate
 }: Props): React.ReactNode {
-  const tool = findToolByName(tools, message.toolName);
+  const tool = findToolByName(tools, message.toolName ?? '');
   if (!tool?.renderGroupedToolUse) {
     return null;
   }
@@ -27,25 +27,27 @@ export function GroupedToolUseContent({
     param: ToolResultBlockParam;
     output: unknown;
   }>();
-  for (const resultMsg of message.results) {
+  for (const resultMsg of (message.results ?? []) as Array<{ message: { content: unknown[] }; toolUseResult?: unknown }>) {
     for (const content of resultMsg.message.content) {
-      if (content.type === 'tool_result') {
-        resultsByToolUseId.set(content.tool_use_id, {
-          param: content,
+      const c = content as { type?: string; tool_use_id?: string };
+      if (c.type === 'tool_result' && c.tool_use_id) {
+        resultsByToolUseId.set(c.tool_use_id, {
+          param: c as unknown as ToolResultBlockParam,
           output: resultMsg.toolUseResult
         });
       }
     }
   }
   const toolUsesData = message.messages.map(msg => {
-    const content = msg.message.content[0];
-    const result = resultsByToolUseId.get(content.id);
+    const content = msg.message.content[0] as { id?: string } | undefined;
+    const id = content?.id ?? '';
+    const result = resultsByToolUseId.get(id);
     return {
-      param: content as ToolUseBlockParam,
-      isResolved: lookups.resolvedToolUseIDs.has(content.id),
-      isError: lookups.erroredToolUseIDs.has(content.id),
-      isInProgress: inProgressToolUseIDs.has(content.id),
-      progressMessages: filterToolProgressMessages(lookups.progressMessagesByToolUseID.get(content.id) ?? []),
+      param: content as unknown as ToolUseBlockParam,
+      isResolved: lookups.resolvedToolUseIDs.has(id),
+      isError: lookups.erroredToolUseIDs.has(id),
+      isInProgress: inProgressToolUseIDs.has(id),
+      progressMessages: filterToolProgressMessages(lookups.progressMessagesByToolUseID.get(id) ?? []),
       result
     };
   });
