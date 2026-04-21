@@ -45,8 +45,10 @@ export type UserRolesResponse = {
 
 export type OAuthTokens = {
   accessToken: string
-  refreshToken: string
-  expiresAt: number
+  // null when token comes from CLAUDE_CODE_OAUTH_TOKEN env or fd handoff
+  // (inference-only flows have no refresh/expiry).
+  refreshToken: string | null
+  expiresAt: number | null
   scopes: string[]
   subscriptionType: SubscriptionType | null
   rateLimitTier: RateLimitTier | null
