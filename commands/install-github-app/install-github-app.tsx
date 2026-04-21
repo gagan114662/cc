@@ -47,7 +47,7 @@ function InstallGitHubApp(props: {
   onDone: (message: string) => void;
 }): React.ReactNode {
   const [existingApiKey] = useState(() => getAnthropicApiKey());
-  const [state, setState] = useState({
+  const [state, setState] = useState<State>({
     ...INITIAL_STATE,
     useExistingKey: !!existingApiKey,
     selectedApiKeyOption: (existingApiKey ? 'existing' : isAnthropicAuthEnabled() ? 'oauth' : 'new')

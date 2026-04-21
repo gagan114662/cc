@@ -37,7 +37,9 @@ export type State = {
   workflowExists: boolean
   selectedWorkflows: Workflow[]
   selectedApiKeyOption: 'existing' | 'new' | 'oauth'
-  authType: 'api_key' | 'oauth'
+  authType: 'api_key' | 'oauth_token'
   workflowAction?: 'skip' | 'overwrite' | 'keep' | string
   error?: string
+  errorReason?: string
+  errorInstructions?: string[]
 }
