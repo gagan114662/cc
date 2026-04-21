@@ -112,10 +112,10 @@ describe('inMemoryErrorLog partitioning by tenant', () => {
 
     const acmeEntries = runWithTenantScope(buildTenantScope(ACME), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
     const globexEntries = runWithTenantScope(buildTenantScope(GLOBEX), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
 
     const acmeMessages = acmeEntries.map((e: { error: string; timestamp: string }) => e.error)
     const globexMessages = globexEntries.map((e: { error: string; timestamp: string }) => e.error)
@@ -150,10 +150,10 @@ describe('inMemoryErrorLog partitioning by tenant', () => {
     })
     const acmeEntries = runWithTenantScope(buildTenantScope(ACME), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
     const globexEntries = runWithTenantScope(buildTenantScope(GLOBEX), () =>
       getInMemoryErrors(),
-    )
+    ) as { error: string; timestamp: string }[]
     expect(acmeEntries.length).toBe(100)
     // Oldest surviving error should be index 5 (0..4 evicted)
     expect(acmeEntries[0]!.error).toContain('acme-5')
