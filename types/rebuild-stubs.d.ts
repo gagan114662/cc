@@ -117,14 +117,34 @@ declare module '@anthropic-ai/sandbox-runtime' {
   export class SandboxViolationStore {
     constructor(...args: unknown[])
   }
-  export type FsReadRestrictionConfig = Record<string, unknown>
-  export type FsWriteRestrictionConfig = Record<string, unknown>
-  export type IgnoreViolationsConfig = Record<string, unknown>
+  export type FsReadRestrictionConfig = {
+    denyOnly: string[]
+    allowOnly?: string[]
+    denyWithinAllow?: string[]
+    allowWithinDeny?: string[]
+    [key: string]: unknown
+  }
+  export type FsWriteRestrictionConfig = {
+    denyOnly?: string[]
+    allowOnly: string[]
+    denyWithinAllow: string[]
+    allowWithinDeny?: string[]
+    [key: string]: unknown
+  }
+  export type IgnoreViolationsConfig = {
+    paths?: string[]
+    hosts?: string[]
+    [key: string]: unknown
+  }
   export type NetworkHostPattern = {
     host: string
     [key: string]: unknown
   }
-  export type NetworkRestrictionConfig = Record<string, unknown>
+  export type NetworkRestrictionConfig = {
+    allowedHosts?: string[]
+    deniedHosts?: string[]
+    [key: string]: unknown
+  }
   export type SandboxAskCallback = (
     hostPattern: NetworkHostPattern,
   ) => Promise<unknown>
