@@ -1,7 +1,12 @@
 /* eslint-disable custom-rules/no-top-level-side-effects */
 
 import { appendFileSync } from 'fs'
-import createReconciler from 'react-reconciler'
+import createReconciler_ from 'react-reconciler'
+const createReconciler = createReconciler_ as unknown as <
+  T1 = unknown, T2 = unknown, T3 = unknown, T4 = unknown, T5 = unknown,
+  T6 = unknown, T7 = unknown, T8 = unknown, T9 = unknown, T10 = unknown,
+  T11 = unknown, T12 = unknown, T13 = unknown, T14 = unknown, T15 = unknown,
+>(config: unknown) => any
 import { getYogaCounters } from 'src/native-ts/yoga-layout/index.js'
 import { isEnvTruthy } from '../utils/envUtils.js'
 import {

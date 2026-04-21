@@ -71,12 +71,12 @@ export function AppStateProvider(t0: Props) {
   } else {
     t2 = $[4];
   }
-  let t3;
+  let t3: React.DependencyList;
   if ($[5] === Symbol.for("react.memo_cache_sentinel")) {
     t3 = [];
     $[5] = t3;
   } else {
-    t3 = $[5];
+    t3 = $[5] as React.DependencyList;
   }
   useEffect(t2, t3);
   let t4;

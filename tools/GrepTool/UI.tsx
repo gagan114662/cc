@@ -175,10 +175,10 @@ export function renderToolResultMessage({
   verbose: boolean;
 }): React.ReactNode {
   if (mode === 'content') {
-    return <SearchResultSummary count={numLines ?? 0} countLabel="lines" content={content} verbose={verbose} />;
+    return <SearchResultSummary count={numLines ?? 0} countLabel="lines" content={content ?? ''} verbose={verbose} />;
   }
   if (mode === 'count') {
-    return <SearchResultSummary count={numMatches ?? 0} countLabel="matches" secondaryCount={numFiles} secondaryLabel="files" content={content} verbose={verbose} />;
+    return <SearchResultSummary count={numMatches ?? 0} countLabel="matches" secondaryCount={numFiles} secondaryLabel="files" content={content ?? ''} verbose={verbose} />;
   }
 
   // files_with_matches mode
